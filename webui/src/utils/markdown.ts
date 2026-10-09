@@ -38,10 +38,15 @@ function inline(raw: string): string {
         : text
     );
   html = emphasis(html);
-  return html.replace(/\uE000(\d+)\uE000/g, (_, i: string) => tokens[+i]);
+  // 链接文字里可能还有行内代码的占位符，逐层还原
+  const held = /\uE000(\d+)\uE000/g;
+  while (held.test(html))
+    html = html.replace(held, (_, i: string) => tokens[+i]);
+  return html;
 }
 
 const LIST_ITEM = /^\s*(?:([-*+])|(\d+)[.)])\s+(.*)$/;
+const RULE = /^\s*([-*_])(?:\s*\1){2,}\s*$/;
 
 export function renderMarkdown(source: string): string {
   const lines = source
@@ -77,7 +82,13 @@ export function renderMarkdown(source: string): string {
       code = [];
       continue;
     }
-    const heading = /^\s*(#{1,6})\s+(.*?)\s*#*\s*$/.exec(line);
+    if (RULE.test(line)) {
+      flush();
+      out.push('<hr>');
+      continue;
+    }
+    // 结尾的 # 只有与正文隔着空格时才是闭合符号（如 “C#” 保留）
+    const heading = /^\s*(#{1,6})\s+(.*?)(?:\s+#+)?\s*$/.exec(line);
     if (heading) {
       flush();
       // README 嵌在详情栏里，标题从 h3 起，不与页面标题争层级
@@ -86,7 +97,11 @@ export function renderMarkdown(source: string): string {
       continue;
     }
     const item = LIST_ITEM.exec(line);
-    if (item) {
+    // 有序列表只有从 1 开始才能打断段落，否则 “2024. 起” 这样的行会被当成列表
+    if (
+      item &&
+      !(paragraph.length && item[2] !== undefined && item[2] !== '1')
+    ) {
       const ordered = item[2] !== undefined;
       if (paragraph.length || (list && list.ordered !== ordered)) flush();
       list ??= { ordered, items: [] };

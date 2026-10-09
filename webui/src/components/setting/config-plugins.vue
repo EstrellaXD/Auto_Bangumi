@@ -9,8 +9,7 @@ import PluginSchemaForm from './plugin-schema-form.vue';
 import type { PluginInfo, PluginsOverview } from '#/plugins';
 import { apiPlugins } from '@/api/plugins';
 import { useConfirm } from '@/hooks/useConfirm';
-import { refreshPluginProviders } from '@/hooks/usePluginProviders';
-import { refreshPluginUi } from '@/hooks/usePluginUi';
+import { pluginSetVersion, refreshPluginState } from '@/hooks/usePluginRefresh';
 import { idLabel } from '@/utils/id-label';
 import { fillSchemaDefaults, schemaFields } from '@/utils/plugin-schema';
 import {
@@ -27,13 +26,13 @@ const message = useMessage();
 const router = useRouter();
 const { confirm } = useConfirm();
 const configStore = useConfigStore();
-const { refreshGroup } = configStore;
 
 const overview = ref<PluginsOverview | null>(null);
 const drafts = ref<Record<string, Record<string, unknown>>>({});
 // 并发操作各自占用一个 key，互不覆盖对方的加载态
 const busy = ref(new Set<string>());
 const loadError = ref(false);
+let seenVersion = pluginSetVersion.value;
 
 const stateType = {
   active: 'success',
@@ -84,12 +83,8 @@ async function run(
   busy.value.add(key);
   try {
     apply(await action());
-    // 只刷新插件卡片保存的字段，保留未保存的下载器实例与 slots 修改
-    await refreshGroup('plugins', ['allow_unsigned', 'enabled', 'options']);
-    // 插件启停会增减下载器/通知渠道候选，同步刷新下拉框
-    await refreshPluginProviders();
-    // 启停也会增减插件的前端挂载点
-    await refreshPluginUi();
+    await refreshPluginState();
+    seenVersion = pluginSetVersion.value;
     return true;
   } catch {
     // 后端的具体原因（如验签失败）由 axios 拦截器另行提示
@@ -139,7 +134,7 @@ async function setEnabled(plugin: PluginInfo, enabled: boolean) {
     impact &&
     !(await confirm({
       title: t('config.plugins_set.disable_confirm_title', {
-        name: pluginName(t, plugin.id, plugin.name),
+        name: pluginName(t, plugin),
       }),
       body: impact,
       confirmText: t('config.plugins_set.disable'),
@@ -163,7 +158,7 @@ async function saveOptions(plugin: PluginInfo) {
 async function uninstall(plugin: PluginInfo) {
   const confirmed = await confirm({
     title: t('config.plugins_set.uninstall_confirm_title', {
-      name: pluginName(t, plugin.id, plugin.name),
+      name: pluginName(t, plugin),
     }),
     body: [impactText(plugin), t('config.plugins_set.uninstall_confirm_body')]
       .filter(Boolean)
@@ -181,6 +176,13 @@ async function uninstall(plugin: PluginInfo) {
 }
 
 onMounted(load);
+
+// 设置页被 KeepAlive 缓存：插件市场安装或更新后，再次进入时重新加载列表
+onActivated(() => {
+  if (seenVersion === pluginSetVersion.value) return;
+  seenVersion = pluginSetVersion.value;
+  return load();
+});
 </script>
 
 <template>
@@ -219,7 +221,7 @@ onMounted(load);
       >
         <header class="plugin__header">
           <div class="plugin__title">
-            <strong>{{ pluginName(t, plugin.id, plugin.name) }}</strong>
+            <strong>{{ pluginName(t, plugin) }}</strong>
             <span class="plugin__meta"
               >{{ plugin.id }} · v{{ plugin.version }}</span
             >
@@ -229,7 +231,7 @@ onMounted(load);
             :loading="busy.has(plugin.id)"
             :aria-label="
               $t('config.plugins_set.enabled_for', {
-                name: pluginName(t, plugin.id, plugin.name),
+                name: pluginName(t, plugin),
               })
             "
             @update:model-value="setEnabled(plugin, $event)"
@@ -247,7 +249,7 @@ onMounted(load);
         </div>
 
         <p v-if="plugin.description" class="plugin__desc">
-          {{ pluginDescription(t, plugin.id, plugin.description) }}
+          {{ pluginDescription(t, plugin) }}
         </p>
         <AbAlert
           v-if="plugin.error && plugin.error !== 'not_enabled'"
@@ -278,7 +280,7 @@ onMounted(load);
             <PluginSchemaForm
               v-model="drafts[plugin.id]"
               :fields="
-                localizeFields(t, plugin.id, schemaFields(plugin.config_schema))
+                localizeFields(t, plugin, schemaFields(plugin.config_schema))
               "
             />
             <div class="plugin__save">

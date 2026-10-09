@@ -22,9 +22,19 @@ describe('renderMarkdown', () => {
       '[docs](https://a.io/x_y_z)',
       '<p><a href="https://a.io/x_y_z" target="_blank" rel="noopener noreferrer">docs</a></p>',
     ],
-  ])('should render %j', (source, html) => {
-    expect(renderMarkdown(source)).toBe(html);
-  });
+    [
+      '[`sdk`](https://a.io)',
+      '<p><a href="https://a.io" target="_blank" rel="noopener noreferrer"><code>sdk</code></a></p>',
+    ],
+    ['Released in\n2024. It works', '<p>Released in 2024. It works</p>'],
+    ['* * *', '<hr>'],
+    ['# C#', '<h3>C#</h3>'],
+  ])(
+    'should render %j as the expected HTML when it is the source',
+    (source, html) => {
+      expect(renderMarkdown(source)).toBe(html);
+    }
+  );
 
   it.each([
     [
@@ -40,7 +50,7 @@ describe('renderMarkdown', () => {
     ['[x](data:text/html,hi)', '<p>x</p>'],
     ['![pic](https://a.io/p.png)', '<p>pic</p>'],
     ['# <iframe src=x>', '<h3>&lt;iframe src=x&gt;</h3>'],
-  ])('should neutralise %j', (source, html) => {
+  ])('should neutralise the markup when the source is %j', (source, html) => {
     expect(renderMarkdown(source)).toBe(html);
   });
 

@@ -4,8 +4,7 @@ import MarketConfirm from '@/components/market/market-confirm.vue';
 import type { ApiError } from '#/api';
 import type { CatalogEntry, PluginInfo } from '#/plugins';
 import { apiPlugins } from '@/api/plugins';
-import { refreshPluginProviders } from '@/hooks/usePluginProviders';
-import { refreshPluginUi } from '@/hooks/usePluginUi';
+import { pluginSetVersion, refreshPluginState } from '@/hooks/usePluginRefresh';
 import { idLabel } from '@/utils/id-label';
 import { renderMarkdown } from '@/utils/markdown';
 import {
@@ -31,7 +30,6 @@ const message = useMessage();
 const route = useRoute();
 const router = useRouter();
 const { isMobile } = useBreakpointQuery();
-const { refreshGroup } = useConfigStore();
 
 // 目录：成功获取后写入 localStorage；目录不可达时显示上一次的目录（stale），
 // 此时安装与更新不可用。error 为 null 表示最近一次获取成功，'' 表示失败但后端没给原因。
@@ -74,21 +72,12 @@ async function loadInstalled() {
 
 onMounted(() => Promise.all([loadCatalog(), loadInstalled()]));
 
-// 页面被 KeepAlive 缓存；再次进入时按本机插件同步安装状态（设置页可能卸载过），不重新下载目录
-let activated = false;
-onActivated(async () => {
-  if (!activated) {
-    activated = true;
-    return;
-  }
-  await loadInstalled();
-  if (!catalog.value) return;
-  catalog.value = catalog.value.map((entry) => ({
-    ...entry,
-    installed_version:
-      installed.value.find((p) => p.id === entry.id && p.source === 'catalog')
-        ?.version ?? null,
-  }));
+// 页面被 KeepAlive 缓存：其它页面（如设置）改过插件后，再次进入时重新获取目录与安装状态
+let seenVersion = pluginSetVersion.value;
+onActivated(() => {
+  if (seenVersion === pluginSetVersion.value) return;
+  seenVersion = pluginSetVersion.value;
+  return Promise.all([loadCatalog(), loadInstalled()]);
 });
 
 // 相对时间每分钟刷新一次
@@ -156,7 +145,10 @@ const selected = computed(() => {
 const showDetail = computed(() => isMobile.value && Boolean(routeId.value));
 
 const confirming = ref(false);
-watch(routeId, () => (confirming.value = false));
+watch(
+  () => selected.value?.id,
+  () => (confirming.value = false)
+);
 
 function back() {
   if ((window.history.state as { back?: unknown } | null)?.back) router.back();
@@ -218,15 +210,11 @@ async function install(entry: CatalogEntry) {
       ? t('market.update_success', { name, version: entry.version })
       : t('market.install_success', { name })
   );
+  entry.installed_version = entry.version;
   confirming.value = false;
   busy.value = false;
-  // 与设置页插件卡片相同：同步 config store 的 plugins 段、Provider 候选与前端挂载点
-  await Promise.all([
-    loadCatalog(),
-    refreshGroup('plugins', ['allow_unsigned', 'enabled', 'options']),
-    refreshPluginProviders(),
-    refreshPluginUi(),
-  ]);
+  await refreshPluginState();
+  seenVersion = pluginSetVersion.value;
 }
 
 function pointLabel(id: string) {

@@ -1,39 +1,56 @@
 import { hasKey } from './id-label';
 import type { SchemaField } from './plugin-schema';
+import type { PluginInfo } from '#/plugins';
 
 type Translate = (key: string) => string;
+type Plugin = Pick<PluginInfo, 'id' | 'source'>;
 
 /**
  * 内置插件的名称、描述与配置字段文案：清单和 config_model 里只有中文，前端在
  * `builtin_plugins.<id>` 下为它们各配一份翻译。没有收录的插件（第三方）原样显示
  * 后端给的文字。
  */
-function root(pluginId: string): string {
-  return `builtin_plugins.${pluginId.replaceAll('-', '_')}`;
+function root(plugin: Plugin): string | null {
+  // 按 id 查找会让同 id 的第三方插件借用内置插件的文案
+  return plugin.source === 'builtin'
+    ? `builtin_plugins.${plugin.id.replaceAll('-', '_')}`
+    : null;
 }
 
-function pick(t: Translate, key: string, fallback: string): string {
-  return hasKey(key) ? t(key) : fallback;
+function pick(t: Translate, key: string | null, fallback: string): string {
+  return key !== null && hasKey(key) ? t(key) : fallback;
 }
 
-export function pluginName(t: Translate, id: string, fallback: string): string {
-  return pick(t, `${root(id)}.name`, fallback);
+export function pluginName(
+  t: Translate,
+  plugin: Plugin & { name: string }
+): string {
+  const base = root(plugin);
+  return pick(t, base && `${base}.name`, plugin.name);
 }
 
 export function pluginDescription(
   t: Translate,
-  id: string,
-  fallback: string
+  plugin: Plugin & { description: string }
 ): string {
-  return pick(t, `${root(id)}.description`, fallback);
+  const base = root(plugin);
+  return pick(t, base && `${base}.description`, plugin.description);
 }
 
 /** 字段文案：`fields.<key>.title / description`，对象数组的子字段嵌套在父字段下 */
 export function localizeFields(
   t: Translate,
-  id: string,
-  fields: SchemaField[],
-  parent = `${root(id)}.fields`
+  plugin: Plugin,
+  fields: SchemaField[]
+): SchemaField[] {
+  const base = root(plugin);
+  return base ? localizeUnder(t, `${base}.fields`, fields) : fields;
+}
+
+function localizeUnder(
+  t: Translate,
+  parent: string,
+  fields: SchemaField[]
 ): SchemaField[] {
   return fields.map((field) => {
     const base = `${parent}.${field.key}`;
@@ -41,7 +58,7 @@ export function localizeFields(
       ...field,
       label: pick(t, `${base}.title`, field.label),
       description: pick(t, `${base}.description`, field.description),
-      itemFields: localizeFields(t, id, field.itemFields, base),
+      itemFields: localizeUnder(t, base, field.itemFields),
     };
   });
 }

@@ -165,7 +165,7 @@ describe('market page', () => {
     expect(w.findAll('.row-link')).toHaveLength(2);
   });
 
-  it('should install after the confirm step and refresh catalog, config and plugin UI', async () => {
+  it('should mark the plugin installed without a catalog refetch when the confirmed install succeeds', async () => {
     api.catalog.mockResolvedValue([entry()]);
     api.install.mockResolvedValue({ allow_unsigned: false, plugins: [] });
     const w = await mountPage();
@@ -178,7 +178,8 @@ describe('market page', () => {
     await flushPromises();
 
     expect(api.install).toHaveBeenCalledWith('bili');
-    expect(api.catalog).toHaveBeenCalledTimes(2);
+    expect(api.catalog).toHaveBeenCalledTimes(1);
+    expect(w.text()).toContain('market.state.installed');
     expect(refreshGroup).toHaveBeenCalledWith(
       'plugins',
       expect.arrayContaining(['enabled'])

@@ -56,14 +56,19 @@ describe('categoriesOf', () => {
 
 describe('entryState', () => {
   it.each([
-    [null, 'available'],
-    ['0.2.0', 'installed'],
-    ['0.1.0', 'update'],
-  ] as const)('should be %s → %s', (installed, state) => {
-    expect(entryState(catalogEntry({ installed_version: installed }))).toBe(
-      state
-    );
-  });
+    ['available', null],
+    ['installed', '0.2.0'],
+    ['update', '0.1.0'],
+    ['update', '0.2.0-beta.1'],
+    ['installed', '0.3.0'],
+  ] as const)(
+    'should give state %s when the installed version is %s',
+    (state, installed) => {
+      expect(entryState(catalogEntry({ installed_version: installed }))).toBe(
+        state
+      );
+    }
+  );
 });
 
 describe('filterEntries', () => {
@@ -128,7 +133,7 @@ describe('filterEntries', () => {
 });
 
 describe('permissionDiff', () => {
-  it('should split kept, added and removed permissions', () => {
+  it('should split kept, added and removed permissions when an update changes them', () => {
     expect(
       permissionDiff(['filesystem', 'fs.write'], ['filesystem', 'network'])
     ).toEqual({
