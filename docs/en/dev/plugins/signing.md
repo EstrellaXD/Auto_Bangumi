@@ -28,6 +28,12 @@ AB downloads `catalog.json` from the GitHub release `plugins`. The catalog conta
       "sdk": ">=0.5,<1",
       "min_ab_version": "4.0.0-beta.1",
       "description": "…",
+      "authors": ["…"],
+      "repo": "owner/ntfy-notifier",
+      "commit": "…",
+      "permissions": ["network"],
+      "has_web": false,
+      "readme": "…",
       "asset": "ntfy-notifier-0.1.0.zip",
       "sha256": "…"
     }
@@ -35,7 +41,18 @@ AB downloads `catalog.json` from the GitHub release `plugins`. The catalog conta
 }
 ```
 
-`catalog.json` and each zip have a `.sig` file with the same name. It is an ed25519 signature over all bytes of the file, encoded in base64. The public key is part of the AB image. It is the same key that the online update uses.
+Fields of an entry:
+
+| Field | Description |
+| --- | --- |
+| `authors` | List of authors, from `plugin.toml` |
+| `repo` | The GitHub repository of the source |
+| `commit` | The full 40-character SHA that was packed |
+| `permissions` | Permissions that the manifest declares. For display only |
+| `has_web` | Whether the plugin has a frontend |
+| `readme` | README text, 16 KB at most |
+
+`catalog.json` and each zip have a `.sig` file with the same name. It is an ed25519 signature over all bytes of the file, encoded in base64. The public key is part of the AB image. The catalog uses a dedicated plugin signing key. It is not the key of the online update. AB 4.0.0-beta.2 and later trust the plugin key. 4.0.0-beta.1 cannot install from the new catalog.
 
 At install time AB checks, in this order:
 
@@ -67,22 +84,9 @@ The host owns `/plugins/{id}/install` and `/plugins/catalog`. The `api_router` o
 
 ## Publish a plugin
 
-Only a maintainer who has the signing private key can publish the catalog. The steps:
+The author opens a PR to `EstrellaXD/Auto_Bangumi` that registers the repository and the commit of the plugin source. CI checks it, and a maintainer reviews and merges it. After the merge, CI rebuilds the catalog, signs it with the plugin signing key, and uploads it to the release `plugins`. The private key exists only in a CI secret. Authors and the CI of a PR cannot reach it.
 
-1. The author runs `ab-plugin pack .` and gets a zip.
-2. The author opens a GitHub issue with the zip and the source address to ask for a listing.
-3. The maintainer reviews the source, then runs this command on one or more zips:
-
-   ```bash
-   uv run --no-project --with cryptography python scripts/build_plugin_catalog.py \
-       --key ~/.autobangumi/update-signing-key.pem --min-ab 4.0.0-beta.1 \
-       --out release-assets dist/*.zip
-   ```
-
-   The script writes `catalog.json`, the zips and their `.sig` files. Do not set `--min-ab` to `4.0.0`: in semver, `4.0.0-beta.N` is lower than `4.0.0`, so 4.0 beta users cannot install the plugin.
-4. The maintainer uploads the whole directory to the release `plugins` (and overwrites the old files).
-
-A user sees the new version through `GET /api/v1/plugins/catalog`.
+For the full procedure, refer to [List a Plugin](/en/dev/plugins/publish).
 
 ## Publish the SDK
 

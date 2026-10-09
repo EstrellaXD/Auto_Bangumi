@@ -43,6 +43,7 @@ const pluginPages: [string, string, string, string][] = [
   ['/frontend-slots', '前端挂载点', 'Frontend slots', 'フロントエンドスロット'],
   ['/cli', '命令行 ab-plugin', 'The ab-plugin command', 'コマンド ab-plugin'],
   ['/signing', '签名与分发', 'Signing and distribution', '署名と配布'],
+  ['/publish', '上架插件', 'List a plugin', 'プラグインの掲載'],
   ['/builtin', '内置插件', 'Built-in plugins', '組み込みプラグイン'],
   ['/examples', '示例插件', 'Example plugins', 'サンプルプラグイン'],
 ]

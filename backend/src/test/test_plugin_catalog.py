@@ -23,10 +23,20 @@ from cryptography.hazmat.primitives.serialization import (
 from ab_sdk.cli import main, pack
 from ab_sdk.manifest import load_manifest
 from module.models.config import Plugins
-from module.plugin.installer import PluginInstaller
+from module.plugin.installer import PLUGIN_PUBKEY_PATH, PluginInstaller
 from module.plugin.loader import discover
+from module.update.signing import DEFAULT_PUBKEY_PATH
 
 PLUGIN_ID = "catalog-demo"
+
+
+def load_catalog_script():
+    script = Path(__file__).resolve().parents[3] / "scripts" / "build_plugin_catalog.py"
+    spec = importlib.util.spec_from_file_location("build_plugin_catalog", script)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 @pytest.fixture
@@ -227,6 +237,12 @@ class TestInstall:
 
         assert not result.success and unmanaged.is_dir()
 
+    def test_default_pubkey_is_the_plugin_key_not_the_update_key(self):
+        assert PluginInstaller().pubkey_path == PLUGIN_PUBKEY_PATH
+        assert PLUGIN_PUBKEY_PATH != DEFAULT_PUBKEY_PATH
+        # 公钥随 module/ 进入在线更新包，旧镜像更新后也有它
+        assert PLUGIN_PUBKEY_PATH.is_file()
+
     async def test_uninstall_leaves_llm_provider_plugins_alone(self, tmp_path, keypair):
         installer = make_installer(tmp_path, keypair, build_zip(tmp_path))
         # LLM 插件：有 installed.json 与 plugin.json，没有 plugin.toml
@@ -241,18 +257,23 @@ class TestInstall:
 
 
 class TestReleaseScript:
+    def test_empty_registry_builds_an_empty_signed_catalog(self, tmp_path, keypair):
+        module = load_catalog_script()
+        priv, _ = keypair
+        key_path = tmp_path / "key.pem"
+        key_path.write_bytes(
+            priv.private_bytes(Encoding.PEM, PrivateFormat.PKCS8, NoEncryption())
+        )
+        catalog = module.build([], tmp_path / "release", key_path)
+        assert json.loads(catalog.read_text())["plugins"] == []
+        assert (tmp_path / "release" / "catalog.json.sig").is_file()
+
     # 默认 --min-ab 须放行 4.0 的 beta 宿主（semver 中 4.0.0-beta.N < 4.0.0）
     @pytest.mark.parametrize("app_version", ["4.0.0-beta.1", "4.0.0"])
     async def test_catalog_built_by_release_script_installs(
         self, tmp_path, keypair, app_version
     ):
-        script = (
-            Path(__file__).resolve().parents[3] / "scripts" / "build_plugin_catalog.py"
-        )
-        spec = importlib.util.spec_from_file_location("build_plugin_catalog", script)
-        assert spec and spec.loader
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
+        module = load_catalog_script()
         priv, pubkey_path = keypair
         key_path = tmp_path / "key.pem"
         key_path.write_bytes(
@@ -262,7 +283,10 @@ class TestReleaseScript:
         archive.parent.mkdir()
         archive.write_bytes(build_zip(tmp_path))
 
-        module.build([archive], tmp_path / "release", key_path)
+        source = {"repo": "alice/ab-demo", "commit": "a" * 40, "readme": "# demo"}
+        module.build(
+            [archive], tmp_path / "release", key_path, sources={PLUGIN_ID: source}
+        )
 
         released = tmp_path / "release"
 
@@ -278,6 +302,8 @@ class TestReleaseScript:
         )
         [entry] = await installer.fetch_catalog()
         assert entry["extension_points"] == ["rename_strategy"]
+        assert {k: entry[k] for k in source} == source
+        assert entry["has_web"] is False
         assert (await installer.install(PLUGIN_ID)).success
 
 

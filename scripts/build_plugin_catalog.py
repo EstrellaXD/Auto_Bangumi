@@ -6,7 +6,8 @@
         --key ~/.autobangumi/update-signing-key.pem \
         --out release-assets  dist/*.zip
 
-输入是 ``ab-plugin pack`` 打出的 zip。输出目录里有 ``catalog.json``、每个 zip 以及
+输入是 ``ab-plugin pack`` 打出的 zip；``--sources`` 是 ``plugin_registry.py build``
+写出的 ``sources.json``（每个插件的 repo、commit 与 README）。输出目录里有 ``catalog.json``、每个 zip 以及
 它们的 ``.sig``（对文件全部字节做 ed25519 签名，base64 文本），一并上传到 GitHub
 release ``plugins`` 即可。安装端的校验见 ``backend/src/module/plugin/installer.py``。
 """
@@ -28,9 +29,10 @@ CATALOG_SCHEMA = 2
 DEFAULT_MIN_AB = "4.0.0-beta.1"
 
 
-def _entry(archive: Path, min_ab: str) -> dict:
+def _entry(archive: Path, min_ab: str, sources: dict[str, dict[str, str]]) -> dict:
     with zipfile.ZipFile(archive) as zf:
         plugin = tomllib.loads(zf.read("plugin.toml").decode("utf-8"))["plugin"]
+    source = sources.get(plugin["id"], {})
     return {
         "id": plugin["id"],
         "name": plugin["name"],
@@ -40,6 +42,13 @@ def _entry(archive: Path, min_ab: str) -> dict:
         "sdk": plugin["sdk"],
         "min_ab_version": min_ab,
         "description": plugin.get("description", ""),
+        "authors": plugin.get("authors", []),
+        "permissions": plugin.get("permissions", []),
+        "has_web": bool(plugin.get("ui")),
+        "repo": source.get("repo", ""),
+        "commit": source.get("commit", ""),
+        "path": source.get("path", "."),
+        "readme": source.get("readme", ""),
         "asset": archive.name,
         "sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
     }
@@ -51,7 +60,11 @@ def _sign(key: Ed25519PrivateKey, path: Path) -> None:
 
 
 def build(
-    archives: list[Path], out: Path, key_path: Path, min_ab: str = DEFAULT_MIN_AB
+    archives: list[Path],
+    out: Path,
+    key_path: Path,
+    min_ab: str = DEFAULT_MIN_AB,
+    sources: dict[str, dict[str, str]] | None = None,
 ) -> Path:
     key = load_pem_private_key(key_path.read_bytes(), password=None)
     if not isinstance(key, Ed25519PrivateKey):
@@ -59,7 +72,7 @@ def build(
     out.mkdir(parents=True, exist_ok=True)
     entries = []
     for archive in sorted(archives):
-        entries.append(_entry(archive, min_ab))
+        entries.append(_entry(archive, min_ab, sources or {}))
         shutil.copy2(archive, out / archive.name)
         _sign(key, out / archive.name)
     catalog = out / "catalog.json"
@@ -73,9 +86,11 @@ def build(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("archives", nargs="+", type=Path)
+    parser.add_argument("archives", nargs="*", type=Path)  # 全部下架时为空
     parser.add_argument("--key", required=True, type=Path)
     parser.add_argument("--out", required=True, type=Path)
     parser.add_argument("--min-ab", default=DEFAULT_MIN_AB)
+    parser.add_argument("--sources", type=Path)
     args = parser.parse_args()
-    print(build(args.archives, args.out, args.key, args.min_ab))
+    sources = json.loads(args.sources.read_text("utf-8")) if args.sources else None
+    print(build(args.archives, args.out, args.key, args.min_ab, sources))

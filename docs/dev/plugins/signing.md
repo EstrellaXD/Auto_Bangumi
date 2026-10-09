@@ -28,6 +28,12 @@ AB 从 GitHub release `plugins` 下载 `catalog.json`。目录包含：
       "sdk": ">=0.5,<1",
       "min_ab_version": "4.0.0-beta.1",
       "description": "…",
+      "authors": ["…"],
+      "repo": "owner/ntfy-notifier",
+      "commit": "…",
+      "permissions": ["network"],
+      "has_web": false,
+      "readme": "…",
       "asset": "ntfy-notifier-0.1.0.zip",
       "sha256": "…"
     }
@@ -35,7 +41,18 @@ AB 从 GitHub release `plugins` 下载 `catalog.json`。目录包含：
 }
 ```
 
-`catalog.json` 和每个 zip 都有同名的 `.sig` 文件：对文件全部字节做 ed25519 签名，再用 base64 编码。公钥随 AB 镜像分发，与在线更新使用同一把密钥。
+条目里的字段：
+
+| 字段 | 说明 |
+| --- | --- |
+| `authors` | 作者列表，来自 `plugin.toml` |
+| `repo` | 源码所在的 GitHub 仓库 |
+| `commit` | 打包所用的 40 位完整 SHA |
+| `permissions` | 清单声明的权限，仅供展示 |
+| `has_web` | 插件是否带前端 |
+| `readme` | README 文本，最大 16 KB |
+
+`catalog.json` 和每个 zip 都有同名的 `.sig` 文件：对文件全部字节做 ed25519 签名，再用 base64 编码。公钥随 AB 镜像分发。目录使用专用的插件签名密钥，与在线更新的密钥不是同一把。4.0.0-beta.2 及之后的版本信任这把插件密钥；4.0.0-beta.1 无法从新目录安装。
 
 安装时 AB 依次检查：
 
@@ -67,22 +84,9 @@ API：
 
 ## 发布一个插件
 
-只有持有签名私钥的维护者能发布目录。流程：
+作者向 `EstrellaXD/Auto_Bangumi` 提交 PR，登记插件源码的仓库和 commit。CI 检查，维护者审核并合并。合并后 CI 用插件签名密钥重建并签名目录，上传到 release `plugins`。私钥只存在于 CI 的 secret 中，作者和 PR 的 CI 都接触不到。
 
-1. 作者：`ab-plugin pack .`，得到 zip。
-2. 作者：在 GitHub issue 里提交 zip 和源码地址，申请上架。
-3. 维护者审核源码后，对一个或多个 zip 运行：
-
-   ```bash
-   uv run --no-project --with cryptography python scripts/build_plugin_catalog.py \
-       --key ~/.autobangumi/update-signing-key.pem --min-ab 4.0.0-beta.1 \
-       --out release-assets dist/*.zip
-   ```
-
-   脚本输出 `catalog.json`、各 zip 及其 `.sig`。`--min-ab` 不要写成 `4.0.0`：按 semver，`4.0.0-beta.N` 低于 `4.0.0`，4.0 beta 用户将无法安装。
-4. 维护者把整个目录上传到 release `plugins`（覆盖旧文件）。
-
-用户端通过 `GET /api/v1/plugins/catalog` 看到新版本。
+完整流程见 [上架插件](/dev/plugins/publish)。
 
 ## 发布 SDK
 

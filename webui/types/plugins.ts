@@ -68,6 +68,13 @@ export interface CatalogEntry {
   extension_points: string[];
   description: string;
   min_ab_version: string;
+  authors: string[];
+  permissions: string[];
+  has_web: boolean;
+  /** 源码位置：作者仓库与固定的 commit */
+  repo: string;
+  commit: string;
+  readme: string;
   installed_version: string | null;
 }
 
