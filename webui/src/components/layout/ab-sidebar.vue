@@ -1,5 +1,6 @@
 <script lang="tsx" setup>
 import {
+  AppStore,
   Calendar,
   Download,
   Home,
@@ -86,12 +87,23 @@ const items = [
     path: '/log',
   },
   {
+    id: 8,
+    icon: AppStore,
+    label: () => t('sidebar.market'),
+    path: '/market',
+  },
+  {
     id: 7,
     icon: SettingTwo,
     label: () => t('sidebar.config'),
     path: '/config',
   },
 ];
+
+// 子路由（如 /market/:id）也高亮所属入口
+function isActive(path: string) {
+  return route.path === path || route.path.startsWith(`${path}/`);
+}
 
 // 插件经 page 挂载点提供的页面，排在设置之前
 const pageSlots = usePluginPages();
@@ -161,7 +173,7 @@ function Exit() {
             :title="i.label()"
             class="sidebar-item"
             :class="[
-              route.path === i.path && 'sidebar-item--active',
+              isActive(i.path) && 'sidebar-item--active',
               i.hidden && 'hidden',
             ]"
           >
@@ -204,7 +216,7 @@ function Exit() {
               :title="i.label()"
               class="sidebar-item"
               :class="[
-                route.path === i.path && 'sidebar-item--active',
+                isActive(i.path) && 'sidebar-item--active',
                 i.hidden && 'hidden',
               ]"
             >

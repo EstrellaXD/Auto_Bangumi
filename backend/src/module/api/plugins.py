@@ -4,6 +4,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
+from packaging.version import InvalidVersion, Version
 from pydantic import BaseModel, ValidationError
 
 from ab_sdk import points
@@ -64,6 +65,8 @@ class CatalogEntry(BaseModel):
     kind: str = "plugin"
     extension_points: list[str] = []
     description: str = ""
+    # 插件依赖的 ab_sdk 版本范围（清单中的 sdk）
+    sdk: str = ""
     min_ab_version: str = "0.0.0"
     authors: list[str] = []
     permissions: list[str] = []
@@ -71,8 +74,12 @@ class CatalogEntry(BaseModel):
     # 源码位置：作者仓库与固定的 commit（插件市场的索引条目）
     repo: str = ""
     commit: str = ""
+    # 插件在仓库中的子目录，"." 为仓库根
+    path: str = "."
     readme: str = ""
     installed_version: str | None
+    # 目录版本比已安装版本新（PEP 440 顺序）；目录回退时为 False
+    update_available: bool = False
 
 
 class PluginUiSlot(BaseModel):
@@ -141,12 +148,25 @@ async def get_catalog():
         raise HTTPException(
             status_code=502, detail=f"Plugin catalog unavailable: {e}"
         ) from None
-    return [
-        CatalogEntry(
-            **entry, installed_version=installed_version(CATALOG_ROOT, entry["id"])
+    result = []
+    for entry in entries:
+        current = installed_version(CATALOG_ROOT, entry["id"])
+        result.append(
+            CatalogEntry(
+                **entry,
+                installed_version=current,
+                update_available=current is not None
+                and _newer(entry["version"], current),
+            )
         )
-        for entry in entries
-    ]
+    return result
+
+
+def _newer(version: str, than: str) -> bool:
+    try:
+        return Version(version) > Version(than)
+    except InvalidVersion:
+        return version != than
 
 
 @router.get("/ui", response_model=list[PluginUiSlot])
@@ -220,9 +240,14 @@ async def update_plugin(
 
 
 @router.post("/{plugin_id}/install", response_model=PluginsOverview)
-async def install_plugin(plugin_id: str, ctx: AppContext = Depends(get_context)):
-    """从签名目录安装（或升级）插件并启用：用户点安装即同意其运行。"""
-    result = await PluginInstaller(app_version=VERSION).install(plugin_id)
+async def install_plugin(
+    plugin_id: str,
+    version: str | None = None,
+    ctx: AppContext = Depends(get_context),
+):
+    """从签名目录安装（或升级）插件并启用：用户点安装即同意其运行。
+    version 为用户确认时看到的版本，目录已变化时拒绝。"""
+    result = await PluginInstaller(app_version=VERSION).install(plugin_id, version)
     if not result.success:
         raise HTTPException(status_code=400, detail=result.message)
     settings.plugins.enabled[plugin_id] = True
