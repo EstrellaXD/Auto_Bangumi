@@ -165,23 +165,24 @@ class TestNotificationManager:
         for provider in manager.providers:
             provider.send.assert_called_once_with(notify)  # type: ignore[attr-defined]
 
-    async def test_test_provider(self, mock_settings):
-        """Manager can test a specific provider."""
-        config = ProviderConfig(
+    async def test_test_provider_index_counts_disabled_rows(self, mock_settings):
+        """下标对应已保存的完整渠道列表（含停用项），用保存的配置测试。"""
+        disabled = ProviderConfig(type="bark", enabled=False, device_key="k")
+        target = ProviderConfig(
             type="telegram", enabled=True, token="test", chat_id="123"
         )
-        mock_settings.notification.providers = [config]
+        mock_settings.notification.providers = [disabled, target]
 
         manager = NotificationManager()
-
-        # Mock the provider's test method
-        manager.providers[0].test = AsyncMock(return_value=(True, "Test successful"))
-        manager.providers[0].__aenter__ = AsyncMock(return_value=manager.providers[0])
-        manager.providers[0].__aexit__ = AsyncMock(return_value=None)
-
-        success, message = await manager.test_provider(0)
+        with patch.object(
+            NotificationManager,
+            "test_provider_config",
+            AsyncMock(return_value=(True, "Test successful")),
+        ) as tested:
+            success, message = await manager.test_provider(1)
         assert success is True
         assert message == "Test successful"
+        tested.assert_awaited_once_with(target)
 
     async def test_test_provider_invalid_index(self, mock_settings):
         """Manager handles invalid provider index."""

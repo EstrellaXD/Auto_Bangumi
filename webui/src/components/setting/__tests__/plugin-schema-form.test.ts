@@ -41,17 +41,29 @@ describe('plugin-schema-form', () => {
 });
 
 describe('plugin-schema-form number clear', () => {
+  // 清空后保持空白以便重新输入，不立刻填回默认值；Optional 字段清空为 null
   it.each([
-    [{ type: 'integer' as const, default: 5 }, 5],
-    [{ type: 'integer' as const }, undefined],
-  ])('should reset %j to its default when cleared', async (prop, expected) => {
+    [{ type: 'integer' as const, default: 5 }, false, undefined],
+    [{ type: 'integer' as const }, false, undefined],
+    [
+      {
+        anyOf: [{ type: 'integer' as const }, { type: 'null' as const }],
+        default: 5,
+      },
+      true,
+      null,
+    ],
+  ])('should keep %j empty when cleared', async (prop, hasKey, expected) => {
     const fields = schemaFields({ properties: { n: prop } });
     const model: Record<string, unknown> = { n: 9 };
     const wrapper = mount(PluginSchemaForm, {
       props: { fields, modelValue: model },
     });
-    await wrapper.find('input').setValue('');
+    const input = wrapper.find('input');
+    await input.setValue('');
+    expect('n' in model).toBe(hasKey);
     expect(model.n).toBe(expected);
+    expect(input.element.value).toBe('');
   });
 });
 

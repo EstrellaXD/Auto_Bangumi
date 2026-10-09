@@ -38,9 +38,11 @@ function instance(id: string) {
 }
 
 const state = ref({} as Plugins);
+// 服务端最近一次加载/保存的快照
+const saved = { plugins: {} as Plugins };
 
 vi.mock('@/store/config', () => ({
-  useConfigStore: () => ({ getSettingGroup: () => state }),
+  useConfigStore: () => ({ getSettingGroup: () => state, savedConfig: saved }),
 }));
 
 const AbSettingStub = defineComponent({
@@ -100,6 +102,7 @@ describe('config-download', () => {
       slots: { downloader: 'default' },
       instances: [instance('default'), instance('nas')],
     } as unknown as Plugins;
+    saved.plugins = JSON.parse(JSON.stringify(state.value));
   });
 
   it('should list every downloader instance and mark the default', () => {
@@ -201,6 +204,28 @@ describe('config-download', () => {
     expect(state.value.instances[0].provider).toBe('aria2');
     expect(state.value.instances[0].options.username).toBe('');
     expect(state.value.instances[0].options.host).toBe('');
+  });
+
+  // 切走再切回已保存的类型时恢复保存的配置（含掩码密码，保存时由后端还原）
+  it('should restore the saved options when switching back to the saved provider', async () => {
+    saved.plugins.instances[0].options.password = '********';
+    state.value.instances[0].options.password = '********';
+    const wrapper = mountIt();
+    const type = wrapper
+      .findAllComponents(AbSettingStub)
+      .find(
+        (s) =>
+          (s.props('label') as () => string)() === 'config.downloader_set.type'
+      );
+    await type?.vm.$emit('update:data', 'aria2');
+    await type?.vm.$emit('update:data', 'qbittorrent');
+    expect(state.value.instances[0].provider).toBe('qbittorrent');
+    expect(state.value.instances[0].options).toEqual(
+      saved.plugins.instances[0].options
+    );
+    expect(state.value.instances[0].options).not.toBe(
+      saved.plugins.instances[0].options
+    );
   });
 
   it('should hide the username field for aria2', async () => {

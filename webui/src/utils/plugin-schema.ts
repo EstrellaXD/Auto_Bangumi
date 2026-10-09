@@ -24,6 +24,8 @@ export interface SchemaField {
   default: unknown;
   /** 出现在 schema 的 required 列表中（pydantic 中没有默认值的字段） */
   required: boolean;
+  /** Optional 字段（anyOf 含 null），清空时存为 null */
+  nullable: boolean;
   /** number 字段的取值范围 */
   minimum?: number;
   maximum?: number;
@@ -88,6 +90,7 @@ function buildFields(
         : [],
       default: prop.default,
       required: required.includes(key),
+      nullable: Boolean(raw.anyOf?.some((p) => p.type === 'null')),
       minimum: prop.minimum,
       maximum: prop.maximum,
     };
@@ -100,12 +103,15 @@ export function schemaFields(schema: JsonSchema | null): SchemaField[] {
   return buildFields(schema.properties, schema.$defs ?? {}, schema.required);
 }
 
-/** 未保存过的字段用 schema 默认值填充，供表单初始展示 */
+/**
+ * 未保存过的字段用 schema 默认值填充，供表单初始展示。深拷贝 options：
+ * 表单会原地修改嵌套行，与已保存的 options 共用对象会让脏值检测失效。
+ */
 export function fillSchemaDefaults(
   fields: SchemaField[],
   options: Record<string, unknown>
 ): Record<string, unknown> {
-  const result: Record<string, unknown> = { ...options };
+  const result: Record<string, unknown> = JSON.parse(JSON.stringify(options));
   for (const field of fields) {
     if (!(field.key in result) && field.default !== undefined) {
       result[field.key] = JSON.parse(JSON.stringify(field.default));

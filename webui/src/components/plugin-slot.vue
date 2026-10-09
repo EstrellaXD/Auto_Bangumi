@@ -69,6 +69,12 @@ async function mount() {
   }
 }
 
+// 浏览器会缓存求值失败的模块（插件加载器只丢弃失败的 Promise），
+// 原地重新导入无法恢复，只能刷新页面
+function reload() {
+  location.reload();
+}
+
 function unmount() {
   generation += 1;
   teardown?.();
@@ -95,7 +101,9 @@ watch(
       <span v-if="reason" class="plugin-slot__id">{{ reason }}</span>
       {{ $t('plugin.load_failed_hint') }}
       <template #action>
-        <ab-button size="sm" @click="mount">{{ $t('plugin.retry') }}</ab-button>
+        <ab-button size="sm" @click="reload">{{
+          $t('plugin.reload')
+        }}</ab-button>
       </template>
     </ab-alert>
     <div v-show="!failed" ref="container" class="plugin-slot__body"></div>

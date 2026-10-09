@@ -20,10 +20,14 @@ vi.mock('@/hooks/usePluginProviders', () => ({
 }));
 const group = ref({
   enable: true,
-  providers: [{ type: 'telegram', enabled: true, token: 'tk' }],
+  providers: [
+    { type: 'telegram', enabled: true, token: '********' },
+    { type: 'ntfy', enabled: true, topic: '********' },
+  ],
 });
+const saved = { notification: { providers: [] as unknown[] } };
 vi.mock('@/store/config', () => ({
-  useConfigStore: () => ({ getSettingGroup: () => group }),
+  useConfigStore: () => ({ getSettingGroup: () => group, savedConfig: saved }),
 }));
 
 const api = vi.mocked(apiNotification);
@@ -61,9 +65,33 @@ describe('config-notification', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     api.testProviderConfig.mockResolvedValue(ok as any);
+    api.testProvider.mockResolvedValue(ok as any);
+    saved.notification.providers = JSON.parse(
+      JSON.stringify(group.value.providers)
+    );
   });
 
-  it('should test the in-memory config and name the provider when testing from the list', async () => {
+  // /config/get 返回的密钥是掩码，列表测试须按下标走后端保存的配置
+  it.each([
+    [0, 'Telegram: ok'],
+    [1, 'config.notification_set.plugin_label:ntfy: ok'],
+  ])(
+    'should test saved row %i by index when testing from the list',
+    async (index, text) => {
+      const w = mountPage();
+      await w
+        .findAll('[aria-label="config.notification_set.test"]')
+        [index].trigger('click');
+      await flushPromises();
+      expect(api.testProviderConfig).not.toHaveBeenCalled();
+      expect(api.testProvider).toHaveBeenCalledWith({ provider_index: index });
+      expect(w.find('.test-result').text()).toBe(text);
+    }
+  );
+
+  // 未保存的行（新增或删除后下标错位）在后端没有对应项，按当前配置测试
+  it('should test an unsaved row with its in-memory config', async () => {
+    saved.notification.providers = [];
     const w = mountPage();
     await w
       .find('[aria-label="config.notification_set.test"]')
@@ -71,9 +99,8 @@ describe('config-notification', () => {
     await flushPromises();
     expect(api.testProvider).not.toHaveBeenCalled();
     expect(api.testProviderConfig).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'telegram', token: 'tk' })
+      expect.objectContaining({ type: 'telegram' })
     );
-    expect(w.find('.test-result').text()).toBe('Telegram: ok');
   });
 
   it('should keep dialog test results out of the list and clear them on close', async () => {

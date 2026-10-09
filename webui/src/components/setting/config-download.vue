@@ -7,7 +7,8 @@ import { usePluginProviders } from '@/hooks/usePluginProviders';
 
 const { t } = useMyI18n();
 const { confirm } = useConfirm();
-const { getSettingGroup } = useConfigStore();
+const configStore = useConfigStore();
+const { getSettingGroup } = configStore;
 
 const plugins = getSettingGroup('plugins');
 const downloaders = computed(() =>
@@ -34,7 +35,7 @@ const idError = computed(() => {
   return idTaken.value ? t('config.downloader_set.id_taken') : '';
 });
 
-// 空白 options；切换下载器类型时重置，避免旧类型的凭据带入新类型
+// 空白 options；切换到新类型时重置，避免旧类型的凭据带入新类型
 function defaultOptions() {
   return {
     host: '',
@@ -45,10 +46,19 @@ function defaultOptions() {
   } satisfies DownloaderOptions;
 }
 
+// 切回已保存的类型时恢复保存的 options（掩码密码保存时由后端还原），
+// 否则切走再切回会把已保存的凭据清空
 function setProvider(provider: string) {
-  if (!downloader.value || downloader.value.provider === provider) return;
-  downloader.value.provider = provider;
-  downloader.value.options = defaultOptions();
+  const current = downloader.value;
+  if (!current || current.provider === provider) return;
+  const saved = configStore.savedConfig.plugins.instances.find(
+    (i) => i.id === current.id
+  );
+  current.provider = provider;
+  current.options =
+    saved?.provider === provider
+      ? JSON.parse(JSON.stringify(saved.options))
+      : defaultOptions();
 }
 
 function addInstance() {

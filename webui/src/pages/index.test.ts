@@ -15,9 +15,11 @@ vi.mock('@/hooks/useMyI18n', async () => {
 });
 
 const slots = ref<unknown[]>([]);
+const loaded = ref(false);
+const loadFailed = ref(false);
 vi.mock('@/hooks/usePluginUi', () => ({
   slotTitle: (ui: { title: Record<string, string> }) => ui.title['en-US'],
-  usePluginUi: () => ({ slots }),
+  usePluginUi: () => ({ slots, loaded, loadFailed }),
 }));
 vi.mock('@/store/bangumi', () => ({
   useBangumiStore: () => ({ editRule: ref({}) }),
@@ -37,6 +39,8 @@ function mountIndex() {
 describe('index page title', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
+    loaded.value = false;
+    loadFailed.value = false;
   });
 
   it('should leave the title empty on a plugin route until the manifest arrives', async () => {
@@ -50,4 +54,19 @@ describe('index page title', () => {
     await w.vm.$nextTick();
     expect(w.find('h1').text()).toBe('Demo page');
   });
+
+  // 插件已停用/不存在或清单加载失败时没有匹配的页面，标题回退为插件 id
+  it.each([
+    [true, false],
+    [false, true],
+  ])(
+    'should fall back to the plugin id when loaded=%s failed=%s and no page matches',
+    async (isLoaded, failed) => {
+      slots.value = [];
+      loaded.value = isLoaded;
+      loadFailed.value = failed;
+      const w = mountIndex();
+      expect(w.find('h1').text()).toBe('demo');
+    }
+  );
 });

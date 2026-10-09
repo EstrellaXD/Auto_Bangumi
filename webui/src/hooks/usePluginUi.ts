@@ -35,6 +35,19 @@ export function useUiSlots(slot: UiSlot) {
   return computed(() => all.value.filter((s) => s.slot === slot));
 }
 
+/**
+ * 导航用的插件页面：每个插件一项（取它的第一个 page 挂载点）。同一插件的
+ * 多个页面共用 /plugins/<id> 路由，逐个列出会出现重复入口。
+ */
+export function usePluginPages() {
+  const pages = useUiSlots('page');
+  return computed(() =>
+    pages.value.filter(
+      (ui, i, all) => all.findIndex((s) => s.plugin_id === ui.plugin_id) === i
+    )
+  );
+}
+
 /** 按当前语言取标题：`zh-CN` → `en-US` → 第一个。 */
 export function slotTitle(ui: PluginUiSlot, locale: string): string {
   return ui.title[locale] ?? ui.title['en-US'] ?? Object.values(ui.title)[0];

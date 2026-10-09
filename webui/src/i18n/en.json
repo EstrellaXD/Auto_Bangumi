@@ -627,8 +627,9 @@
     "load_failed": "Plugin component failed to load.",
     "page_missing": "This plugin has no page",
     "page_missing_hint": "The plugin is disabled, or it does not declare a page.",
-    "load_failed_hint": "Retry, or reload the page. If it keeps failing, disable the plugin in Settings > Plugins.",
+    "load_failed_hint": "Reload the page to try again. If it keeps failing, disable the plugin in Settings > Plugins.",
     "retry": "Retry",
+    "reload": "Reload page",
     "load_failed_page": "Could not load plugin pages"
   },
   "sidebar": {

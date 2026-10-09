@@ -15,7 +15,7 @@ vi.mock('@/hooks/useDarkMode', async () => {
 vi.mock('vue-inline-svg', () => ({ default: { template: '<i />' } }));
 vi.mock('@/hooks/usePluginUi', () => ({
   slotTitle: (ui: { title: Record<string, string> }) => ui.title['en-US'],
-  useUiSlots: () =>
+  usePluginPages: () =>
     ref([
       {
         plugin_id: 'demo',

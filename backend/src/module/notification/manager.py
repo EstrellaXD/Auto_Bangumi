@@ -148,23 +148,16 @@ class NotificationManager:
         await self._broadcast("system event", send_one)
 
     async def test_provider(self, index: int) -> tuple[bool, str]:
-        """Test a specific provider by index.
+        """按下标测试已保存的渠道。
 
-        Args:
-            index: The index of the provider in the providers list.
-
-        Returns:
-            A tuple of (success, message).
+        下标对应 ``settings.notification.providers`` 的完整列表（含停用项），
+        与前端列表一致；``self.providers`` 只含已启用且构造成功的渠道，不能
+        按它取下标。使用保存的配置，密钥是真实值而非前端拿到的掩码。
         """
-        if index < 0 or index >= len(self.providers):
+        providers = settings.notification.providers
+        if index < 0 or index >= len(providers):
             return False, f"Invalid provider index: {index}"
-
-        provider = self.providers[index]
-        try:
-            async with provider:
-                return await provider.test()
-        except Exception as e:
-            return False, f"Test failed: {e}"
+        return await self.test_provider_config(providers[index])
 
     @staticmethod
     async def test_provider_config(config: "ProviderConfig") -> tuple[bool, str]:

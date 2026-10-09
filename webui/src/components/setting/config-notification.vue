@@ -8,7 +8,8 @@ import { usePluginProviders } from '@/hooks/usePluginProviders';
 
 const { t, returnUserLangText } = useMyI18n();
 const { confirm } = useConfirm();
-const { getSettingGroup } = useConfigStore();
+const configStore = useConfigStore();
+const { getSettingGroup } = configStore;
 
 const notificationRef = getSettingGroup('notification');
 
@@ -214,10 +215,10 @@ function toggleProvider(index: number) {
 }
 
 async function runTest(
-  config: NotificationProviderConfig
+  request: () => ReturnType<typeof apiNotification.testProvider>
 ): Promise<TestResult> {
   try {
-    const response = await apiNotification.testProviderConfig(config as any);
+    const response = await request();
     return {
       success: response.data.success,
       message: returnUserLangText({
@@ -233,12 +234,20 @@ async function runTest(
   }
 }
 
-// 列表测试发送当前（含未保存）的配置，而不是后端已保存的第 index 项
+// 已保存且未改动的行按下标使用后端保存的配置：前端拿到的密钥是掩码，
+// 发回去必然失败；插件渠道的自带字段也只有后端的完整配置里才有。
+// 其余行（新增、删除后下标错位、已编辑）在后端没有对应项，按当前配置测试
 async function testProvider(index: number) {
   testingIndex.value = index;
   listResult.value = null;
   const provider = providers.value[index];
-  const result = await runTest(provider);
+  const saved = configStore.savedConfig.notification.providers?.[index];
+  const unchanged = JSON.stringify(saved) === JSON.stringify(provider);
+  const result = await runTest(() =>
+    unchanged
+      ? apiNotification.testProvider({ provider_index: index })
+      : apiNotification.testProviderConfig(provider as any)
+  );
   listResult.value = {
     ...result,
     message: `${getProviderLabel(provider.type)}: ${result.message}`,
@@ -249,7 +258,9 @@ async function testProvider(index: number) {
 async function testNewProvider() {
   testingIndex.value = -999; // Special index for new provider
   dialogResult.value = null;
-  dialogResult.value = await runTest(newProvider.value);
+  dialogResult.value = await runTest(() =>
+    apiNotification.testProviderConfig(newProvider.value as any)
+  );
   testingIndex.value = -1;
 }
 

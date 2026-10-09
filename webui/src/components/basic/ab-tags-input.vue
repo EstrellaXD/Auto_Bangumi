@@ -13,6 +13,12 @@ function add() {
     model.value = [...model.value, value];
   draft.value = '';
 }
+
+// 输入法组字时的回车用于确认候选词，不添加标签
+function onEnter(event: KeyboardEvent) {
+  if (event.isComposing || event.keyCode === 229) return;
+  add();
+}
 </script>
 
 <template>
@@ -30,8 +36,8 @@ function add() {
     <AbInput
       v-model="draft"
       :aria-label="ariaLabel"
-      @keydown.enter.prevent="add"
-      @blur="add"
+      @keydown.enter.prevent="onEnter"
+      @focusout="add"
     />
   </div>
 </template>

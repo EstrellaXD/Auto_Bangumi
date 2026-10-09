@@ -63,15 +63,7 @@ async def test_provider(request: TestProviderRequest):
     in the current configuration.
     """
     try:
-        manager = NotificationManager()
-        if request.provider_index >= len(manager):
-            return TestResponse(
-                success=False,
-                message=f"Invalid provider index: {request.provider_index}",
-                message_zh=f"无效的提供者索引: {request.provider_index}",
-                message_en=f"Invalid provider index: {request.provider_index}",
-            )
-
+        manager = NotificationManager(load_providers=False)
         success, message = await manager.test_provider(request.provider_index)
         return TestResponse(
             success=success,

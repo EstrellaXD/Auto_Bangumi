@@ -627,8 +627,9 @@
     "load_failed": "插件组件加载失败。",
     "page_missing": "该插件没有页面",
     "page_missing_hint": "插件未启用，或没有声明页面。",
-    "load_failed_hint": "请重试或刷新页面。仍然失败时，请在 设置 > 插件 中停用该插件。",
+    "load_failed_hint": "请刷新页面后重试。仍然失败时，请在 设置 > 插件 中停用该插件。",
     "retry": "重试",
+    "reload": "刷新页面",
     "load_failed_page": "无法加载插件页面"
   },
   "sidebar": {

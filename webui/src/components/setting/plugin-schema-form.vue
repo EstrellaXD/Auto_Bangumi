@@ -76,10 +76,10 @@ async function removeRow(field: SchemaField, index: number) {
 function setNumber(field: SchemaField, value: string | number) {
   const parsed = Number(value);
   if (value === '' || Number.isNaN(parsed)) {
-    // 清空时回到 schema 默认值，没有默认值才删除该键
-    if (field.default === undefined || field.default === null)
-      delete model.value[field.key];
-    else model.value[field.key] = field.default;
+    // 清空后保持空白便于重新输入：Optional 字段存 null，其余删除该键
+    // （保存时由后端取默认值）
+    if (field.nullable) model.value[field.key] = null;
+    else delete model.value[field.key];
     return;
   }
   model.value[field.key] = field.integer ? Math.trunc(parsed) : parsed;

@@ -166,8 +166,12 @@ describe('plugin-slot', () => {
     expect(wrapper.findComponent(AbSkeleton).exists()).toBe(false);
   });
 
-  it('should show the reason and a next step, and retry on demand', async () => {
+  // 浏览器缓存失败的模块，原地重新导入无法恢复，只能刷新页面
+  it('should show the reason and a next step, and reload the page on demand', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
+    const reload = vi
+      .spyOn(window.location, 'reload')
+      .mockImplementation(() => {});
     loadPluginElement.mockRejectedValueOnce(new Error('bundle 404'));
     const wrapper = mountSlot(makeUi('broken'));
     await flushPromises();
@@ -179,7 +183,7 @@ describe('plugin-slot', () => {
     await alert.findComponent(AbButton).trigger('click');
     await flushPromises();
 
-    expect(wrapper.findComponent(AbAlert).exists()).toBe(false);
-    expect(shadowText(wrapper)).toContain('plugin content');
+    expect(reload).toHaveBeenCalledTimes(1);
+    expect(loadPluginElement).toHaveBeenCalledTimes(1);
   });
 });
