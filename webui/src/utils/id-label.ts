@@ -17,5 +17,6 @@ export function idLabel(
       (node, part) => (node as Record<string, unknown> | undefined)?.[part],
       en
     );
-  return typeof found === 'string' ? t(key) : id;
+  // 构建时 i18n 插件把文案预编译成消息函数，测试里则是原始字符串
+  return typeof found === 'string' || typeof found === 'function' ? t(key) : id;
 }
