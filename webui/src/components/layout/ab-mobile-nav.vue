@@ -51,7 +51,7 @@ const navItems = [
   {
     id: 8,
     icon: AppStore,
-    label: () => t('sidebar.market'),
+    label: () => t('sidebar.market_short'),
     path: '/market',
   },
   {

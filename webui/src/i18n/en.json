@@ -635,7 +635,8 @@
     "player": "Player",
     "rss": "RSS",
     "title": "Menu",
-    "market": "Plugin market"
+    "market": "Plugin market",
+    "market_short": "Market"
   },
   "common": {
     "cancel": "Cancel",

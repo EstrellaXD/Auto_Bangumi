@@ -635,7 +635,8 @@
     "player": "播放器",
     "rss": "RSS 管理",
     "title": "菜单",
-    "market": "插件市场"
+    "market": "插件市场",
+    "market_short": "插件市场"
   },
   "common": {
     "cancel": "取消",

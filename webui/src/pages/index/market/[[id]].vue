@@ -74,6 +74,23 @@ async function loadInstalled() {
 
 onMounted(() => Promise.all([loadCatalog(), loadInstalled()]));
 
+// 页面被 KeepAlive 缓存；再次进入时按本机插件同步安装状态（设置页可能卸载过），不重新下载目录
+let activated = false;
+onActivated(async () => {
+  if (!activated) {
+    activated = true;
+    return;
+  }
+  await loadInstalled();
+  if (!catalog.value) return;
+  catalog.value = catalog.value.map((entry) => ({
+    ...entry,
+    installed_version:
+      installed.value.find((p) => p.id === entry.id && p.source === 'catalog')
+        ?.version ?? null,
+  }));
+});
+
 // 相对时间每分钟刷新一次
 const now = ref(Date.now());
 useIntervalFn(() => (now.value = Date.now()), 60_000);
