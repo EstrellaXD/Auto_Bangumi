@@ -86,7 +86,7 @@ def build(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("archives", nargs="+", type=Path)
+    parser.add_argument("archives", nargs="*", type=Path)  # 全部下架时为空
     parser.add_argument("--key", required=True, type=Path)
     parser.add_argument("--out", required=True, type=Path)
     parser.add_argument("--min-ab", default=DEFAULT_MIN_AB)

@@ -1,11 +1,14 @@
 """插件市场索引工具 scripts/plugin_registry.py：条目解析、上架规则、测试门槛与增量构建。"""
 
+import base64
 import hashlib
 import importlib.util
 import json
 from pathlib import Path
 
 import pytest
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 
 from ab_sdk.cli import main, pack
 from ab_sdk.manifest import load_manifest
@@ -249,3 +252,44 @@ def test_diff_lists_registry_changes_between_commits(reg, tmp_path, monkeypatch)
     changed = reg._diff("HEAD~1", "HEAD", "--diff-filter=AMR", "--", "plugins/registry")
 
     assert changed == [f"plugins/registry/{PLUGIN_ID}.toml"]
+
+
+def test_symlinked_registry_entry_is_rejected(reg, tmp_path, monkeypatch):
+    (tmp_path / "elsewhere.toml").write_text(entry_text())
+    root = tmp_path / "registry"
+    root.mkdir()
+    (root / f"{PLUGIN_ID}.toml").symlink_to(tmp_path / "elsewhere.toml")
+    monkeypatch.setattr(reg, "REGISTRY", root)
+    with pytest.raises(reg.Reject, match="符号链接"):
+        reg.registry_entries()
+
+
+class TestLoadCatalog:
+    @pytest.fixture
+    def signed(self, reg, tmp_path, monkeypatch):
+        priv = Ed25519PrivateKey.generate()
+        pub = tmp_path / "pub.pem"
+        pub.write_bytes(
+            priv.public_key().public_bytes(
+                Encoding.PEM, PublicFormat.SubjectPublicKeyInfo
+            )
+        )
+        monkeypatch.setattr(reg, "PLUGIN_PUBKEY", pub)
+        catalog = tmp_path / "catalog.json"
+        catalog.write_text(json.dumps({"schema": 2, "plugins": [{"id": PLUGIN_ID}]}))
+        sig = tmp_path / "catalog.json.sig"
+        sig.write_text(base64.b64encode(priv.sign(catalog.read_bytes())).decode())
+        return catalog, sig
+
+    def test_valid_signature_loads(self, reg, signed):
+        assert list(reg.load_catalog(signed[0])) == [PLUGIN_ID]
+
+    @pytest.mark.parametrize("tamper", ["catalog", "missing_sig"])
+    def test_tampered_or_unsigned_catalog_is_refused(self, reg, signed, tamper):
+        catalog, sig = signed
+        if tamper == "catalog":
+            catalog.write_text(json.dumps({"schema": 2, "plugins": []}))
+        else:
+            sig.unlink()
+        with pytest.raises(SystemExit, match="签名"):
+            reg.load_catalog(catalog)

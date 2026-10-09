@@ -30,6 +30,15 @@ from module.update.signing import DEFAULT_PUBKEY_PATH
 PLUGIN_ID = "catalog-demo"
 
 
+def load_catalog_script():
+    script = Path(__file__).resolve().parents[3] / "scripts" / "build_plugin_catalog.py"
+    spec = importlib.util.spec_from_file_location("build_plugin_catalog", script)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 @pytest.fixture
 def keypair(tmp_path):
     priv = Ed25519PrivateKey.generate()
@@ -248,18 +257,23 @@ class TestInstall:
 
 
 class TestReleaseScript:
+    def test_empty_registry_builds_an_empty_signed_catalog(self, tmp_path, keypair):
+        module = load_catalog_script()
+        priv, _ = keypair
+        key_path = tmp_path / "key.pem"
+        key_path.write_bytes(
+            priv.private_bytes(Encoding.PEM, PrivateFormat.PKCS8, NoEncryption())
+        )
+        catalog = module.build([], tmp_path / "release", key_path)
+        assert json.loads(catalog.read_text())["plugins"] == []
+        assert (tmp_path / "release" / "catalog.json.sig").is_file()
+
     # 默认 --min-ab 须放行 4.0 的 beta 宿主（semver 中 4.0.0-beta.N < 4.0.0）
     @pytest.mark.parametrize("app_version", ["4.0.0-beta.1", "4.0.0"])
     async def test_catalog_built_by_release_script_installs(
         self, tmp_path, keypair, app_version
     ):
-        script = (
-            Path(__file__).resolve().parents[3] / "scripts" / "build_plugin_catalog.py"
-        )
-        spec = importlib.util.spec_from_file_location("build_plugin_catalog", script)
-        assert spec and spec.loader
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
+        module = load_catalog_script()
         priv, pubkey_path = keypair
         key_path = tmp_path / "key.pem"
         key_path.write_bytes(

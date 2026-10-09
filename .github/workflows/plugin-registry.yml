@@ -44,10 +44,12 @@ jobs:
       - name: Fetch PR head
         run: |
           git fetch -q origin "refs/pull/${{ github.event.number }}/head"
+          # 固定为 SHA：作者代码在检查过程中可以改写 .git/FETCH_HEAD
+          echo "HEAD_SHA=$(git rev-parse FETCH_HEAD)" >> "$GITHUB_ENV"
           # 引入本脚本的那个 PR 时 base 上还没有它，只能用 PR 自己的版本
           if [ ! -f scripts/plugin_registry.py ]; then
             echo "::warning::base 分支没有 scripts/plugin_registry.py，使用 PR 中的版本"
-            git checkout FETCH_HEAD -- scripts/plugin_registry.py
+            git checkout "$(git rev-parse FETCH_HEAD)" -- scripts/plugin_registry.py
           fi
       - &python
         uses: actions/setup-python@v5
@@ -73,12 +75,12 @@ jobs:
         name: Download published catalog
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release download plugins -p catalog.json -D old || echo "release plugins 还不存在"
+        run: gh release download plugins -p catalog.json -p catalog.json.sig -D old || echo "release plugins 还不存在"
       - name: Check changed entries
         run: |
           set -o pipefail
           uv run --project backend python scripts/plugin_registry.py check \
-            --base "${{ github.event.pull_request.base.sha }}" --head FETCH_HEAD \
+            --base "${{ github.event.pull_request.base.sha }}" --head "$HEAD_SHA" \
             --catalog old/catalog.json --out dist | tee -a "$GITHUB_STEP_SUMMARY"
 
   plan:
@@ -158,8 +160,10 @@ jobs:
           fi
           umask 077
           printf '%s\n' "$PLUGIN_SIGNING_KEY" > "$RUNNER_TEMP/key.pem"
+          shopt -s nullglob  # 全部下架时没有 zip，签一个空目录
+          zips=(stage/*.zip)
           uv run --no-project --with cryptography python scripts/build_plugin_catalog.py \
-            --key "$RUNNER_TEMP/key.pem" --sources stage/sources.json --out release-assets stage/*.zip
+            --key "$RUNNER_TEMP/key.pem" --sources stage/sources.json --out release-assets "${zips[@]}"
           rm -f "$RUNNER_TEMP/key.pem"
       - name: Publish
         env:

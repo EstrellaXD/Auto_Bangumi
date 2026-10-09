@@ -20,6 +20,7 @@
 """
 
 import argparse
+import base64
 import hashlib
 import html
 import json
@@ -35,6 +36,9 @@ import zipfile
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
+from cryptography.exceptions import InvalidSignature
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+from cryptography.hazmat.primitives.serialization import load_pem_public_key
 from packaging.version import Version
 
 from ab_sdk.cli import _PACK_EXCLUDE_DIRS, pack
@@ -44,6 +48,7 @@ ROOT = Path(__file__).resolve().parent.parent
 REGISTRY = ROOT / "plugins" / "registry"
 BUILTIN_ROOT = ROOT / "backend" / "src" / "module" / "plugins" / "builtin"
 PLUGIN_UI = ROOT / "webui" / "packages" / "plugin-ui"
+PLUGIN_PUBKEY = ROOT / "backend" / "src" / "module" / "plugin" / "ab_plugin_pubkey.pem"
 RELEASE_BASE = "https://github.com/EstrellaXD/Auto_Bangumi/releases/download/plugins"
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 REPO_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
@@ -95,10 +100,11 @@ class Entry:
 
 
 def registry_entries() -> list[Entry]:
-    return [
-        Entry.parse(p.stem, p.read_text("utf-8"))
-        for p in sorted(REGISTRY.glob("*.toml"))
-    ]
+    paths = sorted(REGISTRY.glob("*.toml"))
+    if links := [p.name for p in paths if p.is_symlink()]:
+        # 符号链接会把条目指向 registry 之外、未经检查的文件
+        raise Reject(f"条目不能是符号链接：{', '.join(links)}")
+    return [Entry.parse(p.stem, p.read_text("utf-8")) for p in paths]
 
 
 def _run(cmd: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
@@ -231,10 +237,22 @@ def readme(src: Path) -> str:
 
 
 def load_catalog(path: Path | None) -> dict[str, dict]:
-    """已发布的 catalog：id → 条目。release 还不存在时为空。"""
+    """已发布的 catalog：id → 条目。release 还不存在时为空。
+
+    先验签：复用的 zip 与已上架版本都以它为准，能改 release 资源但没有签名密钥的
+    人不能借下一次发布让篡改过的 zip 被重新签名。
+    """
     if path is None or not path.is_file():
         return {}
-    return {p["id"]: p for p in json.loads(path.read_text("utf-8")).get("plugins", [])}
+    data = path.read_bytes()
+    sig_path = path.with_name(path.name + ".sig")
+    pubkey = load_pem_public_key(PLUGIN_PUBKEY.read_bytes())
+    assert isinstance(pubkey, Ed25519PublicKey)
+    try:
+        pubkey.verify(base64.b64decode(sig_path.read_text().strip()), data)
+    except (FileNotFoundError, ValueError, InvalidSignature):
+        raise SystemExit(f"{path} 的签名无效或缺失") from None
+    return {p["id"]: p for p in json.loads(data).get("plugins", [])}
 
 
 def _git(*args: str) -> subprocess.CompletedProcess[str]:
@@ -262,6 +280,8 @@ def check_entry(
     rel = f"plugins/registry/{plugin_id}.toml"
     lines: list[tuple[str, str]] = []
     try:
+        if _git("ls-tree", head, rel).stdout.startswith("120000"):
+            raise Reject("条目不能是符号链接")
         entry = Entry.parse(plugin_id, _git("show", f"{head}:{rel}").stdout)
         old_text = _git("show", f"{base}:{rel}")
         old = (
@@ -342,7 +362,7 @@ def summary(results: list[Result], removed: list[str], others: list[str]) -> str
 def cmd_check(base: str, head: str, catalog: Path | None, out: Path) -> int:
     changed = sorted(
         PurePosixPath(p).stem
-        for p in _diff(base, head, "--diff-filter=AMR", "--", "plugins/registry")
+        for p in _diff(base, head, "--diff-filter=AMRT", "--", "plugins/registry")
     )
     removed = sorted(
         PurePosixPath(p).stem
