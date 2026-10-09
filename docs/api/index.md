@@ -208,7 +208,7 @@ curl -N -H "Authorization: Bearer $AB_TOKEN" http://your-host:7892/api/v1/events
 
 ## MCP
 
-AB 在根路径的 `/mcp` 下提供 MCP 服务（SSE 传输）：客户端连接 `GET /mcp/sse`，并向 `POST /mcp/messages/` 发送消息。
+AB 在根路径的 `/mcp` 下提供 MCP 服务：Streamable HTTP 传输的端点为 `/mcp`；旧版 SSE 传输仍可用，客户端连接 `GET /mcp/sse`，并向 `POST /mcp/messages/` 发送消息。
 
 - 访问控制与 REST API 分开：客户端 IP 在 `security.mcp_whitelist` 内，或请求带 `scope=mcp` 的令牌（`Authorization: Bearer <令牌>`）。`mcp_whitelist` 为空时拒绝所有基于 IP 的访问，令牌仍然有效。
 - 内置工具：`list_anime`、`get_anime`、`search_anime`、`subscribe_anime`、`unsubscribe_anime`、`list_downloads`、`list_rss_feeds`、`get_program_status`、`refresh_feeds`、`update_anime`。
