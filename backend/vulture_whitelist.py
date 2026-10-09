@@ -34,6 +34,7 @@ min_ab_version
 authors
 has_web
 readme
+update_available
 
 # --- 协议 / 回调签名要求的参数 ---
 connection_record  # SQLAlchemy connect 事件回调
