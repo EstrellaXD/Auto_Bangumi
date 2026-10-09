@@ -686,7 +686,7 @@ class TestManager:
         await manager.start()
         [status] = manager.statuses()
         assert status.state == "disabled"
-        assert "allow_unsigned" in (status.error or "")
+        assert status.error == "unsigned_blocked"
         settings_obj.plugins.allow_unsigned = True
         await manager.apply_settings()
         assert manager.statuses()[0].state == "active"
@@ -834,7 +834,7 @@ class TestManager:
         settings_obj.plugins.enabled = {"demo": False}
         await manager.apply_settings()
         [status] = manager.statuses()
-        assert (status.state, status.error) == ("disabled", "未启用")
+        assert (status.state, status.error) == ("disabled", "not_enabled")
 
     async def test_unknown_extension_point_fails_load(self, tmp_path):
         recorder = Recorder()
@@ -984,7 +984,7 @@ class TestPluginsApi:
             source="local",
             signed=False,
             state="disabled",
-            error="未签名插件需要开启 plugins.allow_unsigned",
+            error="unsigned_blocked",
         )
         ctx = SimpleNamespace(plugins=SimpleNamespace(statuses=lambda: [status]))
         monkeypatch.setattr(settings, "plugins", Plugins())

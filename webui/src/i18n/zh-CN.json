@@ -270,7 +270,11 @@
       "remove_row_confirm_body": "保存插件选项后，该行的内容会被删除。",
       "field_required": "必填",
       "field_min": "不能小于 {n}",
-      "field_max": "不能大于 {n}"
+      "field_max": "不能大于 {n}",
+      "reason": {
+        "not_enabled": "未启用",
+        "unsigned_blocked": "未签名插件需要开启「允许未签名插件」后才会加载。"
+      }
     }
   },
   "downloader": {
@@ -852,6 +856,83 @@
       "rename_skipped": {
         "title": "文件未重命名",
         "body": "{torrent_name}（重命名方式：{strategy}）。详情：{reason}。文件保留原名。请修正重命名设置，下次运行时会自动重试。"
+      }
+    }
+  },
+  "builtin_plugins": {
+    "hardlink": {
+      "name": "硬链接到媒体库",
+      "description": "整理完成后把正片与字幕硬链接到媒体库目录，下载目录保持原样继续做种",
+      "fields": {
+        "path_map": {
+          "title": "路径映射",
+          "description": "下载器与 AutoBangumi 不在同一个文件系统视图（如分别运行在不同容器）时，把下载器路径前缀换成本地路径；按最长前缀匹配，未匹配的路径原样使用",
+          "downloader": {
+            "title": "下载器",
+            "description": "下载器实例 id"
+          },
+          "from": {
+            "title": "下载器路径",
+            "description": "下载器看到的路径前缀"
+          },
+          "to": {
+            "title": "本地路径",
+            "description": "同一位置在 AutoBangumi 中的路径"
+          }
+        },
+        "source_root": {
+          "title": "下载根目录",
+          "description": "本地路径，媒体库保持与它相同的目录结构"
+        },
+        "library_root": {
+          "title": "媒体库目录",
+          "description": "链接放在这里；硬链接要求与下载根目录在同一个文件系统"
+        },
+        "cross_device": {
+          "title": "跨文件系统时",
+          "description": "copy 复制文件，symlink 创建软链接，skip 跳过并通知"
+        }
+      }
+    },
+    "ingest_filters": {
+      "name": "种子过滤",
+      "description": "在规则的排除过滤之外，按包含关键词进一步筛选要下载的种子（留空不生效）",
+      "fields": {
+        "include": {
+          "title": "包含过滤",
+          "description": "只下载名称匹配任一表达式的种子（正则，忽略大小写），例如 1080p、简体。留空表示不限制。对所有订阅生效。"
+        }
+      }
+    },
+    "media_server_refresh": {
+      "name": "媒体库刷新",
+      "description": "种子整理完成后通知 Jellyfin / Emby / Plex 刷新媒体库；填写服务器地址与 API Key 后生效",
+      "fields": {
+        "server": {
+          "title": "服务器类型"
+        },
+        "url": {
+          "title": "服务器地址",
+          "description": "如 http://192.168.1.10:8096（Plex 默认端口 32400）；留空则不刷新"
+        },
+        "api_key": {
+          "title": "API Key",
+          "description": "Jellyfin / Emby 的 API Key，或 Plex 的 X-Plex-Token"
+        },
+        "delay": {
+          "title": "延迟（秒）",
+          "description": "收到整理完成事件后等待多久再刷新，期间的事件合并为一次刷新"
+        }
+      }
+    },
+    "rename": {
+      "name": "重命名",
+      "description": "提供重命名方式 pn、advance 与自定义模板 template。停用后所有番剧按 none 处理（保留原文件名）",
+      "fields": {
+        "template": {
+          "title": "文件名模板",
+          "description": "重命名方式选择 template 时使用的 Jinja2 模板，渲染文件名主体（不含扩展名，字幕会自动追加语言）。可用变量：title、bangumi_name、season、episode、episode_type（episode / movie / special）、group、kind（media / subtitle）、language；过滤器 pad(n) 把数字补零到 n 位。渲染失败或结果含路径分隔符的文件保留原名，并发送通知。"
+        }
       }
     }
   }

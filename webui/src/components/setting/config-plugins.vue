@@ -13,6 +13,12 @@ import { refreshPluginProviders } from '@/hooks/usePluginProviders';
 import { refreshPluginUi } from '@/hooks/usePluginUi';
 import { idLabel } from '@/utils/id-label';
 import { fillSchemaDefaults, schemaFields } from '@/utils/plugin-schema';
+import {
+  localizeFields,
+  pluginDescription,
+  pluginName,
+  pluginReason,
+} from '@/utils/plugin-text';
 
 // 插件卡片不参与全局保存：每次改动直接调 /plugins 接口落盘并应用，
 // 随后刷新 config store 的 plugins 段，避免全局保存用旧值覆盖。
@@ -138,7 +144,7 @@ async function setEnabled(plugin: PluginInfo, enabled: boolean) {
     impact &&
     !(await confirm({
       title: t('config.plugins_set.disable_confirm_title', {
-        name: plugin.name,
+        name: pluginName(t, plugin.id, plugin.name),
       }),
       body: impact,
       confirmText: t('config.plugins_set.disable'),
@@ -187,7 +193,7 @@ async function install(entry: CatalogEntry) {
 async function uninstall(plugin: PluginInfo) {
   const confirmed = await confirm({
     title: t('config.plugins_set.uninstall_confirm_title', {
-      name: plugin.name,
+      name: pluginName(t, plugin.id, plugin.name),
     }),
     body: [impactText(plugin), t('config.plugins_set.uninstall_confirm_body')]
       .filter(Boolean)
@@ -246,7 +252,7 @@ onMounted(load);
       >
         <header class="plugin__header">
           <div class="plugin__title">
-            <strong>{{ plugin.name }}</strong>
+            <strong>{{ pluginName(t, plugin.id, plugin.name) }}</strong>
             <span class="plugin__meta"
               >{{ plugin.id }} · v{{ plugin.version }}</span
             >
@@ -255,7 +261,9 @@ onMounted(load);
             :model-value="plugin.enabled"
             :loading="busy.has(plugin.id)"
             :aria-label="
-              $t('config.plugins_set.enabled_for', { name: plugin.name })
+              $t('config.plugins_set.enabled_for', {
+                name: pluginName(t, plugin.id, plugin.name),
+              })
             "
             @update:model-value="setEnabled(plugin, $event)"
           />
@@ -272,14 +280,14 @@ onMounted(load);
         </div>
 
         <p v-if="plugin.description" class="plugin__desc">
-          {{ plugin.description }}
+          {{ pluginDescription(t, plugin.id, plugin.description) }}
         </p>
         <AbAlert
-          v-if="plugin.error"
+          v-if="plugin.error && plugin.error !== 'not_enabled'"
           :type="plugin.state === 'error' ? 'danger' : 'info'"
           :title="$t(`config.plugins_set.state_${plugin.state}`)"
         >
-          {{ plugin.error }}
+          {{ pluginReason(t, plugin.error) }}
         </AbAlert>
         <p
           v-if="plugin.permissions.length"
@@ -302,7 +310,9 @@ onMounted(load);
           <template v-if="plugin.config_schema">
             <PluginSchemaForm
               v-model="drafts[plugin.id]"
-              :fields="schemaFields(plugin.config_schema)"
+              :fields="
+                localizeFields(t, plugin.id, schemaFields(plugin.config_schema))
+              "
             />
             <div class="plugin__save">
               <AbButton
