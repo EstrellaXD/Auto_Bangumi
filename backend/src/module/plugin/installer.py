@@ -166,15 +166,21 @@ class SignedCatalogInstaller:
 
     # ------------------------------------------------------------ 安装
 
-    async def install(self, plugin_id: str) -> InstallResult:
+    async def install(
+        self, plugin_id: str, expected_version: str | None = None
+    ) -> InstallResult:
+        """expected_version：用户确认过的版本；目录已换成别的版本时拒绝安装，
+        避免装上用户没看过权限的版本。"""
         async with self._lock:
             try:
-                return await self._install(plugin_id)
+                return await self._install(plugin_id, expected_version)
             except Exception as e:  # noqa: BLE001 - 统一转成失败结果
                 logger.warning("Plugin install failed for %s: %s", plugin_id, e)
                 return InstallResult(success=False, message=str(e))
 
-    async def _install(self, plugin_id: str) -> InstallResult:
+    async def _install(
+        self, plugin_id: str, expected_version: str | None
+    ) -> InstallResult:
         if reason := self._check_id(plugin_id):
             return InstallResult(success=False, message=reason)
         catalog = await self.fetch_catalog()
@@ -186,6 +192,11 @@ class SignedCatalogInstaller:
         if problem := self._check_entry(entry):
             return InstallResult(success=False, message=problem)
         version = entry.get("version", "")
+        if expected_version is not None and version != expected_version:
+            return InstallResult(
+                success=False,
+                message=f"Catalog version changed to {version}, please review again",
+            )
 
         base = release_base(self.tag)
         asset = entry.get("asset") or f"{plugin_id}-{version}.zip"

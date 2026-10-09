@@ -121,6 +121,16 @@ def discover_catalog(root: Path, tmp_path: Path):
 
 
 class TestInstall:
+    async def test_install_version_changed_since_confirm_rejects(
+        self, tmp_path, keypair
+    ):
+        installer = make_installer(tmp_path, keypair, build_zip(tmp_path))
+
+        result = await installer.install(PLUGIN_ID, expected_version="0.0.9")
+
+        assert not result.success and "0.1.0" in result.message
+        assert not (tmp_path / "plugins" / PLUGIN_ID).exists()
+
     async def test_install_then_discover_load_and_uninstall(self, tmp_path, keypair):
         installer = make_installer(tmp_path, keypair, build_zip(tmp_path))
 
@@ -371,6 +381,27 @@ class TestPluginsApi:
         [item] = response.json()
         assert item["id"] == PLUGIN_ID and item["installed_version"] is None
         assert item["path"] == "."
+
+    @pytest.mark.parametrize(
+        ("installed", "expected"),
+        [("1.0rc1", True), ("1.0.0", False), ("1.1.0", False), ("weird", True)],
+    )
+    def test_catalog_update_available_follows_pep440_order(
+        self, authed_client, ctx, monkeypatch, installed, expected
+    ):
+        from module.api import plugins as plugins_api
+
+        entry = {"id": PLUGIN_ID, "name": "Demo", "version": "1.0.0"}
+        monkeypatch.setattr(
+            plugins_api.PluginInstaller,
+            "fetch_catalog",
+            AsyncMock(return_value=[entry]),
+        )
+        monkeypatch.setattr(plugins_api, "installed_version", lambda *_: installed)
+
+        [item] = authed_client.get("/api/v1/plugins/catalog").json()
+
+        assert item["update_available"] is expected
 
     def test_catalog_unreachable_returns_502(self, authed_client, ctx, monkeypatch):
         from module.api import plugins as plugins_api

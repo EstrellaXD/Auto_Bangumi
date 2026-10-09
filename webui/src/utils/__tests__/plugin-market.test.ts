@@ -29,6 +29,7 @@ function catalogEntry(overrides: Partial<CatalogEntry> = {}): CatalogEntry {
     path: '.',
     readme: '',
     installed_version: null,
+    update_available: false,
     ...overrides,
   };
 }
@@ -56,17 +57,21 @@ describe('categoriesOf', () => {
 
 describe('entryState', () => {
   it.each([
-    ['available', null],
-    ['installed', '0.2.0'],
-    ['update', '0.1.0'],
-    ['update', '0.2.0-beta.1'],
-    ['installed', '0.3.0'],
+    ['available', null, false],
+    ['installed', '0.2.0', false],
+    ['update', '0.1.0', true],
+    ['installed', '0.3.0', false],
   ] as const)(
-    'should give state %s when the installed version is %s',
-    (state, installed) => {
-      expect(entryState(catalogEntry({ installed_version: installed }))).toBe(
-        state
-      );
+    'should give state %s when the installed version is %s and update_available is %s',
+    (state, installed, update) => {
+      expect(
+        entryState(
+          catalogEntry({
+            installed_version: installed,
+            update_available: update,
+          })
+        )
+      ).toBe(state);
     }
   );
 });
@@ -86,6 +91,7 @@ describe('filterEntries', () => {
       extension_points: ['rename_strategy', 'notifier'],
       description: 'Writes Jellyfin metadata',
       installed_version: '0.1.0',
+      update_available: true,
     }),
   ];
   const ids = (list: CatalogEntry[]) => list.map((e) => e.id);

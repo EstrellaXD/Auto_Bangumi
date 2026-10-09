@@ -178,10 +178,12 @@ async function uninstall(plugin: PluginInfo) {
 onMounted(load);
 
 // 设置页被 KeepAlive 缓存：插件市场安装或更新后，再次进入时重新加载列表
-onActivated(() => {
-  if (seenVersion === pluginSetVersion.value) return;
-  seenVersion = pluginSetVersion.value;
-  return load();
+onActivated(async () => {
+  const version = pluginSetVersion.value;
+  if (seenVersion === version) return;
+  await load();
+  // 失败时下次进入再试
+  if (!loadError.value) seenVersion = version;
 });
 </script>
 

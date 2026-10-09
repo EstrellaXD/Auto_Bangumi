@@ -80,6 +80,8 @@ export interface CatalogEntry {
   path: string;
   readme: string;
   installed_version: string | null;
+  /** 目录版本比已安装版本新（后端按 PEP 440 比较） */
+  update_available: boolean;
 }
 
 /** 插件提供的 Provider id，按扩展点分组 */

@@ -64,11 +64,13 @@ describe('Plugins API contract (signed catalog)', () => {
     });
   });
 
-  it('should POST api/v1/plugins/:id/install with an encoded id', async () => {
+  it('should POST api/v1/plugins/:id/install with an encoded id and the confirmed version', async () => {
     (axios.post as any).mockResolvedValue({ data: overview });
-    expect(await apiPlugins.install('my plugin')).toEqual(overview);
+    expect(await apiPlugins.install('my plugin', '0.2.0')).toEqual(overview);
     expect(axios.post).toHaveBeenCalledWith(
-      'api/v1/plugins/my%20plugin/install'
+      'api/v1/plugins/my%20plugin/install',
+      null,
+      { params: { version: '0.2.0' } }
     );
   });
 

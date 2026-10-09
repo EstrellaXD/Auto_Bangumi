@@ -47,20 +47,10 @@ export function categoriesOf(entry: CatalogEntry): MarketCategory[] {
   return MARKET_CATEGORIES.filter((c) => found.has(c));
 }
 
-// 按数字比较 x.y.z；数字部分相同时，带预发布后缀（如 -beta.1）的版本较旧
-function newerThan(a: string, b: string): boolean {
-  const [ra, pa] = a.split(/-(.*)/);
-  const [rb, pb] = b.split(/-(.*)/);
-  const order = ra.localeCompare(rb, undefined, { numeric: true });
-  if (order) return order > 0;
-  if (!pa || !pb) return !pa && Boolean(pb);
-  return pa.localeCompare(pb, undefined, { numeric: true }) > 0;
-}
-
 export function entryState(entry: CatalogEntry): MarketState {
   if (!entry.installed_version) return 'available';
   // 本机版本比目录新（目录回退过）时不提示更新，避免“更新”成旧版本
-  return newerThan(entry.version, entry.installed_version)
+  return entry.installed_version !== entry.version && entry.update_available
     ? 'update'
     : 'installed';
 }

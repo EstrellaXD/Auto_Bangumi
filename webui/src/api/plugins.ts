@@ -36,10 +36,12 @@ export const apiPlugins = {
     return data;
   },
 
-  /** 从签名目录安装或升级插件，后端安装后即启用 */
-  async install(id: string) {
+  /** 从签名目录安装或升级插件，后端安装后即启用；version 不符时后端拒绝 */
+  async install(id: string, version: string) {
     const { data } = await axios.post<PluginsOverview>(
-      `api/v1/plugins/${encodeURIComponent(id)}/install`
+      `api/v1/plugins/${encodeURIComponent(id)}/install`,
+      null,
+      { params: { version } }
     );
     return data;
   },

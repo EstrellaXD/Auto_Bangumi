@@ -62,6 +62,7 @@ function entry(overrides: Partial<CatalogEntry> = {}): CatalogEntry {
     path: '.',
     readme: '',
     installed_version: null,
+    update_available: false,
     ...overrides,
   };
 }
@@ -177,7 +178,7 @@ describe('market page', () => {
     await buttons(w, 'market.install_enable')[0].trigger('click');
     await flushPromises();
 
-    expect(api.install).toHaveBeenCalledWith('bili');
+    expect(api.install).toHaveBeenCalledWith('bili', entry().version);
     expect(api.catalog).toHaveBeenCalledTimes(1);
     expect(w.text()).toContain('market.state.installed');
     expect(refreshGroup).toHaveBeenCalledWith(

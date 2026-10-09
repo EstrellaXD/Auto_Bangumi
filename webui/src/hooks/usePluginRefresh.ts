@@ -11,7 +11,8 @@ export const pluginSetVersion = ref(0);
  */
 export async function refreshPluginState() {
   pluginSetVersion.value++;
-  await Promise.all([
+  // 改动已在服务端生效；这里的失败不算操作失败，下次加载时会再同步
+  await Promise.allSettled([
     useConfigStore().refreshGroup('plugins', [
       'allow_unsigned',
       'enabled',

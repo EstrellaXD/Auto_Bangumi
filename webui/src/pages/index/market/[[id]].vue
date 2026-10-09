@@ -74,10 +74,12 @@ onMounted(() => Promise.all([loadCatalog(), loadInstalled()]));
 
 // 页面被 KeepAlive 缓存：其它页面（如设置）改过插件后，再次进入时重新获取目录与安装状态
 let seenVersion = pluginSetVersion.value;
-onActivated(() => {
-  if (seenVersion === pluginSetVersion.value) return;
-  seenVersion = pluginSetVersion.value;
-  return Promise.all([loadCatalog(), loadInstalled()]);
+onActivated(async () => {
+  const version = pluginSetVersion.value;
+  if (seenVersion === version) return;
+  await Promise.all([loadCatalog(), loadInstalled()]);
+  // 失败时下次进入再试
+  if (error.value === null) seenVersion = version;
 });
 
 // 相对时间每分钟刷新一次
@@ -145,13 +147,14 @@ const selected = computed(() => {
 const showDetail = computed(() => isMobile.value && Boolean(routeId.value));
 
 const confirming = ref(false);
-watch(
-  () => selected.value?.id,
-  () => (confirming.value = false)
-);
+// 换了插件，或刷新目录换了条目（版本与权限可能已变），确认都要重新开始
+watch(selected, () => (confirming.value = false));
 
+// 上一条历史就是列表时后退（保留滚动位置），否则直接回列表：
+// 桌面上选插件用 replace，变窄后上一条历史可能是别的页面
 function back() {
-  if ((window.history.state as { back?: unknown } | null)?.back) router.back();
+  const prev = (window.history.state as { back?: unknown } | null)?.back;
+  if (prev === '/market') router.back();
   else router.replace('/market');
 }
 
@@ -196,7 +199,9 @@ async function install(entry: CatalogEntry) {
   const updating = entry.installed_version !== null;
   busy.value = true;
   try {
-    installed.value = (await apiPlugins.install(entry.id)).plugins;
+    installed.value = (
+      await apiPlugins.install(entry.id, entry.version)
+    ).plugins;
   } catch {
     // 后端的具体原因（如验签失败）由 axios 拦截器另行提示
     message.error(

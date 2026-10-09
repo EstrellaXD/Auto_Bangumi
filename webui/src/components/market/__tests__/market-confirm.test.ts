@@ -25,6 +25,7 @@ function entry(overrides: Partial<CatalogEntry> = {}): CatalogEntry {
     path: '.',
     readme: '',
     installed_version: '0.1.0',
+    update_available: true,
     ...overrides,
   };
 }
