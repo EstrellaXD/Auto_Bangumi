@@ -610,6 +610,14 @@ class TestPluginsApi:
         assert plugin["options"] == {"site": "a", "cookie": MASK}
         assert plugin["config_schema"]["properties"]["cookie"]["secret"] is True
 
+    def test_overview_lists_only_own_providers(
+        self, authed_client, plugin_ctx, registry
+    ):
+        add_plugin_provider(registry, points.DOWNLOADER, "x", FakeDownloader, "demo")
+        add_plugin_provider(registry, points.NOTIFIER, "chat", object, "other")
+        [plugin] = authed_client.get("/api/v1/plugins").json()["plugins"]
+        assert plugin["providers"] == {"downloader": ["x"]}
+
     def test_update_restores_mask_and_saves(self, authed_client, plugin_ctx):
         _, save = plugin_ctx
         settings.plugins.options["demo"] = {"site": "a", "cookie": "c=1"}

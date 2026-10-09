@@ -1,6 +1,9 @@
 <script lang="ts" setup>
 import { Link } from '@icon-park/vue-next';
-import { NSelect, NSpin, NSwitch } from 'naive-ui';
+import { NSpin } from 'naive-ui';
+import AbField from './basic/ab-field.vue';
+import AbSelect from './basic/ab-select.vue';
+import AbSwitch from './basic/ab-switch.vue';
 import type { BangumiRule } from '#/bangumi';
 import type { RSS } from '#/rss';
 import { rssTemplate } from '#/rss';
@@ -194,26 +197,20 @@ function subscribe() {
 
       <!-- Options row -->
       <div class="options-row">
-        <!-- Aggregate Switch -->
-        <div class="option-item">
-          <label class="option-label">{{ $t('topbar.add.aggregate') }}</label>
-          <NSwitch v-model:value="rss.aggregate" />
-        </div>
+        <AbField :label="$t('topbar.add.aggregate')">
+          <AbSwitch v-model="rss.aggregate" />
+        </AbField>
 
-        <!-- Parser Select -->
-        <div class="option-item">
-          <label class="option-label">{{ $t('topbar.add.parser') }}</label>
-          <NSelect
-            v-model:value="rss.parser"
-            :options="parserTypes.map((p) => ({ label: p, value: p }))"
-            class="parser-select"
-          />
-        </div>
+        <AbField :label="$t('topbar.add.parser')">
+          <AbSelect v-model="rss.parser" :items="parserTypes" />
+        </AbField>
 
-        <div v-if="downloaders.multiple.value" class="option-item">
-          <label class="option-label">{{ $t('topbar.add.downloader') }}</label>
-          <NSelect
-            v-model:value="rss.downloader_id"
+        <AbField
+          v-if="downloaders.multiple.value"
+          :label="$t('topbar.add.downloader')"
+        >
+          <AbSelect
+            v-model="rss.downloader_id"
             :options="downloaders.options.value"
             clearable
             :placeholder="
@@ -221,9 +218,9 @@ function subscribe() {
                 id: downloaders.data.value.default,
               })
             "
-            class="parser-select"
+            :aria-label="$t('topbar.add.downloader')"
           />
-        </div>
+        </AbField>
       </div>
     </div>
 
@@ -379,31 +376,13 @@ function subscribe() {
   }
 }
 
-.parser-select {
-  width: 140px;
-}
-
 .options-row {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  padding: 16px;
+  flex-direction: column;
+  gap: var(--layout-gap);
+  padding: var(--layout-padding);
   background: var(--color-surface-hover);
   border-radius: var(--radius-md);
-}
-
-.option-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.option-label {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--color-text-secondary);
 }
 
 // Footer
@@ -457,16 +436,4 @@ function subscribe() {
 }
 
 // Modal transition
-// Responsive
-@media (max-width: 480px) {
-  .options-row {
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .option-item {
-    justify-content: space-between;
-    width: 100%;
-  }
-}
 </style>

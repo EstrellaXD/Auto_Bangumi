@@ -1,10 +1,12 @@
 <script lang="ts" setup>
-import { NCheckbox, NSelect, NSpin, useMessage } from 'naive-ui';
+import { NCheckbox, NSpin, useMessage } from 'naive-ui';
 import { onKeyStroke } from '@vueuse/core';
 import type { BangumiRule, DetectOffsetResponse } from '#/bangumi';
 import { useDownloaderInstances } from '@/hooks/useDownloaderInstances';
 import { slotTitle, useUiSlots } from '@/hooks/usePluginUi';
 import PluginSlot from '@/components/plugin-slot.vue';
+import AbField from '@/components/basic/ab-field.vue';
+import AbSelect from '@/components/basic/ab-select.vue';
 
 const emit = defineEmits<{
   (e: 'apply', rule: BangumiRule): void;
@@ -113,12 +115,6 @@ const resolutionOptions = ['2160p', '1080p', '720p'].map((r) => ({
 
 // 下载器实例：留空跟随默认实例；只有一个实例时不显示
 const downloaders = useDownloaderInstances(show);
-
-const selectMenuProps = { role: 'listbox' } as const;
-
-function selectOptionNodeProps() {
-  return { role: 'option' };
-}
 
 // Auto detect offset using the new detectOffset API
 async function autoDetectOffset() {
@@ -336,54 +332,35 @@ function emitUnarchive() {
           :label="$t('homepage.rule.episode_offset')"
         />
 
-        <div class="weekday-row">
-          <label class="weekday-label">{{
-            $t('homepage.rule.air_weekday')
-          }}</label>
-          <NSelect
-            :value="localRule.air_weekday ?? null"
+        <AbField :label="$t('homepage.rule.air_weekday')">
+          <AbSelect
+            :model-value="localRule.air_weekday ?? null"
             :options="weekdayOptions"
-            role="combobox"
-            aria-haspopup="listbox"
-            :menu-props="selectMenuProps"
-            :node-props="selectOptionNodeProps"
             clearable
             size="small"
             :placeholder="$t('calendar.unknown')"
-            :aria-label="$t('homepage.rule.air_weekday')"
-            class="weekday-select"
-            @update:value="onWeekdayChange"
+            @update:model-value="onWeekdayChange($event as number | null)"
           />
-        </div>
+        </AbField>
 
-        <div class="weekday-row">
-          <label class="weekday-label">{{
-            $t('homepage.rule.episode_type')
-          }}</label>
-          <NSelect
-            v-model:value="localRule.episode_type"
+        <AbField :label="$t('homepage.rule.episode_type')">
+          <AbSelect
+            :model-value="localRule.episode_type"
             :options="episodeTypeOptions"
-            role="combobox"
-            aria-haspopup="listbox"
-            :menu-props="selectMenuProps"
-            :node-props="selectOptionNodeProps"
             size="small"
-            :aria-label="$t('homepage.rule.episode_type')"
-            class="weekday-select"
+            @update:model-value="
+              localRule.episode_type = $event as BangumiRule['episode_type']
+            "
           />
-        </div>
+        </AbField>
 
-        <div v-if="downloaders.multiple.value" class="weekday-row">
-          <label class="weekday-label">{{
-            $t('homepage.rule.downloader')
-          }}</label>
-          <NSelect
-            v-model:value="localRule.downloader_id"
+        <AbField
+          v-if="downloaders.multiple.value"
+          :label="$t('homepage.rule.downloader')"
+        >
+          <AbSelect
+            v-model="localRule.downloader_id"
             :options="downloaders.options.value"
-            role="combobox"
-            aria-haspopup="listbox"
-            :menu-props="selectMenuProps"
-            :node-props="selectOptionNodeProps"
             clearable
             size="small"
             :placeholder="
@@ -391,45 +368,29 @@ function emitUnarchive() {
                 id: downloaders.data.value.default,
               })
             "
-            :aria-label="$t('homepage.rule.downloader')"
-            class="weekday-select"
           />
-        </div>
+        </AbField>
 
-        <div class="weekday-row">
-          <label class="weekday-label">{{
-            $t('homepage.rule.preferred_group')
-          }}</label>
+        <AbField :label="$t('homepage.rule.preferred_group')">
           <ab-input
             :model-value="localRule.preferred_group ?? ''"
             type="text"
-            class="preferred-input"
             placeholder="ANi"
-            :aria-label="$t('homepage.rule.preferred_group')"
             @update:model-value="localRule.preferred_group = String($event)"
           />
-        </div>
+        </AbField>
 
-        <div class="weekday-row">
-          <label class="weekday-label">{{
-            $t('homepage.rule.preferred_resolution')
-          }}</label>
-          <NSelect
-            v-model:value="localRule.preferred_resolution"
+        <AbField :label="$t('homepage.rule.preferred_resolution')">
+          <AbSelect
+            v-model="localRule.preferred_resolution"
             :options="resolutionOptions"
-            role="combobox"
-            aria-haspopup="listbox"
-            :menu-props="selectMenuProps"
-            :node-props="selectOptionNodeProps"
             clearable
             filterable
             tag
             size="small"
             :placeholder="$t('homepage.rule.auto_detect')"
-            :aria-label="$t('homepage.rule.preferred_resolution')"
-            class="weekday-select"
           />
-        </div>
+        </AbField>
 
         <p class="preferred-hint">
           {{ $t('homepage.rule.preferred_hint') }}
@@ -588,6 +549,13 @@ function emitUnarchive() {
 
 .edit-tabs {
   margin-bottom: 12px;
+  // 插件页签过多或标题过长时横向滚动，而不是撑破弹窗
+  overflow-x: auto;
+
+  :deep(.ab-segmented-tab) {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
 }
 
 .edit-content {
@@ -611,30 +579,6 @@ function emitUnarchive() {
 
 .delete-files-option {
   margin-bottom: 20px;
-}
-
-.weekday-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: 32px;
-}
-
-.weekday-label {
-  flex-shrink: 0;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--color-text-secondary);
-}
-
-.weekday-select {
-  max-width: 160px;
-}
-
-.preferred-input {
-  width: 160px;
-  max-width: 160px;
 }
 
 .preferred-hint {

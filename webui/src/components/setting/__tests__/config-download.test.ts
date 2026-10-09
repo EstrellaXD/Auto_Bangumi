@@ -38,9 +38,11 @@ function instance(id: string) {
 }
 
 const state = ref({} as Plugins);
+// 服务端最近一次加载/保存的快照
+const saved = { plugins: {} as Plugins };
 
 vi.mock('@/store/config', () => ({
-  useConfigStore: () => ({ getSettingGroup: () => state }),
+  useConfigStore: () => ({ getSettingGroup: () => state, savedConfig: saved }),
 }));
 
 const AbSettingStub = defineComponent({
@@ -65,6 +67,18 @@ function mountIt() {
           emits: ['click'],
           template: '<button @click="$emit(\'click\')"><slot /></button>',
         },
+        'ab-icon-button': {
+          props: ['label'],
+          emits: ['click'],
+          template:
+            '<button :aria-label="label" @click="$emit(\'click\')"><slot /></button>',
+        },
+        'ab-alert': { template: '<div class="alert"><slot /></div>' },
+        'ab-field': {
+          props: ['error', 'description'],
+          template:
+            '<div><slot /><p v-if="error" class="err">{{ error }}</p></div>',
+        },
         'ab-input': {
           props: ['modelValue'],
           emits: ['update:modelValue'],
@@ -88,6 +102,7 @@ describe('config-download', () => {
       slots: { downloader: 'default' },
       instances: [instance('default'), instance('nas')],
     } as unknown as Plugins;
+    saved.plugins = JSON.parse(JSON.stringify(state.value));
   });
 
   it('should list every downloader instance and mark the default', () => {
@@ -107,10 +122,21 @@ describe('config-download', () => {
           (s.props('label') as () => string)() === 'config.downloader_set.type'
       );
     expect(type?.props('prop')?.items).toEqual([
-      'qbittorrent',
-      'aria2',
-      'transmission',
+      { id: 0, value: 'qbittorrent', label: 'qBittorrent' },
+      { id: 1, value: 'aria2', label: 'aria2' },
+      {
+        id: 2,
+        value: 'transmission',
+        label: 'config.downloader_set.plugin_label',
+      },
     ]);
+  });
+
+  it('should show the provider name instead of the raw id in each row', () => {
+    const wrapper = mountIt();
+    expect(wrapper.find('[data-instance="nas"]').text()).toContain(
+      'qBittorrent · nas:8080'
+    );
   });
 
   it('should add an instance with a new id and edit it', async () => {
@@ -150,5 +176,74 @@ describe('config-download', () => {
     await nextTick();
     await nextTick();
     expect(rows(wrapper)).toEqual(['default']);
+  });
+
+  it('should explain why an id is rejected', async () => {
+    const wrapper = mountIt();
+    const input = wrapper.find('[data-new-instance] input');
+    await input.setValue('my downloader');
+    expect(wrapper.find('.err').text()).toBe(
+      'config.downloader_set.id_invalid'
+    );
+    await input.setValue('nas');
+    expect(wrapper.find('.err').text()).toBe('config.downloader_set.id_taken');
+    await input.setValue('seedbox');
+    expect(wrapper.find('.err').exists()).toBe(false);
+  });
+
+  it('should reset options when the provider changes', async () => {
+    state.value.instances[0].options.username = 'admin';
+    const wrapper = mountIt();
+    const type = wrapper
+      .findAllComponents(AbSettingStub)
+      .find(
+        (s) =>
+          (s.props('label') as () => string)() === 'config.downloader_set.type'
+      );
+    await type?.vm.$emit('update:data', 'aria2');
+    expect(state.value.instances[0].provider).toBe('aria2');
+    expect(state.value.instances[0].options.username).toBe('');
+    expect(state.value.instances[0].options.host).toBe('');
+  });
+
+  // 切走再切回已保存的类型时恢复保存的配置（含掩码密码，保存时由后端还原）
+  it('should restore the saved options when switching back to the saved provider', async () => {
+    saved.plugins.instances[0].options.password = '********';
+    state.value.instances[0].options.password = '********';
+    const wrapper = mountIt();
+    const type = wrapper
+      .findAllComponents(AbSettingStub)
+      .find(
+        (s) =>
+          (s.props('label') as () => string)() === 'config.downloader_set.type'
+      );
+    await type?.vm.$emit('update:data', 'aria2');
+    await type?.vm.$emit('update:data', 'qbittorrent');
+    expect(state.value.instances[0].provider).toBe('qbittorrent');
+    expect(state.value.instances[0].options).toEqual(
+      saved.plugins.instances[0].options
+    );
+    expect(state.value.instances[0].options).not.toBe(
+      saved.plugins.instances[0].options
+    );
+  });
+
+  it('should hide the username field for aria2', async () => {
+    state.value.instances[0].provider = 'aria2';
+    const wrapper = mountIt();
+    const labels = wrapper
+      .findAllComponents(AbSettingStub)
+      .map((s) => (s.props('label') as () => string)());
+    expect(labels).not.toContain('config.downloader_set.username');
+    expect(labels).toContain('config.downloader_set.password');
+  });
+
+  it('should label the delete button for assistive tech', () => {
+    const wrapper = mountIt();
+    expect(
+      wrapper
+        .find('[data-instance="nas"] [data-action="delete"]')
+        .attributes('aria-label')
+    ).toBe('config.downloader_set.delete');
   });
 });
