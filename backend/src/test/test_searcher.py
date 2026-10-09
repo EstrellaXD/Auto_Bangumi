@@ -15,16 +15,28 @@ from module.searcher.provider import search_url
 # ---------------------------------------------------------------------------
 
 
+MIKAN_SITE = {"url": "https://mikanani.me/RSS/Search?searchstr=%s", "parser": "mikan"}
+
+
 class TestSearchUrl:
     @pytest.fixture(autouse=True)
     def mock_search_config(self):
         """Ensure SEARCH_CONFIG has default providers."""
         config = {
-            "mikan": "https://mikanani.me/RSS/Search?searchstr=%s",
-            "nyaa": "https://nyaa.si/?page=rss&q=%s&c=0_0&f=0",
-            "dmhy": "http://dmhy.org/topics/rss/rss.xml?keyword=%s",
+            "mikan": {
+                "url": "https://mikanani.me/RSS/Search?searchstr=%s",
+                "parser": "mikan",
+            },
+            "nyaa": {
+                "url": "https://nyaa.si/?page=rss&q=%s&c=0_0&f=0",
+                "parser": "tmdb",
+            },
+            "dmhy": {
+                "url": "http://dmhy.org/topics/rss/rss.xml?keyword=%s",
+                "parser": "tmdb",
+            },
         }
-        with patch("module.searcher.provider.SEARCH_CONFIG", config):
+        with patch("module.searcher.provider.get_provider", return_value=config):
             yield
 
     def test_mikan_url(self):
@@ -128,10 +140,8 @@ class TestSpecialUrl:
         )
 
         with patch(
-            "module.searcher.provider.SEARCH_CONFIG",
-            {
-                "mikan": "https://mikanani.me/RSS/Search?searchstr=%s",
-            },
+            "module.searcher.provider.get_provider",
+            return_value={"mikan": MIKAN_SITE},
         ):
             result = SearchTorrent.special_url(bangumi, "mikan")
 
@@ -155,10 +165,8 @@ class TestSpecialUrl:
         )
 
         with patch(
-            "module.searcher.provider.SEARCH_CONFIG",
-            {
-                "mikan": "https://mikanani.me/RSS/Search?searchstr=%s",
-            },
+            "module.searcher.provider.get_provider",
+            return_value={"mikan": MIKAN_SITE},
         ):
             result = SearchTorrent.special_url(bangumi, "mikan")
 
@@ -176,8 +184,8 @@ class TestSpecialUrl:
             dpi="1080p",
         )
         with patch(
-            "module.searcher.provider.SEARCH_CONFIG",
-            {"mikan": "https://mikanani.me/RSS/Search?searchstr=%s"},
+            "module.searcher.provider.get_provider",
+            return_value={"mikan": MIKAN_SITE},
         ):
             result = SearchTorrent.special_url(movie, "mikan")
 
@@ -224,7 +232,7 @@ class TestPosterCache:
             "module.searcher.searcher.tmdb_parser", new=AsyncMock(return_value=None)
         ):
             for i in range(4):
-                await torrent._fetch_tmdb_poster(f"Title {i}")
+                await torrent._fetch_tmdb_preview(f"Title {i}")
 
         assert len(searcher_module._poster_cache) == 3
         # The oldest entry ("Title 0") was evicted; the rest remain.

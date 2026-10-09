@@ -26,12 +26,18 @@ jobs:
         run: cd backend && uv sync --group dev
       - name: Lint
         run: cd backend && uv run ruff check src
+      - name: Dead code
+        run: cd backend && uv run vulture
       - name: Type check
         run: cd backend && uv run mypy src
       - name: Test
         run: |
           mkdir -p backend/config
           cd backend && uv run pytest src/test -v -m "not e2e"
+      # 示例插件：校验清单并跑各自的契约 / 行为测试（与插件作者在示例目录里
+      # `uv run pytest` 一致）
+      - name: Example plugins
+        run: scripts/test_example_plugins.sh
 
   webui-test:
     runs-on: ubuntu-latest
@@ -309,17 +315,31 @@ jobs:
           cd backend && zip -r app-v${{ needs.version-info.outputs.version }}.zip \
             src pyproject.toml uv.lock requirements.txt
 
-      # 在线自动更新 bundle：module 源码树 + pyproject/uv.lock + 前端 dist + manifest。
-      # 同时产出 .sha256（客户端下载后据此校验完整性）。min_image_version 是能应用
-      # 此 bundle 布局的最低镜像版本（引入在线更新的首个版本）。
+      # 插件作者用的两个附件：autobangumi-sdk 轮子（ab_sdk + ab-plugin，不发 PyPI，
+      # 作者从 release 下载安装）和 autobangumi-plugin agent skill 的 zip。
+      # beta（预发布）与稳定版 release 都会带上它们。
+      - name: Build plugin SDK wheel
+        run: uv build --wheel backend/sdk --out-dir sdk-dist
+
+      - name: Zip plugin-author skill
+        run: |
+          cd skills && zip -r "../autobangumi-plugin-skill-${{ needs.version-info.outputs.version }}.zip" autobangumi-plugin
+
+      # 在线自动更新 bundle：module 与 ab_sdk 源码树 + pyproject/uv.lock + 前端 dist +
+      # manifest。同时产出 .sha256（客户端下载后据此校验完整性）。min_image_version
+      # 是能应用此 bundle 布局的最低镜像版本。4.x 的 module 依赖同版本的 ab_sdk 与新
+      # 依赖，只有 4.0 起的镜像（boot_overlay 会替换 /app/ab_sdk）能应用；已发布的
+      # 3.3 镜像在 beta 通道会选中最新的预发布，必须靠这个下限拒绝。本分支只发 4.x，
+      # 下一个大版本若再改 bundle 布局，在这里提高下限。
       - name: Build update bundle
         run: |
           VERSION="${{ needs.version-info.outputs.version }}"
-          MIN_IMAGE_VERSION="3.3.0-beta.1"
+          MIN_IMAGE_VERSION="4.0.0-beta.1"
           STAGE="bundle_stage"
           rm -rf "$STAGE"
           mkdir -p "$STAGE/backend/src" "$STAGE/webui-dist"
           cp -r backend/src/module "$STAGE/backend/src/module"
+          cp -r backend/src/ab_sdk "$STAGE/backend/src/ab_sdk"
           cp backend/pyproject.toml backend/uv.lock "$STAGE/backend/"
           cp -r webui/dist/. "$STAGE/webui-dist/"
           LOCK_SHA=$(sha256sum backend/uv.lock | awk '{print $1}')
@@ -396,6 +416,8 @@ jobs:
             update-bundle-${{ needs.version-info.outputs.version }}.zip
             update-bundle-${{ needs.version-info.outputs.version }}.zip.sha256
             update-bundle-${{ needs.version-info.outputs.version }}.zip.sig
+            sdk-dist/*.whl
+            autobangumi-plugin-skill-${{ needs.version-info.outputs.version }}.zip
         env:
           GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
 

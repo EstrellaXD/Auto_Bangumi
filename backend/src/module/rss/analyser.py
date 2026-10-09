@@ -1,13 +1,13 @@
 import logging
 import re
 
-from module.conf import settings
 from module.models import Bangumi, Movie, ResponseModel, RSSItem, Torrent
 from module.network import RequestContent
 from module.parser import TitleParser
 from module.parser.analyser.selector import parser_engine_snapshot
 
 from .engine import RSSEngine
+from .metadata import enrich_bangumi, enrich_movie
 
 logger = logging.getLogger(__name__)
 
@@ -20,38 +20,9 @@ class RSSAnalyser:
         torrent: Torrent,
         fetch_poster: bool = True,
     ):
-        if not fetch_poster:
-            pass
-        elif rss.parser == "mikan":
-            if not torrent.homepage:
-                logger.warning("Mikan movie torrent has no homepage info.")
-            else:
-                try:
-                    poster_link, official_title = await TitleParser.mikan_parser(
-                        torrent.homepage
-                    )
-                except AttributeError as e:
-                    logger.warning(
-                        f"Failed to parse Mikan homepage {torrent.homepage}: {e}"
-                    )
-                else:
-                    movie.poster_link = poster_link
-                    if official_title:
-                        movie.official_title = official_title
-        elif rss.parser == "tmdb":
-            tmdb_title, _, year, poster_link = await TitleParser.tmdb_parser(
-                movie.official_title,
-                1,
-                settings.rss_parser.language,
-                episode_type="movie",
-            )
-            movie.official_title = tmdb_title
-            if year:
-                try:
-                    movie.year = int(year)
-                except (ValueError, TypeError):
-                    pass
-            movie.poster_link = poster_link
+        # 元数据源由 rss.parser 选择（metadata_provider 扩展点）
+        if fetch_poster:
+            await enrich_movie(movie, rss, torrent)
         if movie.official_title:
             movie.official_title = re.sub(r"[/:.\\]", " ", movie.official_title)
 
@@ -62,37 +33,8 @@ class RSSAnalyser:
         torrent: Torrent,
         fetch_poster: bool = True,
     ):
-        if not fetch_poster:
-            pass
-        elif rss.parser == "mikan":
-            if not torrent.homepage:
-                logger.warning("Mikan torrent has no homepage info.")
-            else:
-                try:
-                    poster_link, official_title = await TitleParser.mikan_parser(
-                        torrent.homepage
-                    )
-                except AttributeError as e:
-                    logger.warning(
-                        f"Failed to parse Mikan homepage " f"{torrent.homepage}: {e}"
-                    )
-                else:
-                    bangumi.poster_link = poster_link
-                    if official_title:
-                        bangumi.official_title = official_title
-        elif rss.parser == "tmdb":
-            tmdb_title, season, year, poster_link = await TitleParser.tmdb_parser(
-                bangumi.official_title,
-                bangumi.season,
-                settings.rss_parser.language,
-                episode_type=bangumi.episode_type,
-            )
-            bangumi.official_title = tmdb_title
-            bangumi.year = year
-            bangumi.season = season
-            bangumi.poster_link = poster_link
-        else:
-            pass
+        if fetch_poster:
+            await enrich_bangumi(bangumi, rss, torrent)
         if bangumi.official_title:
             bangumi.official_title = re.sub(r"[/:.\\]", " ", bangumi.official_title)
 
@@ -128,6 +70,7 @@ class RSSAnalyser:
                     movie=result, rss=rss, torrent=torrent
                 )
                 result.rss_link = rss.url
+                result.downloader_id = rss.downloader_id
                 seen_identities.add(identity)
                 new_movies.append(result)
                 logger.info(f"New movie found: {result.official_title}")
@@ -136,6 +79,7 @@ class RSSAnalyser:
                     bangumi=result, rss=rss, torrent=torrent
                 )
                 result.rss_link = rss.url
+                result.downloader_id = rss.downloader_id
                 if not full_parse:
                     return [result], new_movies
                 seen_identities.add(identity)
@@ -156,6 +100,7 @@ class RSSAnalyser:
                     fetch_poster=fetch_poster,
                 )
                 result.rss_link = rss.url
+                result.downloader_id = rss.downloader_id
             else:
                 await self.official_title_parser(
                     bangumi=result,
@@ -164,6 +109,7 @@ class RSSAnalyser:
                     fetch_poster=fetch_poster,
                 )
                 result.rss_link = rss.url
+                result.downloader_id = rss.downloader_id
             return result
         return None
 

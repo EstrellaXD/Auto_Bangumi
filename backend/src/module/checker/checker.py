@@ -1,9 +1,11 @@
 import logging
 from pathlib import Path
 
+import semver
+
 from module.conf import VERSION, settings
 from module.models import Config
-from module.update import version_check
+from module.update.version_check import version_check
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +45,8 @@ class Checker:
         return settings.dict() == _get_default_config_dict()
 
     @staticmethod
-    def check_version() -> tuple[bool, int | None]:
+    def check_version() -> semver.Version | None:
+        """返回上一次运行的版本；数据过旧时抛 UnsupportedUpgradeError。"""
         return version_check()
 
     @staticmethod

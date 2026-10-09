@@ -34,16 +34,8 @@ class MockDownloader:
     def __init__(self):
         self._torrents: dict[str, dict] = {}
         self._rules: dict[str, dict] = {}
-        self._feeds: dict[str, dict] = {}
         self._categories: set[str] = {"Bangumi", "BangumiCollection"}
         self._authed = False
-        self._prefs = {
-            "save_path": "/tmp/mock-downloads",
-            "rss_auto_downloading_enabled": True,
-            "rss_max_articles_per_feed": 500,
-            "rss_processing_enabled": True,
-            "rss_refresh_interval": 30,
-        }
         logger.debug("Initialized")
 
     async def auth(self, retry=3) -> bool:
@@ -56,18 +48,6 @@ class MockDownloader:
     async def logout(self):
         self._authed = False
         logger.debug("Logout (mocked)")
-
-    async def check_host(self) -> bool:
-        logger.debug("check_host -> True")
-        return True
-
-    async def prefs_init(self, prefs: dict):
-        self._prefs.update(prefs)
-        logger.debug("prefs_init: %s", prefs)
-
-    async def get_app_prefs(self) -> dict:
-        logger.debug("get_app_prefs")
-        return self._prefs
 
     async def add_category(self, category: str):
         self._categories.add(category)
@@ -91,11 +71,6 @@ class MockDownloader:
                 continue
             result.append(torrent)
         return result
-
-    async def get_torrents_by_tag(self, tag: str) -> list[dict]:
-        """Return all torrents carrying a given tag."""
-        logger.debug("get_torrents_by_tag(%s)", tag)
-        return [t for t in self._torrents.values() if tag in t.get("tags", [])]
 
     async def torrent_exists(self, torrent_hash: str) -> bool | None:
         return torrent_hash in self._torrents
@@ -171,18 +146,6 @@ class MockDownloader:
         logger.info(f"rename: {old_path} -> {new_path}")
         return RenameResult(RenameOutcome.RENAMED)
 
-    async def rss_add_feed(self, url: str, item_path: str):
-        self._feeds[item_path] = {"url": url, "path": item_path}
-        logger.debug("rss_add_feed(%s, %s)", url, item_path)
-
-    async def rss_remove_item(self, item_path: str):
-        self._feeds.pop(item_path, None)
-        logger.debug("rss_remove_item(%s)", item_path)
-
-    async def rss_get_feeds(self) -> dict:
-        logger.debug("rss_get_feeds")
-        return self._feeds
-
     async def rss_set_rule(self, rule_name: str, rule_def: dict):
         self._rules[rule_name] = rule_def
         logger.info(f"rss_set_rule({rule_name})")
@@ -193,25 +156,11 @@ class MockDownloader:
                 self._torrents[h]["save_path"] = new_location
         logger.debug("move_torrent(%s, %s)", hashes, new_location)
 
-    async def get_download_rule(self) -> dict:
-        logger.debug("get_download_rule")
-        return self._rules
-
-    async def get_torrent_path(self, _hash: str) -> str:
-        torrent = self._torrents.get(_hash, {})
-        path = torrent.get("save_path", "/tmp/mock-downloads")
-        logger.debug("get_torrent_path(%s) -> %s", _hash, path)
-        return path
-
     async def set_category(self, _hash: str | list, category: str):
         for h in self._normalize_hashes(_hash):
             if h in self._torrents:
                 self._torrents[h]["category"] = category
         logger.debug("set_category(%s, %s)", _hash, category)
-
-    async def remove_rule(self, rule_name: str):
-        self._rules.pop(rule_name, None)
-        logger.debug("remove_rule(%s)", rule_name)
 
     async def add_tag(self, _hash: str, tag: str):
         if _hash in self._torrents:
@@ -219,9 +168,6 @@ class MockDownloader:
             if tag not in tags:
                 tags.append(tag)
         logger.debug("add_tag(%s, %s)", _hash, tag)
-
-    async def check_connection(self) -> str:
-        return "v4.6.0 (mock)"
 
     # Helper methods for testing
 
@@ -258,6 +204,5 @@ class MockDownloader:
         return {
             "torrents": self._torrents,
             "rules": self._rules,
-            "feeds": self._feeds,
             "categories": list(self._categories),
         }

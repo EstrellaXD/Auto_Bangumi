@@ -57,17 +57,3 @@ class AuthenticationSuccess(SQLModel):
     """Non-secret response shared by every browser-session issuing endpoint."""
 
     authenticated: Literal[True] = True
-
-
-class UserLogin(SQLModel):
-    username: str
-    password: str = Field(..., min_length=8)
-
-
-class Token(BaseModel):
-    token: str
-    token_type: str
-
-
-class TokenData(BaseModel):
-    username: str | None = None

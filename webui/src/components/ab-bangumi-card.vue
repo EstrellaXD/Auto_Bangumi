@@ -1,6 +1,8 @@
 <script lang="ts" setup>
 import { ErrorPicture, Write } from '@icon-park/vue-next';
+import PluginSlot from './plugin-slot.vue';
 import type { BangumiRule } from '#/bangumi';
+import { useUiSlots } from '@/hooks/usePluginUi';
 
 const props = withDefaults(
   defineProps<{
@@ -14,62 +16,75 @@ const props = withDefaults(
 
 defineEmits(['click']);
 
+// 插件经 bangumi.card.action 挂载点追加的操作
+const actionSlots = useUiSlots('bangumi.card.action');
+
 const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
 </script>
 
 <template>
-  <!-- Grid poster card -->
-  <div
-    v-if="type === 'primary'"
-    class="card"
-    role="button"
-    tabindex="0"
-    :aria-label="`Edit ${bangumi.official_title}`"
-    @click="() => $emit('click')"
-    @keydown.enter="() => $emit('click')"
-    @keydown.space.prevent="() => $emit('click')"
-  >
+  <!-- Grid poster card：插件操作与 role=button 的卡片并列，避免交互元素嵌套 -->
+  <div v-if="type === 'primary'" class="card-wrap">
     <div
-      class="card-poster"
-      :class="{ 'card-poster--needs-review': bangumi.needs_review }"
+      class="card"
+      role="button"
+      tabindex="0"
+      :aria-label="`Edit ${bangumi.official_title}`"
+      @click="() => $emit('click')"
+      @keydown.enter="() => $emit('click')"
+      @keydown.space.prevent="() => $emit('click')"
     >
-      <template v-if="bangumi.poster_link">
-        <img
-          :src="posterSrc"
-          :alt="bangumi.official_title"
-          class="card-img"
-          loading="lazy"
-        />
-      </template>
-      <template v-else>
-        <div class="card-placeholder">
-          <ErrorPicture theme="outline" size="24" />
-        </div>
-      </template>
-
-      <div class="card-overlay">
-        <div class="card-overlay-tags">
-          <ab-tag :title="`Season ${bangumi.season}`" type="info" />
-          <ab-tag
-            v-if="bangumi.group_name"
-            :title="bangumi.group_name"
-            type="info"
+      <div
+        class="card-poster"
+        :class="{ 'card-poster--needs-review': bangumi.needs_review }"
+      >
+        <template v-if="bangumi.poster_link">
+          <img
+            :src="posterSrc"
+            :alt="bangumi.official_title"
+            class="card-img"
+            loading="lazy"
           />
+        </template>
+        <template v-else>
+          <div class="card-placeholder">
+            <ErrorPicture theme="outline" size="24" />
+          </div>
+        </template>
+
+        <div class="card-overlay">
+          <div class="card-overlay-tags">
+            <ab-tag :title="`Season ${bangumi.season}`" type="info" />
+            <ab-tag
+              v-if="bangumi.group_name"
+              :title="bangumi.group_name"
+              type="info"
+            />
+          </div>
+          <div
+            class="card-edit-btn"
+            role="img"
+            :aria-label="$t('homepage.rule.edit')"
+          >
+            <Write size="18" />
+          </div>
         </div>
-        <div
-          class="card-edit-btn"
-          role="img"
-          :aria-label="$t('homepage.rule.edit')"
-        >
-          <Write size="18" />
+      </div>
+
+      <div class="card-info">
+        <div class="card-title" :title="bangumi.official_title">
+          {{ bangumi.official_title }}
         </div>
       </div>
     </div>
 
-    <div class="card-info">
-      <div class="card-title" :title="bangumi.official_title">
-        {{ bangumi.official_title }}
-      </div>
+    <div v-if="actionSlots.length" class="card-actions">
+      <PluginSlot
+        v-for="ui in actionSlots"
+        :key="`${ui.plugin_id}:${ui.element}`"
+        :ui="ui"
+        :context="{ bangumiId: bangumi.id }"
+      />
     </div>
   </div>
 
@@ -133,8 +148,12 @@ const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
 
 <style lang="scss" scoped>
 // Grid poster card
-.card {
+.card-wrap {
   width: 150px;
+}
+
+.card {
+  width: 100%;
   cursor: pointer;
   user-select: none;
 
@@ -144,6 +163,14 @@ const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
     outline-offset: 4px;
     border-radius: var(--radius-md);
   }
+}
+
+.card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 4px;
 }
 
 .card-poster {

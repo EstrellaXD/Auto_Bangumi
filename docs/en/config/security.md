@@ -17,7 +17,7 @@ Section: `security`
 | --- | --- | --- | --- | --- |
 | `login_whitelist` | Login IP whitelist | string array | Login IP Whitelist | `[]` |
 | `login_tokens` | Login API tokens | string array | Login API Tokens | `[]` |
-| `mcp_whitelist` | MCP IP whitelist | string array | MCP IP Whitelist | local-network CIDRs or `[]` |
+| `mcp_whitelist` | MCP IP whitelist | string array | MCP IP Whitelist | `[]` |
 | `mcp_tokens` | MCP API tokens | string array | MCP API Tokens | `[]` |
 | `webauthn_rp_id` | Passkey RP ID | string | config only | `""` |
 | `webauthn_origin` | Passkey origin | string | config only | `""` |

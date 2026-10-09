@@ -292,7 +292,14 @@ class RenameOperationDatabase:
         retry_at: datetime | None = None,
         last_error: str | None = None,
     ) -> RenameOperation | None:
-        """Advance a replacement only while the caller still owns its lease."""
+        """Advance a replacement only while the caller still owns its lease.
+
+        The same UPDATE clears the lease, so every saga step that ends in a
+        state write releases it atomically; there is no separate "release"
+        call.  A step aborted by an exception keeps the lease until it expires
+        (``claim_replacement_lease``'s ``lease_for``, equal to the retry
+        cooldown), which only delays the next attempt.
+        """
 
         if operation_id is None:
             return None
@@ -319,23 +326,6 @@ class RenameOperationDatabase:
         if not result.rowcount:  # type: ignore[attr-defined]
             return None
         return await self.get(operation_id)
-
-    async def release_replacement_lease(
-        self, operation_id: int | None, *, owner: str
-    ) -> bool:
-        if operation_id is None:
-            return False
-        result = await self.session.execute(
-            update(RenameOperation)
-            .where(
-                col(RenameOperation.id) == operation_id,
-                col(RenameOperation.lease_owner) == owner,
-            )
-            .values(lease_owner=None, lease_expires_at=None, updated_at=utc_now())
-            .execution_options(synchronize_session="fetch")
-        )
-        await self.session.commit()
-        return bool(result.rowcount)  # type: ignore[attr-defined]
 
     async def mark_notified(
         self, operation_id: int | None, when: datetime | None = None
@@ -366,35 +356,23 @@ class RenameOperationDatabase:
         )
         return list(result.scalars().all())
 
-    async def list_retryable(
-        self, now: datetime | None = None, limit: int = 100
+    async def list_active_replacements(
+        self, downloader_type: str | None, limit: int = 100
     ) -> list[RenameOperation]:
-        ready_at = now or utc_now()
-        result = await self.session.execute(
-            select(RenameOperation)
-            .where(
-                RenameOperation.state == "retry",
-                or_(
-                    col(RenameOperation.retry_at).is_(None),
-                    col(RenameOperation.retry_at) <= ready_at,
-                ),
-            )
-            .order_by(col(RenameOperation.retry_at).asc())
-            .limit(limit)
+        """某个下载器实例（``downloader_type``）上未完成的版本替换事务；
+        ``None`` 时不限实例。"""
+        statement = select(RenameOperation).where(
+            RenameOperation.kind == "replacement",
+            col(RenameOperation.state).in_(
+                ("planned", "old_staged", "new_promoted", "old_removed")
+            ),
         )
-        return list(result.scalars().all())
-
-    async def list_active_replacements(self, limit: int = 100) -> list[RenameOperation]:
-        result = await self.session.execute(
-            select(RenameOperation)
-            .where(
-                RenameOperation.kind == "replacement",
-                col(RenameOperation.state).in_(
-                    ("planned", "old_staged", "new_promoted", "old_removed")
-                ),
+        if downloader_type is not None:
+            statement = statement.where(
+                RenameOperation.downloader_type == downloader_type
             )
-            .order_by(col(RenameOperation.updated_at).asc())
-            .limit(limit)
+        result = await self.session.execute(
+            statement.order_by(col(RenameOperation.updated_at).asc()).limit(limit)
         )
         return list(result.scalars().all())
 

@@ -10,6 +10,8 @@ from .log import router as log_router
 from .movie import router as movie_router
 from .notification import router as notification_router
 from .passkey import router as passkey_router
+from .plugin_routes import router as plugin_routes_router
+from .plugins import router as plugins_router
 from .program import router as program_router
 from .rss import router as rss_router
 from .search import router as search_router
@@ -39,3 +41,6 @@ v1.include_router(setup_router)
 v1.include_router(notification_router)
 v1.include_router(update_router)
 v1.include_router(llm_router)
+v1.include_router(plugins_router)
+# 插件路由分发须排在插件管理路由之后（后者的路径更具体）
+v1.include_router(plugin_routes_router)

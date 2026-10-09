@@ -3,6 +3,8 @@ import { type DataTableColumns, NDataTable } from 'naive-ui';
 import AbProgress from '@/components/basic/ab-progress.vue';
 import { useConfirm } from '@/hooks/useConfirm';
 import type { QbTorrentInfo, TorrentGroup } from '#/downloader';
+import { useDownloaderInstances } from '@/hooks/useDownloaderInstances';
+import { hasConfiguredDownloader, torrentKey } from '@/store/downloader';
 
 definePage({
   name: 'Downloader',
@@ -11,13 +13,13 @@ definePage({
 const { t } = useMyI18n();
 const { config } = storeToRefs(useConfigStore());
 const { getConfig } = useConfigStore();
-const { groups, selectedHashes, loading } = storeToRefs(useDownloaderStore());
+const { groups, selectedKeys, loading } = storeToRefs(useDownloaderStore());
 const {
   getAll,
   pauseSelected,
   resumeSelected,
   deleteSelected,
-  toggleHash,
+  toggleKey,
   toggleGroup,
   clearSelection,
 } = useDownloaderStore();
@@ -33,9 +35,9 @@ async function onDeleteSelected() {
   if (ok) deleteSelected(false);
 }
 
-const isNull = computed(() => {
-  return config.value.downloader.host === '';
-});
+const isNull = computed(
+  () => !hasConfiguredDownloader(config.value.plugins.instances)
+);
 
 const { connected: sseConnected } = useEventStream();
 
@@ -117,8 +119,13 @@ function stateType(state: string): string {
 }
 
 function isGroupAllSelected(group: TorrentGroup): boolean {
-  return group.torrents.every((t) => selectedHashes.value.includes(t.hash));
+  return group.torrents.every((t) =>
+    selectedKeys.value.includes(torrentKey(t))
+  );
 }
+
+// 多个下载器实例时标出每个种子所在的实例
+const downloaders = useDownloaderInstances();
 
 const tableColumnsValue = computed<DataTableColumns<QbTorrentInfo>>(() => [
   {
@@ -198,24 +205,30 @@ const tableColumnsValue = computed<DataTableColumns<QbTorrentInfo>>(() => [
       return `${row.num_seeds} / ${row.num_leechs}`;
     },
   },
+  // 放在最后并完整显示 id（触屏没有悬停提示）
+  ...(downloaders.multiple.value
+    ? [
+        {
+          title: t('downloader.torrent.instance'),
+          key: 'downloader_id',
+          minWidth: 110,
+        },
+      ]
+    : []),
 ]);
 
-function tableRowKey(row: QbTorrentInfo) {
-  return row.hash;
-}
-
 function onCheckedChange(group: TorrentGroup, keys: string[]) {
-  const groupHashes = group.torrents.map((t) => t.hash);
-  const otherSelected = selectedHashes.value.filter(
-    (h) => !groupHashes.includes(h)
+  const groupKeys = group.torrents.map(torrentKey);
+  const otherSelected = selectedKeys.value.filter(
+    (k) => !groupKeys.includes(k)
   );
-  selectedHashes.value = [...otherSelected, ...keys];
+  selectedKeys.value = [...otherSelected, ...keys];
 }
 
 function groupCheckedKeys(group: TorrentGroup): string[] {
   return group.torrents
-    .filter((t) => selectedHashes.value.includes(t.hash))
-    .map((t) => t.hash);
+    .map(torrentKey)
+    .filter((k) => selectedKeys.value.includes(k));
 }
 </script>
 
@@ -291,7 +304,7 @@ function groupCheckedKeys(group: TorrentGroup): string[] {
           <NDataTable
             :columns="tableColumnsValue"
             :data="group.torrents"
-            :row-key="tableRowKey"
+            :row-key="torrentKey"
             :pagination="false"
             :bordered="false"
             :checked-row-keys="groupCheckedKeys(group)"
@@ -302,9 +315,9 @@ function groupCheckedKeys(group: TorrentGroup): string[] {
       </div>
 
       <Transition name="fade">
-        <div v-if="selectedHashes.length > 0" class="action-bar">
+        <div v-if="selectedKeys.length > 0" class="action-bar">
           <span class="action-bar-count">
-            {{ selectedHashes.length }} {{ $t('downloader.selected') }}
+            {{ selectedKeys.length }} {{ $t('downloader.selected') }}
           </span>
           <div class="action-bar-buttons">
             <ab-button variant="primary" size="sm" @click="resumeSelected">{{

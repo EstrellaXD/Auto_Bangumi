@@ -33,6 +33,59 @@ const sharedConfig = {
   },
 }
 
+// 插件开发文档的页面表：[路径, 中文, English, 日本語]
+const pluginPages: [string, string, string, string][] = [
+  ['', '概览', 'Overview', '概要'],
+  ['/sdk', '获取 SDK', 'Get the SDK', 'SDK の入手'],
+  ['/concepts', '核心概念', 'Concepts', '基本概念'],
+  ['/config-forms', '配置表单', 'Config forms', '設定フォーム'],
+  ['/events', '事件', 'Events', 'イベント'],
+  ['/frontend-slots', '前端挂载点', 'Frontend slots', 'フロントエンドスロット'],
+  ['/cli', '命令行 ab-plugin', 'The ab-plugin command', 'コマンド ab-plugin'],
+  ['/signing', '签名与分发', 'Signing and distribution', '署名と配布'],
+  ['/publish', '上架插件', 'List a plugin', 'プラグインの掲載'],
+  ['/builtin', '内置插件', 'Built-in plugins', '組み込みプラグイン'],
+  ['/examples', '示例插件', 'Example plugins', 'サンプルプラグイン'],
+]
+const pluginPoints: [string, string, string, string][] = [
+  ['downloader', '下载器', 'Downloader', 'ダウンローダー'],
+  ['notifier', '通知渠道', 'Notifier', '通知チャンネル'],
+  ['llm-provider', 'LLM 提供商', 'LLM provider', 'LLM プロバイダー'],
+  ['search-site', '搜索站点', 'Search site', '検索サイト'],
+  ['scheduled-task', '定时任务', 'Scheduled task', '定期タスク'],
+  ['metadata-provider', '元数据源', 'Metadata provider', 'メタデータソース'],
+  ['rename-strategy', '重命名方式', 'Rename strategy', 'リネーム方式'],
+  ['media-files', '文件分类', 'Media files', 'ファイル分類'],
+  ['conflict-policy', '版本冲突策略', 'Conflict policy', 'バージョン競合ポリシー'],
+  ['api-router', 'REST 路由', 'REST routes', 'REST ルート'],
+  ['mcp', 'MCP 工具与资源', 'MCP tools and resources', 'MCP ツールとリソース'],
+  ['torrent-filter', '种子过滤', 'Torrent filter', 'トレントフィルター'],
+  ['title-parsed', '修正解析结果', 'Parsed title', '解析結果の補正'],
+  ['torrent-adding', '修改添加请求', 'Adding request', '追加リクエストの変更'],
+  ['http-request', '请求头', 'HTTP request', 'HTTP リクエスト'],
+  ['message-template', '通知文案模板', 'Message template', '通知メッセージテンプレート'],
+]
+
+// lang: 0 中文，1 English，2 日本語
+function pluginSidebar(lang: 0 | 1 | 2) {
+  const prefix = ['', '/en', '/ja'][lang]
+  const label = (row: string[]) => row[lang + 1]
+  return [
+    ...pluginPages.map((row) => ({
+      text: label(row),
+      link: `${prefix}/dev/plugins${row[0]}`,
+    })),
+    {
+      text: ['扩展点', 'Extension points', '拡張ポイント'][lang],
+      collapsed: true,
+      items: pluginPoints.map((row) => ({
+        text: label(row),
+        link: `${prefix}/dev/plugins/points/${row[0]}`,
+      })),
+    },
+  ]
+}
+
 // Chinese sidebar (default)
 const zhSidebar = [
   {
@@ -49,6 +102,7 @@ const zhSidebar = [
       { text: 'Docker Compose', link: '/deploy/docker-compose' },
       { text: '群晖 NAS (DSM)', link: '/deploy/dsm' },
       { text: '本地部署', link: '/deploy/local' },
+      { text: '从 3.3 升级到 4.0', link: '/deploy/upgrade-4.0' },
     ],
   },
   {
@@ -60,6 +114,7 @@ const zhSidebar = [
       { text: '解析器设置', link: '/config/parser' },
       { text: '通知设置', link: '/config/notifier' },
       { text: '番剧管理设置', link: '/config/manager' },
+      { text: '插件设置', link: '/config/plugins' },
       { text: '代理设置', link: '/config/proxy' },
       { text: '网络设置', link: '/config/network' },
       { text: '搜索源设置', link: '/config/search-provider' },
@@ -77,6 +132,9 @@ const zhSidebar = [
       { text: '番剧管理', link: '/feature/bangumi' },
       { text: '日历视图', link: '/feature/calendar' },
       { text: '文件重命名', link: '/feature/rename' },
+      { text: '插件', link: '/feature/plugins' },
+      { text: '多下载器', link: '/feature/downloaders' },
+      { text: '硬链接到媒体库', link: '/feature/hardlink' },
       { text: '种子搜索', link: '/feature/search' },
     ],
   },
@@ -97,6 +155,7 @@ const zhSidebar = [
   {
     text: '更新日志',
     items: [
+      { text: '4.0 版本说明', link: '/changelog/4.0' },
       { text: '3.3 版本说明', link: '/changelog/3.3' },
       { text: '3.2 版本说明', link: '/changelog/3.2' },
       { text: '3.1 版本说明', link: '/changelog/3.1' },
@@ -108,8 +167,11 @@ const zhSidebar = [
     text: '开发者指南',
     items: [
       { text: '参与贡献', link: '/dev/' },
+      { text: '数据库开发指南', link: '/dev/database' },
+      { text: 'E2E 测试指南', link: '/dev/e2e-test-guide' },
     ],
   },
+  { text: '插件开发', items: pluginSidebar(0) },
 ]
 
 // Japanese sidebar
@@ -128,6 +190,7 @@ const jaSidebar = [
       { text: 'Docker Compose', link: '/ja/deploy/docker-compose' },
       { text: 'Synology NAS (DSM)', link: '/ja/deploy/dsm' },
       { text: 'ローカルデプロイ', link: '/ja/deploy/local' },
+      { text: '3.3 から 4.0 へのアップグレード', link: '/ja/deploy/upgrade-4.0' },
     ],
   },
   {
@@ -139,6 +202,7 @@ const jaSidebar = [
       { text: 'パーサー設定', link: '/ja/config/parser' },
       { text: '通知設定', link: '/ja/config/notifier' },
       { text: 'アニメ管理設定', link: '/ja/config/manager' },
+      { text: 'プラグイン設定', link: '/ja/config/plugins' },
       { text: 'プロキシ設定', link: '/ja/config/proxy' },
       { text: 'ネットワーク設定', link: '/ja/config/network' },
       { text: '検索プロバイダー設定', link: '/ja/config/search-provider' },
@@ -156,6 +220,9 @@ const jaSidebar = [
       { text: 'アニメ管理', link: '/ja/feature/bangumi' },
       { text: 'カレンダー表示', link: '/ja/feature/calendar' },
       { text: 'ファイルリネーム', link: '/ja/feature/rename' },
+      { text: 'プラグイン', link: '/ja/feature/plugins' },
+      { text: '複数のダウンローダー', link: '/ja/feature/downloaders' },
+      { text: 'メディアライブラリへのハードリンク', link: '/ja/feature/hardlink' },
       { text: 'トレント検索', link: '/ja/feature/search' },
     ],
   },
@@ -176,6 +243,7 @@ const jaSidebar = [
   {
     text: '更新履歴',
     items: [
+      { text: '4.0 リリースノート', link: '/ja/changelog/4.0' },
       { text: '3.3 リリースノート', link: '/ja/changelog/3.3' },
       { text: '3.2 リリースノート', link: '/ja/changelog/3.2' },
       { text: '3.1 リリースノート', link: '/ja/changelog/3.1' },
@@ -187,8 +255,11 @@ const jaSidebar = [
     text: '開発者ガイド',
     items: [
       { text: 'コントリビュート', link: '/ja/dev/' },
+      { text: 'データベース開発ガイド', link: '/ja/dev/database' },
+      { text: 'E2E テストガイド', link: '/ja/dev/e2e-test-guide' },
     ],
   },
+  { text: 'プラグイン開発', items: pluginSidebar(2) },
 ]
 
 // English sidebar
@@ -207,6 +278,7 @@ const enSidebar = [
       { text: 'Docker Compose', link: '/en/deploy/docker-compose' },
       { text: 'Synology NAS (DSM)', link: '/en/deploy/dsm' },
       { text: 'Local Deployment', link: '/en/deploy/local' },
+      { text: 'Upgrade from 3.3 to 4.0', link: '/en/deploy/upgrade-4.0' },
     ],
   },
   {
@@ -218,6 +290,7 @@ const enSidebar = [
       { text: 'Parser Settings', link: '/en/config/parser' },
       { text: 'Notification Settings', link: '/en/config/notifier' },
       { text: 'Bangumi Manager', link: '/en/config/manager' },
+      { text: 'Plugin Settings', link: '/en/config/plugins' },
       { text: 'Proxy Settings', link: '/en/config/proxy' },
       { text: 'Network Settings', link: '/en/config/network' },
       { text: 'Search Providers', link: '/en/config/search-provider' },
@@ -235,6 +308,9 @@ const enSidebar = [
       { text: 'Bangumi Management', link: '/en/feature/bangumi' },
       { text: 'Calendar View', link: '/en/feature/calendar' },
       { text: 'File Renaming', link: '/en/feature/rename' },
+      { text: 'Plugins', link: '/en/feature/plugins' },
+      { text: 'Multiple Downloaders', link: '/en/feature/downloaders' },
+      { text: 'Hard Links to a Media Library', link: '/en/feature/hardlink' },
       { text: 'Torrent Search', link: '/en/feature/search' },
     ],
   },
@@ -255,6 +331,7 @@ const enSidebar = [
   {
     text: 'Changelog',
     items: [
+      { text: '4.0 Release Notes', link: '/en/changelog/4.0' },
       { text: '3.3 Release Notes', link: '/en/changelog/3.3' },
       { text: '3.2 Release Notes', link: '/en/changelog/3.2' },
       { text: '3.1 Release Notes', link: '/en/changelog/3.1' },
@@ -266,12 +343,17 @@ const enSidebar = [
     text: 'Developer Guide',
     items: [
       { text: 'Contributing', link: '/en/dev/' },
+      { text: 'Database guide', link: '/en/dev/database' },
+      { text: 'E2E test guide', link: '/en/dev/e2e-test-guide' },
     ],
   },
+  { text: 'Plugin Development', items: pluginSidebar(1) },
 ]
 
 export default defineConfig({
   lang: 'zh-CN',
+  srcExclude: ['plans/**', 'superpowers/**', '**/README.md', '**/node_modules/**'],
+  sitemap: { hostname: 'https://www.autobangumi.org' },
   title: 'AutoBangumi',
   description: '基于 RSS 的全自动番剧下载与整理工具',
   ...sharedConfig,

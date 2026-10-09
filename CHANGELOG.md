@@ -1,3 +1,61 @@
+# [4.0.0-beta.2] - 2026-10-09
+
+- **新增（插件市场）**：第三方插件经 PR 上架：在 `plugins/registry/<id>.toml` 写入作者仓库、固定的完整 commit、子目录与审查过的 zip `sha256`。`plugin-registry` 工作流在 PR 上用 base 分支的检查脚本运行作者的测试（至少 1 个且全部通过）和前端构建（`web-src/`，pnpm `--frozen-lockfile --ignore-scripts`），结果写入 Job Summary；合并后每个插件单独构建，签名 job 只接受与条目 `sha256` 一致的 zip，用独立的插件签名密钥签名后增量发布到 GitHub release `plugins`。更换 `repo` 会被拒绝（先下架再上架）。宿主改用随在线更新包分发的插件公钥 `module/plugin/ab_plugin_pubkey.pem` 验签。目录条目新增作者、权限、前端、源码位置与 README（16 KB 以内）。`ab-plugin pack` 不再打包 `web-src/`。新增上架文档与 PR 模板
+- **新增（插件市场页面）**：新增「插件市场」页面（`/market`，侧栏与手机底栏入口）：左侧列表、右侧详情，按分类、状态筛选和搜索；详情显示来源（仓库与固定 commit）、扩展点、权限与 README（安全的 Markdown 子集，原始 HTML 按文本显示）。安装和更新前先确认来源、权限和前端，更新新增权限时须勾选确认；安装请求带上确认过的版本，目录已换版本时拒绝安装。目录不可达时显示上次缓存的目录，不能安装。设置 → 插件 中的「插件目录」区改为「打开插件市场」链接
+- **新增（插件目录）**：`GET /api/v1/plugins/catalog` 新增 `update_available`（按 PEP 440 比较），目录版本比已安装版本旧时不再提示更新；`POST /api/v1/plugins/{id}/install` 新增可选参数 `version`
+- **修复（英文界面）**：内置插件的名称、描述与配置字段，以及插件未加载的原因，在英文界面中显示为英文（后端改为返回原因代码 `not_enabled` / `unsigned_blocked`）；扩展点与权限的译名此前在实际运行中从未生效，界面一直显示原始 id
+- **修复（插件设置）**：插件卡片加载失败可重试，标出未保存的修改，停用或卸载仍被使用的插件前确认；插件配置表单增加必填与范围校验，数字字段清空后保持空白（`Optional` 字段存为 null），编辑嵌套行后保存按钮可用；插件页面与挂载点显示加载状态、失败原因和重试
+- **修复（下载器与通知设置）**：下载器按类型显示字段，切回已保存的类型时恢复保存的配置，不再清空凭据；通知渠道列表中已保存且未改动的行按后端保存的配置测试，掩码的密钥不再导致测试失败
+- **修复（手机端）**：底栏可进入插件页面，同一插件只显示一个入口，导航项可横向滚动；标签输入失焦时添加未确认的输入，输入法组字时的回车不再添加标签
+
+# [4.0.0-beta.1] - 2026-10-08
+
+4.0 是插件化重构的大版本（设计见 `docs/plans/2026-10-08-plugin-architecture-4.0-design.md`）。本节随各阶段合入持续更新。
+
+- **新增（插件运行时）**：新增插件 SDK `ab_sdk`，包括 `Plugin` 基类、`@hook` / `@provider` / `@subscribe`、`PluginContext`，以及供插件作者写单元测试的 `ab_sdk.testing`；新增宿主运行时 `module/plugin`，负责清单解析、内置 / 本地目录 / pip entry point 三种来源的发现与加载、扩展点注册表、钩子超时与熔断、事件总线和插件私有 KV 存储（数据库迁移 v25）。新增 `plugins` 配置段和 `GET /api/v1/plugins`。本地与 pip 插件未签名，需开启 `plugins.allow_unsigned` 才会加载
+- **新增（插件扩展点）**：插件可以提供下载器、通知渠道、LLM 解析提供商、搜索站点和定时任务（`ab_sdk.points`）。内置的 qB / aria2 和各通知渠道走同一套扩展注册表。设置页新增「插件」卡片，可查看状态、启停插件，并通过插件配置模型自动生成的表单修改配置；`secret_field` 声明的秘密字段在读取接口中一律掩码。下载器类型和通知渠道下拉框会列出插件提供的选项。新增插件开发文档（开发者指南 → 插件开发）
+- **新增（ingest 扩展点）**：RSS 下载流程开放 `torrent.filter`（种子过滤）、`title.parsed`（修正解析结果）、`torrent.adding`（修改保存路径 / 分类 / 标签）、`http.request`（为私有站点添加 Cookie 等请求头）四个钩子，以及 `metadata_provider` 元数据源扩展点：内置 mikan / tmdb 以 `core` 身份登记，插件可按 RSS 订阅的「解析器」取值提供新的元数据源，添加订阅时的解析器下拉框会列出插件选项。插件 SDK 升至 0.3.0，新增 `ab_sdk.ingest`。未安装插件时行为不变
+- **新增（种子过滤）**：新增默认启用的内置插件「种子过滤」（`ingest-filters`）。在 设置 → 插件 中填写「包含过滤」后，只下载名称匹配任一表达式的种子（对所有订阅生效）；留空时不过滤
+- **新增（事件与外部接口）**：系统事件（RSS 订阅异常、种子添加失败、下载器不可用、新版本等）在写入通知中心后发布到插件事件总线，插件可用 `@subscribe("rss_failure")` 等订阅；事件类移入 `ab_sdk.events`（`SystemEvent` 基类，新增 `i18n()` 返回前端 i18n key 与参数）。插件可以提供 REST 路由（挂载于 `/api/v1/plugins/<id>/`，强制登录鉴权，随插件启停出现和消失）、MCP 工具（工具名 `<插件 id>__<id>`）与 MCP 资源（`autobangumi://plugins/<插件 id>/<id>`），并可通过 `message_template` 钩子按事件类型和渠道改写系统通知的标题与正文。`ab_sdk` 升至 0.3.0
+- **优化（通知中心推送）**：SSE 的 `notification` 帧改为订阅事件总线，通知中心有新消息、已读或删除时立即推送（原先每 3 秒比较一次修订号），推送格式不变
+- **修复（搜索）**：`GET /api/v1/search/provider` 读取的是导入时的站点快照，新保存的搜索站点要重启后才会出现在列表中；现在实时读取
+- **修复（MCP）**：MCP 客户端每次断开 SSE 连接后，日志都会出现 `AssertionError: Unexpected message http.response.start`（3.x 起存在）。原因是 `/sse` 端点在 SSE 响应结束后又返回了一个空 `Response`，现在改为裸 ASGI 端点
+- **新增（整理流水线）**：重命名方式改为 `rename_strategy` 扩展点：`pn` / `advance` / `template` 由默认启用的内置插件「重命名」（`rename`）提供，`none` 由宿主提供；`pn` / `advance` 的输出与此前逐字一致。字幕不再使用 `subtitle_*` 平行方式，同一方式按文件类型生成。`template` 用 Jinja2 沙箱模板自定义文件名（默认模板与 `pn` 相同），保存时试渲染、不合法直接拒绝；运行时渲染失败的文件保留原名并发送「文件未重命名」通知，不会退回 `pn`。文件分类（`media_files`）与版本冲突策略（`conflict_policy`）改为宿主 Provider。重命名后向事件总线发布 `file.renamed` / `torrent.organized`（`ab_sdk.events`）。`ab_sdk` 升至 0.4.0
+- **新增（硬链接）**：新增默认停用的内置插件「硬链接到媒体库」（`hardlink`）：种子整理完成后把正片与字幕链接到媒体库目录，按下载器实例做路径映射（`path_map`），跨文件系统时默认复制；不覆盖不是它创建的文件，版本升级后替换自己创建的链接；已有文件经 `POST /api/v1/plugins/hardlink/backfill` 按需补链
+- **新增（媒体库刷新）**：新增内置插件「媒体库刷新」（`media-server-refresh`）：配置 Jellyfin / Emby / Plex 地址与 API Key 后，合并一段时间内整理完成的种子，请求刷新媒体库；未配置时不做任何事
+- **重构（整理流水线）**：`manager/renamer.py` 拆为编排（`renamer.py`）与 revision 替换事务（`revision_saga.py`）；删除仅测试使用的 `Renamer.rename_file` / `_lookup_offsets`、无调用方的 `release_replacement_lease`、`match_by_save_path`、`search_by_qb_hash`，以及在重命名链路中传递却从未使用的 `season_offset` 参数
+- **修复（插件配置）**：插件配置模型的校验器（`field_validator`）报错时，保存接口返回 500 而不是 422（错误详情中的异常对象无法序列化）
+- **破坏性变更（配置，多下载器）**：下载器改为 `plugins.instances` 中的实例，`plugins.slots.downloader` 指向默认实例；重命名方式与版本冲突策略移到 `plugins.slots.rename_strategy` / `conflict_policy`（另有 `media_files`），插件提供的实现也可以通过 slots 选用。升级后第一次启动时，3.3 的 `downloader`、`bangumi_manage.rename_method`、`bangumi_manage.revision_conflict_policy` 自动迁移，原文件备份为 `config.json.v3.bak`（已有备份时不覆盖，另存为 `config.json.v3.bak.1` 等）；迁移失败时从备份恢复配置并拒绝启动，日志写明出错的字段。`AB_DOWNLOADER_*`、`AB_DOWNLOAD_PATH`、`AB_METHOD`、`AB_REVISION_CONFLICT_POLICY` 环境变量照常生效。番剧、电影、RSS 订阅与种子新增 `downloader_id` 列（数据库迁移 v26）：存量种子归属 `default`，规则与订阅为空（跟随默认实例）。`ab_sdk` 升至 0.5.0：`ConflictRequest` 删除 `configured`，宿主的冲突策略改为 `hold` / `replace` 两个 Provider
+- **新增（多下载器）**：设置 → 下载器设置 可以添加多个下载器实例（qBittorrent、aria2 或插件提供的下载器）并指定默认实例。规则与 RSS 订阅可以选择下载器，留空时用默认实例；由订阅新建的规则继承订阅的选择。每个种子记录它所在的下载器，重命名、删除都在该下载器上进行，规则改用另一个下载器后已有种子留在原处，新种子保存到该下载器的下载目录（默认下载器切换或下载器被删除时也是如此）。重命名逐个下载器运行，连不上的下载器被跳过，并在第一次连不上时通知（`DownloaderUnavailableEvent` 新增 `instance_id`，按实例去重）。下载器页与种子列表标出种子所在的下载器；`GET /api/v1/downloader/torrents` 汇总所有实例，暂停 / 恢复 / 删除 / 打标接口新增 `downloader_id`，新增 `GET /api/v1/downloader/instances`
+- **新增（插件开发工具）**：`ab_sdk` 可单独打包为 `autobangumi-sdk` 轮子（`uv build --wheel backend/sdk`），带 `ab-plugin` 命令行：`new` 生成插件骨架与契约测试，`validate` 校验清单和 SDK 版本范围，`pack` 打包为可安装的 zip，`dev` 把插件目录链接到 `config/plugins/local/` 并开启 `plugins.dev_mode`。开启 `dev_mode` 后，修改本地插件的文件会自动重新加载该插件（包括上次加载失败的）。`ab_sdk.testing` 新增 `DownloaderContract`、`RenameStrategyContract`、`NotifierContract`、`SearchSiteContract` 契约测试套件，内置的下载器、重命名方式、通知渠道和默认搜索站点都通过它们
+- **新增（签名插件目录）**：LLM 插件的安装器泛化为通用的签名目录安装器：`GET /api/v1/plugins/catalog` 列出目录（GitHub release `plugins`）中的插件，`POST /api/v1/plugins/{id}/install` 验签（目录、sha256、ed25519）后安装并启用，`DELETE /api/v1/plugins/{id}` 卸载。已安装的插件来源为 `catalog`，视为已签名。插件 id `local` 改为保留
+- **破坏性变更（通知渠道）**：Bark 不再读取旧字段 `token`（改用 `device_key`），WeCom 不再读取 `chat_id`（改用 `webhook_url`）。升级后第一次启动时自动把旧字段迁移到新字段，原文件备份为 `config.json.v3.bak`
+- **新增（插件文档与示例）**：插件开发文档拆为总览、核心概念、配置表单、事件、前端挂载点、命令行、签名与分发、内置插件、示例和每个扩展点一页（中 / 英 / 日）。`examples/plugins/` 新增 `webhook-on-event`、`custom-rss-site`、`template-rename`、`nfo-writer`、`ntfy-notifier`，CI 逐个校验并运行它们的测试。新增插件作者 skill（`skills/autobangumi-plugin/`）
+- **新增（发布）**：beta 与稳定版的 GitHub Release 附带 `autobangumi-sdk` 轮子和 `autobangumi-plugin-skill-<版本>.zip`
+- **修复（插件开发工具）**：插件目录里的 `.venv`、`node_modules` 等工具链目录不再被当作原生扩展（`ab-plugin validate` / `pack` / `dev` 和宿主加载此前会报「含原生扩展」），`dev_mode` 也不再监听它们
+- **修复（配置迁移）**：配置里有 Bark 或 WeCom 渠道时，每次启动都会新增一份 `config.json.v3.bak.N` 并改写配置；现在只迁移带值的旧字段
+- **修复（在线更新）**：在线更新包带上 `ab_sdk`，4.0 镜像启动时与 `module` 一起替换；更新包要求镜像不低于 4.0.0-beta.1，已安装 3.3 的用户在 beta 通道不会应用 4.x 更新包（缺少 `ab_sdk` 与新依赖，应用后无法启动），需要拉取 4.0 镜像
+- **修复（多下载器）**：删除规则并删除文件时，若某个下载器不可用，规则与种子记录会保留并提示稍后重试；此前规则和种子记录已先删除，该下载器上的种子之后无法再删
+- **修复（多下载器）**：aria2 任务与番剧的关联按下载器实例区分，两个 aria2 实例分配到相同 gid 时不再互相覆盖，同一种子也可以分别加入两个实例；插件下载器的工厂参数 `DownloaderConnection` 新增 `instance_id`
+- **修复（回退 3.3）**：4.x 改把运行版本写入 `config/version_v4.info`，`config/version.info` 保留 3.x 的最后记录。此前 3.3 读到 `4.0.0` 只比较 minor，会当作 3.0 数据运行 3.0→3.1 迁移并重建数据库。首次以 4.x 启动 3.x 数据时还会把数据库备份为 `data/data.db.v3.bak`，回退时与 `config.json.v3.bak` 一起还原
+- **新增（插件目录界面）**：设置 → 插件 新增「插件目录」：浏览签名目录中的插件并安装、更新；目录安装的插件可在卡片上卸载（内置、本地、pip 与 LLM 提供商插件不提供卸载）。插件卡片标出已签名或未签名。目录不可达时在区内显示原因，不弹全局提示
+- **修复（插件设置）**：经签名目录安装的插件在插件卡片上的来源显示为未翻译的 `config.plugins_set.source_catalog`
+- **修复（插件安装）**：`DELETE /api/v1/plugins/{id}` 不再能卸载 LLM 提供商插件；安装通用插件后，LLM 插件列举不再反复输出 `Skipping broken plugin` 警告
+- **修复（插件安装）**：LLM 提供商插件的卸载也校验插件 id，并且只删除 LLM 安装器装入的目录：`..`、`local` 与目录安装的通用插件会被拒绝；卸载未安装的 id 现在返回「Plugin not installed」（400），此前返回成功。`build_plugin_catalog.py` 默认 `min_ab_version` 改为 `4.0.0-beta.1`，此前的 `4.0.0` 会让 beta 版拒绝安装目录中的插件
+- **修复（插件运行时）**：清单不是 UTF-8 或 pip 插件导入失败时，该插件显示为加载失败，不再中断全部插件的发现；`setup()` 抛错或超时后调用 `teardown` 释放已占用的资源；事件订阅者成功一次即清零熔断计数，只有连续失败才熔断；停用一个加载失败的插件后状态显示为「已停用」，重新启用时会再次尝试加载；插件重载后，旧实例的熔断不再停用新实例
+- **修复（设置向导）**：向导中填写的 Bark / WeCom 凭据写入渠道实际读取的 `device_key` / `webhook_url`，此前测试通知与保存后的渠道都拿不到凭据
+- **修复（升级路径）**：首次启动时也检查 2.x 的 `data/data.json`；没有 `version.info` 的 3.0 数据库会被识别并要求先升级到 3.1.x；拒绝启动的提示写明要先把 `config.json.v3.bak` 还原为 `config.json` 再启动旧版本。配置迁移失败时把备份移回原文件，反复重启不再堆积 `config.json.v3.bak.N`
+- **修复（多下载器）**：修改规则的保存路径时，若某个下载器不可用，不移动任何种子也不修改规则，提示稍后重试；此前可用实例上的种子已移动而规则路径未更新。下载器页的批量暂停 / 恢复 / 删除按实例分别执行并汇总失败，同一 hash 在两个实例上时只操作选中的那一个；只配置了插件下载器时下载器页不再显示为未配置
+- **修复（整理）**：插件提供的版本冲突策略或文件分类出错时退回宿主实现并计入熔断，不再中断整次重命名；重命名方式的插件未加载而按 `none` 处理时不发布 `torrent.organized`；已重命名的种子在每次启动后补发一次 `torrent.organized`，此前错过该事件的种子不会再被硬链接或触发媒体库刷新（开启硬链接时，重启后会对仍在下载器中的已整理种子补链一次）
+- **修复（硬链接）**：用户从媒体库删除的硬链接文件不再被重新创建（`backfill` 仍会恢复）；媒体库刷新在硬链接放好文件后再刷新一次，刷新请求进行中到达的整理事件不再丢失
+- **修复（插件配置）**：秘密字段的标记写在 `Optional` / 嵌套模型引用外层或 `list` / `dict` 容器上时，读取接口此前返回明文，现在掩码；`/config/get` 掩码插件通知渠道的自定义字段，保存时按渠道还原
+- **修复（插件设置）**：在插件卡片上切换「允许未签名插件」后，点全局保存不再把它改回旧值；保存或启停一个插件不再清掉其他卡片未保存的输入；整数枚举的下拉框保存为数字而不是字符串
+- **破坏性变更（升级路径）**：只支持从 3.3.x 升级。检测到更早版本的数据（`config/version.info` 低于 3.3，或残留 2.x 的 `data/data.json`）时拒绝启动，并提示先升级到最新 3.3.x 启动一次完成迁移
+- **破坏性变更（API）**：移除 3.2 兼容的 GET 控制端点（`/api/v1/restart`、`/start`、`/stop`、`/shutdown`）和 `GET /api/v1/auth/refresh_token`，请改用 POST
+- **破坏性变更（配置）**：移除旧版 `experimental_openai` 配置节和通知的单 provider 旧字段（`type` / `token` / `chat_id`），3.3 已把它们迁移到 `llm` 与 `notification.providers`；移除废弃的 `normal` 重命名方式，已有配置自动改为语义相同的 `none`
+- **清理**：删除 3.0→3.1、3.1→3.2 跨版本迁移、旧 JWT 与内存会话实现，以及约 70 处无调用方的函数、方法和模型；CI 新增 vulture 死代码检查
+- **修复（版本记录）**：`version.info` 原先只比较次版本号，跨主版本升级（如 3.3 → 4.0）不会被记录；现按完整语义化版本比较
+
 # [3.3.6] - 2026-09-19
 
 3.3.6 是问题修复版本，修复 3.3.5 发布后报告的 RSS 匹配、网络、解析与部署问题。

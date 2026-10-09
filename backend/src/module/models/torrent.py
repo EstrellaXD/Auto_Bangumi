@@ -17,10 +17,8 @@ class Torrent(SQLModel, table=True):
     homepage: Optional[str] = Field(None, alias="homepage")
     downloaded: bool = Field(False, alias="downloaded")
     qb_hash: Optional[str] = Field(None, alias="qb_hash", index=True)
-
-
-class TorrentUpdate(SQLModel):
-    downloaded: bool = Field(False, alias="downloaded")
+    # 种子实际添加到的下载器实例
+    downloader_id: str = Field("default", alias="downloader_id")
 
 
 class EpisodeFile(BaseModel):

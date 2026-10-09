@@ -59,16 +59,6 @@ class RequestContent(RequestURL):
             return req.json()
         return None
 
-    async def post_form_json(self, _url, data: dict) -> dict:
-        """Form-encoded POST that returns a parsed JSON response.
-
-        Renamed from ``post_json`` to avoid shadowing ``RequestURL.post_json``
-        (the JSON-body POST used by notification providers) -- the two had
-        unrelated, LSP-incompatible signatures despite the same name.
-        """
-        resp = await self.post_url(_url, data)
-        return resp.json()
-
     async def post_data(self, _url, data: dict):
         return await self.post_url(_url, data)
 
@@ -85,9 +75,6 @@ class RequestContent(RequestURL):
             return req.content
         logger.warning(f"Failed to get content from {_url}")
         return None
-
-    async def check_connection(self, _url):
-        return await self.check_url(_url)
 
     async def get_rss_title(self, _url) -> str | None:
         soup = await self.get_xml(_url)

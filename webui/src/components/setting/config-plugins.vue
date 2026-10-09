@@ -1,0 +1,417 @@
+<script lang="ts" setup>
+import AbAlert from '../basic/ab-alert.vue';
+import AbButton from '../basic/ab-button.vue';
+import AbField from '../basic/ab-field.vue';
+import AbSkeleton from '../basic/ab-skeleton.vue';
+import AbSwitch from '../basic/ab-switch.vue';
+import AbTag from '../basic/ab-tag.vue';
+import PluginSchemaForm from './plugin-schema-form.vue';
+import type { PluginInfo, PluginsOverview } from '#/plugins';
+import { apiPlugins } from '@/api/plugins';
+import { useConfirm } from '@/hooks/useConfirm';
+import { pluginSetVersion, refreshPluginState } from '@/hooks/usePluginRefresh';
+import { idLabel } from '@/utils/id-label';
+import { fillSchemaDefaults, schemaFields } from '@/utils/plugin-schema';
+import {
+  localizeFields,
+  pluginDescription,
+  pluginName,
+  pluginReason,
+} from '@/utils/plugin-text';
+
+// 插件卡片不参与全局保存：每次改动直接调 /plugins 接口落盘并应用，
+// 随后刷新 config store 的 plugins 段，避免全局保存用旧值覆盖。
+const { t } = useMyI18n();
+const message = useMessage();
+const router = useRouter();
+const { confirm } = useConfirm();
+const configStore = useConfigStore();
+
+const overview = ref<PluginsOverview | null>(null);
+const drafts = ref<Record<string, Record<string, unknown>>>({});
+// 并发操作各自占用一个 key，互不覆盖对方的加载态
+const busy = ref(new Set<string>());
+const loadError = ref(false);
+let seenVersion = pluginSetVersion.value;
+
+const stateType = {
+  active: 'success',
+  disabled: 'neutral',
+  error: 'danger',
+} as const;
+
+// 只重建服务端配置或 schema 有变化的插件草稿，其它卡片里未保存的编辑保留
+function apply(data: PluginsOverview) {
+  const saved = (p?: PluginInfo) =>
+    p && JSON.stringify([p.options, p.config_schema]);
+  const prev = new Map(overview.value?.plugins.map((p) => [p.id, p]));
+  overview.value = data;
+  drafts.value = Object.fromEntries(
+    data.plugins.map((p) => [
+      p.id,
+      drafts.value[p.id] && saved(prev.get(p.id)) === saved(p)
+        ? drafts.value[p.id]
+        : fillSchemaDefaults(schemaFields(p.config_schema), p.options),
+    ])
+  );
+}
+
+async function load() {
+  loadError.value = false;
+  try {
+    apply(await apiPlugins.list());
+  } catch {
+    loadError.value = true;
+    message.error(t('config.plugins_set.load_failed'));
+  }
+}
+
+// 草稿与服务端配置不同即为未保存
+function isDirty(plugin: PluginInfo) {
+  const saved = fillSchemaDefaults(
+    schemaFields(plugin.config_schema),
+    plugin.options
+  );
+  return JSON.stringify(drafts.value[plugin.id]) !== JSON.stringify(saved);
+}
+
+async function run(
+  key: string,
+  action: () => Promise<PluginsOverview>,
+  failKey = 'save_failed'
+) {
+  busy.value.add(key);
+  try {
+    apply(await action());
+    await refreshPluginState();
+    seenVersion = pluginSetVersion.value;
+    return true;
+  } catch {
+    // 后端的具体原因（如验签失败）由 axios 拦截器另行提示
+    message.error(t(`config.plugins_set.${failKey}`));
+    return false;
+  } finally {
+    busy.value.delete(key);
+  }
+}
+
+function setAllowUnsigned(value: boolean) {
+  run('__settings', () => apiPlugins.updateSettings(value));
+}
+
+// 正在引用该插件 Provider 的设置项；停用或卸载后它们会失效
+function usages(plugin: PluginInfo): string[] {
+  const own = plugin.providers;
+  const { plugins, notification } = configStore.config;
+  const strategy = plugins.slots.rename_strategy;
+  return [
+    ...plugins.instances
+      .filter((i) => own.downloader?.includes(i.provider))
+      .map((i) => t('config.plugins_set.uses_downloader', { id: i.id })),
+    ...notification.providers
+      .filter((p) => own.notifier?.includes(p.type))
+      .map((p) => t('config.plugins_set.uses_notifier', { type: p.type })),
+    ...(own.rename_strategy?.includes(strategy)
+      ? [
+          t('config.plugins_set.uses_rename', {
+            name: idLabel(t, 'config.manage_set.strategy_labels', strategy),
+          }),
+        ]
+      : []),
+  ];
+}
+
+function impactText(plugin: PluginInfo) {
+  const used = usages(plugin);
+  return used.length
+    ? t('config.plugins_set.in_use', { list: used.join(', ') })
+    : '';
+}
+
+async function setEnabled(plugin: PluginInfo, enabled: boolean) {
+  const impact = enabled ? '' : impactText(plugin);
+  if (
+    impact &&
+    !(await confirm({
+      title: t('config.plugins_set.disable_confirm_title', {
+        name: pluginName(t, plugin),
+      }),
+      body: impact,
+      confirmText: t('config.plugins_set.disable'),
+      danger: true,
+    }))
+  )
+    return;
+  run(plugin.id, () => apiPlugins.update(plugin.id, { enabled }));
+}
+
+async function saveOptions(plugin: PluginInfo) {
+  const ok = await run(plugin.id, () =>
+    apiPlugins.update(plugin.id, { options: drafts.value[plugin.id] })
+  );
+  if (ok) message.success(t('config.plugins_set.save_success'));
+}
+
+// 只有签名目录安装的插件（source 为 catalog）显示卸载按钮：后端卸载的前提
+// （installed.json 指向含 plugin.toml 的版本目录）与加载器判定 catalog 来源
+// 是同一条件。LLM 提供商插件不在此列表中，仍在 LLM 设置里管理。
+async function uninstall(plugin: PluginInfo) {
+  const confirmed = await confirm({
+    title: t('config.plugins_set.uninstall_confirm_title', {
+      name: pluginName(t, plugin),
+    }),
+    body: [impactText(plugin), t('config.plugins_set.uninstall_confirm_body')]
+      .filter(Boolean)
+      .join(' '),
+    confirmText: t('config.plugins_set.uninstall'),
+    danger: true,
+  });
+  if (!confirmed) return;
+  const ok = await run(
+    `uninstall:${plugin.id}`,
+    () => apiPlugins.uninstall(plugin.id),
+    'uninstall_failed'
+  );
+  if (ok) message.success(t('config.plugins_set.uninstall_success'));
+}
+
+onMounted(load);
+
+// 设置页被 KeepAlive 缓存：插件市场安装或更新后，再次进入时重新加载列表
+onActivated(async () => {
+  const version = pluginSetVersion.value;
+  if (seenVersion === version) return;
+  await load();
+  // 失败时下次进入再试
+  if (!loadError.value) seenVersion = version;
+});
+</script>
+
+<template>
+  <ab-fold-panel :title="$t('config.plugins_set.title')">
+    <AbAlert
+      v-if="loadError && !overview"
+      type="danger"
+      :title="$t('config.plugins_set.load_failed')"
+    >
+      <AbButton size="sm" @click="load">{{
+        $t('config.plugins_set.retry')
+      }}</AbButton>
+    </AbAlert>
+    <AbSkeleton v-else-if="!overview" preset="row" />
+    <div v-else class="plugins">
+      <AbField
+        :label="$t('config.plugins_set.allow_unsigned')"
+        :description="$t('config.plugins_set.allow_unsigned_hint')"
+      >
+        <AbSwitch
+          :model-value="overview.allow_unsigned"
+          :loading="busy.has('__settings')"
+          :aria-label="$t('config.plugins_set.allow_unsigned')"
+          @update:model-value="setAllowUnsigned"
+        />
+      </AbField>
+
+      <p v-if="!overview.plugins.length" class="plugins__empty">
+        {{ $t('config.plugins_set.empty') }}
+      </p>
+
+      <section
+        v-for="plugin in overview.plugins"
+        :key="plugin.id"
+        class="plugin"
+      >
+        <header class="plugin__header">
+          <div class="plugin__title">
+            <strong>{{ pluginName(t, plugin) }}</strong>
+            <span class="plugin__meta"
+              >{{ plugin.id }} · v{{ plugin.version }}</span
+            >
+          </div>
+          <AbSwitch
+            :model-value="plugin.enabled"
+            :loading="busy.has(plugin.id)"
+            :aria-label="
+              $t('config.plugins_set.enabled_for', {
+                name: pluginName(t, plugin),
+              })
+            "
+            @update:model-value="setEnabled(plugin, $event)"
+          />
+        </header>
+
+        <div class="plugin__tags">
+          <AbTag :type="stateType[plugin.state]">
+            {{ $t(`config.plugins_set.state_${plugin.state}`) }}
+          </AbTag>
+          <AbTag>{{ $t(`config.plugins_set.source_${plugin.source}`) }}</AbTag>
+          <AbTag v-if="!plugin.signed" type="warning">
+            {{ $t('config.plugins_set.unsigned') }}
+          </AbTag>
+        </div>
+
+        <p v-if="plugin.description" class="plugin__desc">
+          {{ pluginDescription(t, plugin) }}
+        </p>
+        <AbAlert
+          v-if="plugin.error && plugin.error !== 'not_enabled'"
+          :type="plugin.state === 'error' ? 'danger' : 'info'"
+          :title="$t(`config.plugins_set.state_${plugin.state}`)"
+        >
+          {{ pluginReason(t, plugin.error) }}
+        </AbAlert>
+        <p
+          v-if="plugin.permissions.length"
+          class="plugin__desc"
+          :title="plugin.permissions.join(', ')"
+        >
+          {{
+            $t('config.plugins_set.permissions', {
+              list: plugin.permissions
+                .map((id) =>
+                  idLabel(t, 'config.plugins_set.permission_labels', id)
+                )
+                .join(', '),
+            })
+          }}
+        </p>
+
+        <details class="plugin__options">
+          <summary>{{ $t('config.plugins_set.options') }}</summary>
+          <template v-if="plugin.config_schema">
+            <PluginSchemaForm
+              v-model="drafts[plugin.id]"
+              :fields="
+                localizeFields(t, plugin, schemaFields(plugin.config_schema))
+              "
+            />
+            <div class="plugin__save">
+              <AbButton
+                size="sm"
+                variant="primary"
+                :loading="busy.has(plugin.id)"
+                :disabled="!isDirty(plugin)"
+                @click="saveOptions(plugin)"
+              >
+                {{ $t('config.plugins_set.save') }}
+              </AbButton>
+              <span v-if="isDirty(plugin)" class="plugin__desc">
+                {{ $t('config.plugins_set.unsaved') }}
+              </span>
+            </div>
+          </template>
+          <p v-else-if="plugin.state === 'active'" class="plugin__desc">
+            {{ $t('config.plugins_set.no_options') }}
+          </p>
+          <p v-else class="plugin__desc">
+            {{ $t('config.plugins_set.options_unavailable') }}
+          </p>
+        </details>
+
+        <AbButton
+          v-if="plugin.source === 'catalog'"
+          size="sm"
+          variant="danger"
+          class="plugin__uninstall"
+          :loading="busy.has(`uninstall:${plugin.id}`)"
+          @click="uninstall(plugin)"
+        >
+          {{ $t('config.plugins_set.uninstall') }}
+        </AbButton>
+      </section>
+
+      <p class="plugins__market">
+        <span class="plugin__desc">{{
+          $t('config.plugins_set.market_hint')
+        }}</span>
+        <AbButton size="sm" @click="router.push('/market')">
+          {{ $t('config.plugins_set.open_market') }}
+        </AbButton>
+      </p>
+    </div>
+  </ab-fold-panel>
+</template>
+
+<style lang="scss" scoped>
+.plugins {
+  display: flex;
+  flex-direction: column;
+  gap: var(--layout-padding);
+}
+
+.plugins__empty,
+.plugin__desc,
+.plugin__meta {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+// 插件之间用分隔线（与下方目录段一致），不在折叠面板里再套一层卡片
+.plugin {
+  display: flex;
+  flex-direction: column;
+  gap: var(--layout-gap);
+  padding-top: var(--layout-padding);
+  border-top: 1px solid var(--color-border);
+}
+
+.plugin__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--layout-gap);
+}
+
+.plugin__title {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.plugin__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.plugin__options summary {
+  display: flex;
+  align-items: center;
+  min-height: var(--touch-target);
+  margin-bottom: var(--layout-gap);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.plugin__options summary:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.plugin__save {
+  display: flex;
+  align-items: center;
+  gap: var(--layout-gap);
+  margin-top: var(--layout-gap);
+}
+
+.plugin__uninstall {
+  align-self: flex-start;
+}
+
+.plugin__meta {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.plugins__market {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--layout-gap);
+  margin: 0;
+  padding-top: var(--layout-padding);
+  border-top: 1px solid var(--color-border);
+}
+</style>

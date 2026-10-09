@@ -129,6 +129,7 @@ async function handleConfirm(bangumi: BangumiRule) {
       connection_status: null,
       last_checked_at: null,
       last_error: null,
+      downloader_id: null,
     };
     await apiDownload.subscribe(bangumi, rss);
     message.success(t('search.subscribe_success'));

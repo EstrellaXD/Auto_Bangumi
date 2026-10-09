@@ -1,0 +1,27 @@
+import en from '@/i18n/en.json';
+
+/**
+ * 把扩展点、权限、重命名方式等内部 id 映射成 i18n 文案：`${group}.${id}`
+ * 在 en.json 中存在时返回翻译（id 里的 . 换成 _，避免被当成 key 路径），
+ * 未收录的 id（如第三方插件自定义的）原样返回。
+ */
+export function idLabel(
+  t: (key: string) => string,
+  group: string,
+  id: string
+): string {
+  const key = `${group}.${id.replaceAll('.', '_')}`;
+  return hasKey(key) ? t(key) : id;
+}
+
+/** en.json 中是否有这条文案（en 与 zh-CN 的 key 集合由测试保证一致） */
+export function hasKey(key: string): boolean {
+  const found = key
+    .split('.')
+    .reduce<unknown>(
+      (node, part) => (node as Record<string, unknown> | undefined)?.[part],
+      en
+    );
+  // 构建时 i18n 插件把文案预编译成消息函数，测试里则是原始字符串
+  return typeof found === 'string' || typeof found === 'function';
+}

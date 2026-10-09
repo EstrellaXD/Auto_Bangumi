@@ -1,12 +1,2 @@
-from .auth import migrate_legacy_auth_tokens
-from .cross_version import cache_image, from_30_to_31, from_31_to_32, run_migrations
-from .data_migration import data_migration
-from .startup import first_run, start_up
-from .updater import (
-    ApplyResult,
-    UpdateCheckResult,
-    Updater,
-    get_update_progress,
-    updater,
-)
-from .version_check import version_check
+# 不在包初始化时 import 子模块：module.conf 在构造 settings 之前要 import
+# module.update.v4，而其它子模块依赖 module.conf，会形成循环。

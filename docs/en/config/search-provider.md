@@ -2,7 +2,7 @@
 
 ![search provider](/image/config/search-provider.png){width=700}{class=ab-shadow-card}
 
-Search providers power WebUI torrent search and search-based subscription. Built-in providers are `mikan`, `nyaa` and `dmhy`; default providers cannot be deleted, but their URL templates can be edited.
+Search providers power WebUI torrent search and search-based subscription. Built-in providers are `mikan`, `anibt`, `nyaa` and `dmhy`; default providers cannot be deleted, but their URL templates can be edited.
 
 Search provider changes are saved immediately to `config/search_provider.json`; they do not use the bottom **Save & restart** button.
 

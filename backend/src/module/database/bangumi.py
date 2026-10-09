@@ -79,8 +79,7 @@ def _all_title_patterns(bangumi: Bangumi) -> list[str]:
 def normalize_save_path(save_path: str | None) -> str:
     """Normalize a save_path so equivalent paths compare equal.
 
-    Collapses the separator/trailing-slash variations that
-    `BangumiDatabase.match_by_save_path` used to try one at a time.
+    Collapses separator (``\\`` vs ``/``) and trailing-slash variations.
     """
     if not save_path:
         return ""
@@ -311,10 +310,6 @@ class BangumiDatabase:
         )
         return True
 
-    def get_all_title_patterns(self, bangumi: Bangumi) -> list[str]:
-        """Get all title patterns for matching (title_raw + all aliases)."""
-        return _all_title_patterns(bangumi)
-
     async def find_duplicate(self, data: Bangumi) -> Optional[Bangumi]:
         """Find an existing rule with the same typed subscription identity.
 
@@ -524,27 +519,6 @@ class BangumiDatabase:
         await self.session.commit()
         logger.debug("Update %s bangumi.", len(datas))
 
-    async def update_rss(self, title_raw: str, rss_set: str):
-        statement = select(Bangumi).where(Bangumi.title_raw == title_raw)
-        result = await self.session.execute(statement)
-        bangumi = result.scalar_one_or_none()
-        if bangumi:
-            bangumi.rss_link = rss_set
-            bangumi.added = False
-            self.session.add(bangumi)
-            await self.session.commit()
-            logger.debug("Update %s rss_link to %s.", title_raw, rss_set)
-
-    async def update_poster(self, title_raw: str, poster_link: str):
-        statement = select(Bangumi).where(Bangumi.title_raw == title_raw)
-        result = await self.session.execute(statement)
-        bangumi = result.scalar_one_or_none()
-        if bangumi:
-            bangumi.poster_link = poster_link
-            self.session.add(bangumi)
-            await self.session.commit()
-            logger.debug("Update %s poster_link to %s.", title_raw, poster_link)
-
     async def restore_one(self, _id: int) -> bool:
         """取消软删除（重新启用规则）。行不存在或本就未删除时不写库。"""
         bangumi = await self.session.get(Bangumi, _id)
@@ -628,14 +602,6 @@ class BangumiDatabase:
         result = await self.session.execute(statement)
         return list(result.scalars().all())
 
-    async def match_poster(self, bangumi_name: str) -> str:
-        statement = select(Bangumi).where(
-            func.instr(bangumi_name, Bangumi.official_title) > 0
-        )
-        result = await self.session.execute(statement)
-        data = result.scalar_one_or_none()
-        return (data.poster_link or "") if data else ""
-
     async def match_list(self, torrent_list: list, rss_link: str) -> list:
         match_datas = await self.search_all()
         if not match_datas:
@@ -683,19 +649,6 @@ class BangumiDatabase:
         result = await self.session.execute(condition)
         return list(result.scalars().all())
 
-    async def not_added(self) -> list[Bangumi]:
-        # SQLModel 类属性在 mypy 看来是普通字段类型而非 InstrumentedAttribute，
-        # 无法识别 .is_() 等查询方法（无官方 mypy 插件支持）。
-        conditions = select(Bangumi).where(
-            or_(
-                Bangumi.added == 0,
-                Bangumi.rule_name.is_(None),  # type: ignore[union-attr]
-                Bangumi.save_path.is_(None),  # type: ignore[union-attr]
-            )
-        )
-        result = await self.session.execute(conditions)
-        return list(result.scalars().all())
-
     async def disable_rule(self, _id: int):
         statement = select(Bangumi).where(Bangumi.id == _id)
         result = await self.session.execute(statement)
@@ -734,55 +687,6 @@ class BangumiDatabase:
         await self.session.commit()
         logger.debug("Unarchived bangumi id: %s.", _id)
         return True
-
-    async def match_by_save_path(self, save_path: str) -> Optional[Bangumi]:
-        """Find bangumi by save_path to get offset.
-
-        Tries exact match first, then falls back to matching with/without trailing slashes
-        and different path separators.
-
-        Note: When multiple subscriptions share the same save_path (e.g., different RSS
-        sources for the same anime), this returns the first match. Use match_torrent()
-        for more accurate matching when torrent_name is available.
-        """
-        if not save_path:
-            return None
-
-        # Try exact match first
-        statement = select(Bangumi).where(
-            and_(Bangumi.save_path == save_path, Bangumi.deleted == false())
-        )
-        result = await self.session.execute(statement)
-        bangumi = result.scalars().first()
-        if bangumi:
-            return bangumi
-
-        # Normalize the input path and try variations
-        normalized = save_path.replace("\\", "/").rstrip("/")
-        variations = [
-            normalized,
-            normalized + "/",
-            save_path.rstrip("/"),
-            save_path.rstrip("\\"),
-        ]
-        # Remove duplicates while preserving order
-        seen = {save_path}
-        unique_variations = []
-        for v in variations:
-            if v not in seen:
-                seen.add(v)
-                unique_variations.append(v)
-
-        for variant in unique_variations:
-            statement = select(Bangumi).where(
-                and_(Bangumi.save_path == variant, Bangumi.deleted == false())
-            )
-            result = await self.session.execute(statement)
-            bangumi = result.scalars().first()
-            if bangumi:
-                return bangumi
-
-        return None
 
     async def get_needs_review(self) -> list[Bangumi]:
         """Get all bangumi that need review for offset mismatch."""

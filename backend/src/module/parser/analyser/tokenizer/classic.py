@@ -893,10 +893,6 @@ def _join_title_parts(parts: list[str]) -> str | None:
     return " ".join(parts).strip() if parts else None
 
 
-def _mostly_metadata(text: str) -> bool:
-    return bool(re.fullmatch(r"[\w\s+_.-]{1,48}", text))
-
-
 def _prefer_subtitle(current: str | None, candidate: str) -> str:
     if current is None or _HAN.search(candidate):
         return re.sub(r"_(?:MP4|MKV)$", "", candidate, flags=re.I)

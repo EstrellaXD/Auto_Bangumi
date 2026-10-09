@@ -1,16 +1,18 @@
 import json
 import logging
+from typing import Any
 
 from mcp import types
 
 from module.conf import VERSION
 from module.database import Database
-from module.downloader import DownloadClient
+from module.downloader import DownloaderPool, list_torrents
 from module.manager import SeasonCollector, TorrentManager
 from module.models import Bangumi, BangumiUpdate, RSSItem
 from module.rss import RSSAnalyser, RSSEngine
 from module.searcher import SearchTorrent
 
+from .plugins import call_plugin_tool, list_plugin_tools
 from .runtime import get_context
 
 logger = logging.getLogger(__name__)
@@ -175,6 +177,11 @@ TOOLS = [
 ]
 
 
+def all_tools() -> list[types.Tool]:
+    """内置工具 + 当前已启用插件提供的工具（``<plugin-id>__<id>``）。"""
+    return TOOLS + list_plugin_tools()
+
+
 def _bangumi_to_dict(b: Bangumi) -> dict:
     return {
         "id": b.id,
@@ -202,7 +209,9 @@ async def handle_tool(name: str, arguments: dict) -> list[types.TextContent]:
     try:
         result = await _dispatch(name, arguments)
         return [
-            types.TextContent(type="text", text=json.dumps(result, ensure_ascii=False))
+            types.TextContent(
+                type="text", text=json.dumps(result, ensure_ascii=False, default=str)
+            )
         ]
     except Exception as e:
         logger.exception("Tool %s failed", name)
@@ -213,7 +222,7 @@ async def handle_tool(name: str, arguments: dict) -> list[types.TextContent]:
         ]
 
 
-async def _dispatch(name: str, args: dict) -> dict | list:
+async def _dispatch(name: str, args: dict) -> Any:
     if name == "list_anime":
         return await _list_anime(args.get("active_only", False))
     elif name == "get_anime":
@@ -234,8 +243,10 @@ async def _dispatch(name: str, args: dict) -> dict | list:
         return await _refresh_feeds()
     elif name == "update_anime":
         return await _update_anime(args)
-    else:
-        return {"error": f"Unknown tool: {name}"}
+    handled, result = await call_plugin_tool(name, args)
+    if handled:
+        return result
+    return {"error": f"Unknown tool: {name}"}
 
 
 async def _list_anime(active_only: bool) -> list[dict]:
@@ -290,10 +301,7 @@ async def _unsubscribe_anime(bangumi_id: int, delete: bool) -> dict:
 
 async def _list_downloads(status: str) -> list[dict]:
     status_filter = None if status == "all" else status
-    async with DownloadClient() as client:
-        torrents = await client.get_torrent_info(
-            status_filter=status_filter, category="Bangumi"
-        )
+    torrents = await list_torrents(status_filter) or []
     return [
         {
             "name": t.get("name", ""),
@@ -303,6 +311,7 @@ async def _list_downloads(status: str) -> list[dict]:
             "dlspeed": t.get("dlspeed", 0),
             "upspeed": t.get("upspeed", 0),
             "eta": t.get("eta", 0),
+            "downloader": t["downloader_id"],
         }
         for t in torrents
     ]
@@ -337,10 +346,10 @@ def _get_program_status() -> dict:
 
 
 async def _refresh_feeds() -> dict:
-    async with DownloadClient() as client:
+    async with DownloaderPool() as downloaders:
         async with Database() as db:
             engine = RSSEngine(db)
-            await engine.refresh_rss(client)
+            await engine.refresh_rss(downloaders)
     return {"status": True, "message": "RSS feeds refreshed successfully"}
 
 

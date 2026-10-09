@@ -1,619 +1,221 @@
 # REST API Reference
 
-AutoBangumi exposes a REST API at `/api/v1`. All endpoints (except login and setup) require JWT authentication.
+AutoBangumi provides a REST API under `/api/v1`. The WebUI uses the same API.
 
 **Base URL:** `http://your-host:7892/api/v1`
 
-**Authentication:** Include the JWT token as a cookie or `Authorization: Bearer <token>` header.
-
-**Interactive Docs:** When running in development mode, Swagger UI is available at `http://your-host:7892/docs`.
-
----
+**Interactive docs:** This page lists only the endpoints and their purpose. For the request and response fields, use `http://your-host:7892/docs` on a running instance. FastAPI makes this Swagger UI from the code. Plugin routes are not in `/docs`.
 
 ## Authentication
 
-### Login
+AB accepts two types of credential:
 
-```
-POST /auth/login
-```
+- **Browser session**: send the form fields `username` and `password` to `POST /auth/login`. If the login is correct, AB sets the HttpOnly cookie `token`. The WebUI uses this method.
+- **API token**: create a token with `scope=api` in Settings → Users & Access → API tokens (or call `POST /tokens`). AB shows the plain token one time only. Send it in the header `Authorization: Bearer <token>`.
 
-Authenticate with username and password.
-
-**Request Body:**
-```json
-{
-  "username": "string",
-  "password": "string"
-}
+```bash
+curl -H "Authorization: Bearer $AB_TOKEN" http://your-host:7892/api/v1/status
 ```
 
-**Response:** Sets authentication cookie with JWT token.
+- If a request has an `Authorization` header, AB checks only that token. It ignores the cookie.
+- A request with no credential or a bad credential gets `401`.
+- The account endpoints (`/auth/update`, `/users`, `/tokens`, and Passkey registration and management) accept only a browser session. An API token gets `403`.
+- These endpoints need no authentication: `/auth/login`, `/passkey/auth/*`, the setup wizard `/setup/*` (`GET /setup/status` is always available; the other endpoints return `403` after setup is complete) and `/health` at the root path.
+- `/auth/refresh_token` and `/auth/logout` ignore the `Authorization` header. They use only the session cookie. `refresh_token` returns `401` if there is no valid cookie. `security.login_whitelist` limits login and Passkey login.
+- For local development, set the environment variable `AB_DEV_NO_AUTH=1` to skip all authentication. Do not set it in production.
 
-### Refresh Token
+## Authentication and accounts
 
-```
-GET /auth/refresh_token
-```
+| Method | Path | Description |
+| --- | --- | --- |
+| `POST` | `/auth/login` | Log in with user name and password. Sets the session cookie |
+| `POST` | `/auth/refresh_token` | Extend the current session |
+| `POST` | `/auth/logout` | End the current session and clear the cookie |
+| `GET` | `/auth/me` | The current user |
+| `POST` | `/auth/update` | Change the current account and rotate all of its sessions |
+| `GET` / `POST` | `/users` | List / create users |
+| `PATCH` / `DELETE` | `/users/{user_id}` | Change / delete a user |
+| `GET` / `POST` | `/tokens` | List / create API tokens (`scope` is `api` or `mcp`; `expires_at` is optional) |
+| `DELETE` | `/tokens/{token_id}` | Revoke a token |
+| `POST` | `/passkey/register/options`, `/passkey/register/verify` | Register a Passkey |
+| `POST` | `/passkey/auth/options`, `/passkey/auth/verify` | Log in with a Passkey |
+| `GET` | `/passkey/list` | List the Passkeys of the current user |
+| `POST` | `/passkey/delete` | Delete a Passkey |
 
-Refresh the current authentication token.
+## Program
 
-### Logout
-
-```
-GET /auth/logout
-```
-
-Clear authentication cookies and log out.
-
-### Update Credentials
-
-```
-POST /auth/update
-```
-
-Update username and/or password.
-
-**Request Body:**
-```json
-{
-  "username": "string",
-  "password": "string"
-}
-```
-
----
-
-## Passkey / WebAuthn <Badge type="tip" text="v3.2+" />
-
-Passwordless authentication using WebAuthn/FIDO2 Passkeys.
-
-### Register Passkey
-
-```
-POST /passkey/register/options
-```
-
-Get WebAuthn registration options (challenge, relying party info).
-
-```
-POST /passkey/register/verify
-```
-
-Verify and save the Passkey registration response from the browser.
-
-### Authenticate with Passkey
-
-```
-POST /passkey/auth/options
-```
-
-Get WebAuthn authentication challenge options.
-
-```
-POST /passkey/auth/verify
-```
-
-Verify the Passkey authentication response and issue a JWT token.
-
-### Manage Passkeys
-
-```
-GET /passkey/list
-```
-
-List all registered Passkeys for the current user.
-
-```
-POST /passkey/delete
-```
-
-Delete a registered Passkey by credential ID.
-
----
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/status` | Version, run state and first-run flag |
+| `POST` | `/start`, `/stop`, `/restart` | Start / stop / restart the background tasks |
+| `POST` | `/shutdown` | Stop the program |
+| `GET` | `/check/downloader` | Check that the default downloader is available |
+| `GET` | `/log` | Read the log |
+| `POST` | `/log/clear` | Clear the log |
+| `GET` | `/update/check` | Get the latest version and the online update state |
+| `POST` | `/update/apply` | Download and apply the latest update, then restart |
+| `POST` | `/update/rollback` | Go back to the previous update. If there is no backup, go back to the version in the image |
+| `GET` | `/health` (root path, not under `/api/v1`) | Liveness probe. Always returns `200`: `{"status", "version", "db_ok"}` |
 
 ## Configuration
 
-### Get Configuration
-
-```
-GET /config/get
-```
-
-Retrieve the current application configuration.
-
-**Response:** Full configuration object including `program`, `downloader`, `rss_parser`, `bangumi_manager`, `notification`, `proxy`, and `experimental_openai` sections.
-
-### Update Configuration
-
-```
-PATCH /config/update
-```
-
-Partially update the application configuration. Only include fields you want to change.
-
-**Request Body:** Partial configuration object.
-
----
-
-## Bangumi (Anime Rules)
-
-### List All Bangumi
-
-```
-GET /bangumi/get/all
-```
-
-Get all anime download rules.
-
-### Get Bangumi by ID
-
-```
-GET /bangumi/get/{bangumi_id}
-```
-
-Get a specific anime rule by ID.
-
-### Update Bangumi
-
-```
-PATCH /bangumi/update/{bangumi_id}
-```
-
-Update an anime rule's metadata (title, season, episode offset, etc.).
-
-### Delete Bangumi
-
-```
-DELETE /bangumi/delete/{bangumi_id}
-```
-
-Delete a single anime rule and its associated torrents.
-
-```
-DELETE /bangumi/delete/many/
-```
-
-Batch delete multiple anime rules.
-
-**Request Body:**
-```json
-{
-  "bangumi_ids": [1, 2, 3]
-}
-```
-
-### Disable / Enable Bangumi
-
-```
-DELETE /bangumi/disable/{bangumi_id}
-```
-
-Disable an anime rule (keeps files, stops downloading).
-
-```
-DELETE /bangumi/disable/many/
-```
-
-Batch disable multiple anime rules.
-
-```
-GET /bangumi/enable/{bangumi_id}
-```
-
-Re-enable a previously disabled anime rule.
-
-### Poster Refresh
-
-```
-GET /bangumi/refresh/poster/all
-```
-
-Refresh poster images for all anime from TMDB.
-
-```
-GET /bangumi/refresh/poster/{bangumi_id}
-```
-
-Refresh the poster image for a specific anime.
-
-### Calendar
-
-```
-GET /bangumi/refresh/calendar
-```
-
-Refresh the anime broadcast calendar data from Bangumi.tv.
-
-### Reset All
-
-```
-GET /bangumi/reset/all
-```
-
-Delete all anime rules. Use with caution.
-
----
-
-## RSS Feeds
-
-### List All Feeds
-
-```
-GET /rss
-```
-
-Get all configured RSS feeds.
-
-### Add Feed
-
-```
-POST /rss/add
-```
-
-Add a new RSS feed subscription.
-
-**Request Body:**
-```json
-{
-  "url": "string",
-  "aggregate": true,
-  "parser": "mikan"
-}
-```
-
-### Enable / Disable Feeds
-
-```
-POST /rss/enable/many
-```
-
-Enable multiple RSS feeds.
-
-```
-PATCH /rss/disable/{rss_id}
-```
-
-Disable a single RSS feed.
-
-```
-POST /rss/disable/many
-```
-
-Batch disable multiple RSS feeds.
-
-### Delete Feeds
-
-```
-DELETE /rss/delete/{rss_id}
-```
-
-Delete a single RSS feed.
-
-```
-POST /rss/delete/many
-```
-
-Batch delete multiple RSS feeds.
-
-### Update Feed
-
-```
-PATCH /rss/update/{rss_id}
-```
-
-Update an RSS feed's configuration.
-
-### Refresh Feeds
-
-```
-GET /rss/refresh/all
-```
-
-Manually trigger a refresh of all RSS feeds.
-
-```
-GET /rss/refresh/{rss_id}
-```
-
-Refresh a specific RSS feed.
-
-### Get Torrents from Feed
-
-```
-GET /rss/torrent/{rss_id}
-```
-
-Get the list of torrents parsed from a specific RSS feed.
-
-### Analysis & Subscription
-
-```
-POST /rss/analysis
-```
-
-Analyze an RSS URL and extract anime metadata without subscribing.
-
-**Request Body:**
-```json
-{
-  "url": "string"
-}
-```
-
-```
-POST /rss/collect
-```
-
-Download all episodes from an RSS feed (for completed anime).
-
-```
-POST /rss/subscribe
-```
-
-Subscribe to an RSS feed for automatic ongoing downloads.
-
----
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/config/get` | The current configuration. Secret fields are masked |
+| `PATCH` | `/config/update` | Save and reload the configuration. A masked secret field keeps its old value |
+| `POST` | `/config/llm/models` | List the models of the selected LLM provider |
+| `GET` | `/config/llm/providers` | List the LLM providers |
+| `POST` | `/config/llm/providers/{provider_id}/install` | Install an LLM provider plugin |
+| `DELETE` | `/config/llm/providers/{provider_id}` | Remove an LLM provider plugin |
+| `POST` | `/config/llm/providers/{provider_id}/auth/begin`, `/auth/complete` | Authorization flow for subscription providers |
+| `GET` | `/config/llm/providers/{provider_id}/auth/status` | Authorization state |
+| `DELETE` | `/config/llm/providers/{provider_id}/auth` | Disconnect the authorization |
+
+## Bangumi
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/bangumi/get/all` | All bangumi rules |
+| `GET` | `/bangumi/get/{bangumi_id}` | One rule |
+| `PATCH` | `/bangumi/update/{bangumi_id}` | Change a rule |
+| `DELETE` | `/bangumi/delete/{bangumi_id}` | Delete a rule |
+| `POST` | `/bangumi/delete/many` | Delete many rules |
+| `POST` | `/bangumi/disable/{bangumi_id}`, `/bangumi/enable/{bangumi_id}` | Disable / enable a rule |
+| `POST` | `/bangumi/disable/many` | Disable many rules |
+| `PATCH` | `/bangumi/archive/{bangumi_id}`, `/bangumi/unarchive/{bangumi_id}` | Archive / unarchive |
+| `PATCH` | `/bangumi/{bangumi_id}/weekday` | Set the broadcast weekday manually |
+| `GET` | `/bangumi/refresh/poster/all`, `/bangumi/refresh/poster/{bangumi_id}` | Refresh posters |
+| `GET` | `/bangumi/refresh/calendar` | Refresh the broadcast calendar |
+| `GET` | `/bangumi/refresh/metadata` | Refresh TMDB metadata and archive series that have ended |
+| `POST` | `/bangumi/reset/all` | Delete all rules |
+| `GET` | `/bangumi/needs-review` | Bangumi whose episode offset needs a check |
+| `GET` | `/bangumi/suggest-offset/{bangumi_id}` | Suggest an offset from the TMDB episode counts |
+| `POST` | `/bangumi/detect-offset` | Find a season or episode mismatch with TMDB |
+| `POST` | `/bangumi/apply-offset/{bangumi_id}`, `/bangumi/apply-offset/many` | Apply the suggested offset and start a rename pass |
+| `POST` | `/bangumi/dismiss-review/{bangumi_id}` | Clear the "needs review" flag |
+| `GET` / `DELETE` | `/bangumi/{bangumi_id}/torrents` | List / delete the torrent records of the bangumi |
+| `DELETE` | `/bangumi/{bangumi_id}/torrents/{torrent_id}` | Delete one torrent record |
+| `GET` / `DELETE` | `/bangumi/torrents/orphans` | List / delete torrent records that belong to no bangumi |
+| `GET` | `/bangumi/torrents/orphans/count` | Number of orphan torrent records |
+| `DELETE` | `/bangumi/torrents/orphans/{torrent_id}` | Delete one orphan torrent record |
+
+## Movies
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/movie/get/all`, `/movie/get/{movie_id}` | All movie rules / one movie rule |
+| `PATCH` | `/movie/update/{movie_id}` | Change |
+| `DELETE` | `/movie/delete/{movie_id}` | Delete |
+| `DELETE` | `/movie/disable/{movie_id}` | Disable |
+| `GET` | `/movie/enable/{movie_id}` | Enable |
+
+## RSS feeds
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/rss` | All feeds |
+| `POST` | `/rss/add` | Add a feed |
+| `PATCH` | `/rss/update/{rss_id}` | Change a feed |
+| `DELETE` | `/rss/delete/{rss_id}` | Delete a feed |
+| `POST` | `/rss/delete/many` | Delete many feeds |
+| `PATCH` | `/rss/disable/{rss_id}` | Disable |
+| `POST` | `/rss/disable/many`, `/rss/enable/many` | Disable / enable many feeds |
+| `POST` | `/rss/refresh/all`, `/rss/refresh/{rss_id}` | Refresh now |
+| `GET` | `/rss/torrent/{rss_id}` | Torrents of the feed |
+| `POST` | `/rss/analysis` | Analyze an RSS link and return the bangumi that AB finds |
+| `POST` | `/rss/collect` | Download a full season (collect) |
+| `POST` | `/rss/subscribe` | Subscribe |
 
 ## Search
 
-### Search Bangumi (Server-Sent Events)
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/search/bangumi?site=<site>&keywords=<keywords>` | Server-Sent Events. Sends the results one by one. Separate keywords with spaces |
+| `GET` | `/search/provider` | Available search sites, including sites from plugins |
+| `GET` / `PUT` | `/search/provider/config` | Read / save the search sites that the user configured |
 
-```
-GET /search/bangumi?keyword={keyword}&provider={provider}
-```
+## Downloader
 
-Search for anime torrents. Returns results as a Server-Sent Events (SSE) stream for real-time updates.
+AB 4.0 can have more than one downloader instance (`plugins.instances`). The torrent list includes all instances. Each item has a `downloader_id`.
 
-**Query Parameters:**
-- `keyword` — Search keyword
-- `provider` — Search provider (e.g., `mikan`, `nyaa`, `dmhy`)
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/downloader/instances` | Downloader instances: `{"default": <default instance id>, "instances": [{"id", "provider"}]}` |
+| `GET` | `/downloader/torrents` | Torrents of all instances. AB skips an instance that is not available |
+| `POST` | `/downloader/torrents/pause`, `/resume`, `/delete` | Pause / resume / delete torrents |
+| `POST` | `/downloader/torrents/tag` | Tag a torrent with a bangumi id |
+| `POST` | `/downloader/torrents/tag/auto` | Tag all untagged torrents from their name and path |
+| `GET` | `/downloader/rename-conflicts` | Rename conflicts that wait for the user |
+| `POST` | `/downloader/rename-conflicts/{operation_id}/retry` | Clear one conflict. The next rename pass checks it again |
 
-**Response:** SSE stream with parsed search results.
+## Notification center
 
-### List Search Providers
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` / `DELETE` | `/notification/messages` | List / clear the in-app notifications |
+| `GET` | `/notification/messages/unread-count` | Number of unread notifications |
+| `POST` | `/notification/messages/read-all` | Mark all as read |
+| `POST` | `/notification/messages/{message_id}/read` | Mark one as read |
+| `DELETE` | `/notification/messages/{message_id}` | Delete one |
+| `POST` | `/notification/test` | Test a saved notification channel by its index |
+| `POST` | `/notification/test-config` | Test a channel configuration that is not saved |
 
-```
-GET /search/provider
-```
+## Event stream
 
-Get the list of available search providers.
+`GET /events/stream` is one Server-Sent Events connection. The WebUI uses it instead of polling.
 
----
+| `event` | When AB sends it | `data` |
+| --- | --- | --- |
+| `status` | Each 3 seconds | The same structure as `GET /status` |
+| `downloader` | Each 5 seconds | Torrents of all instances. `null` when the downloader is not available |
+| `log` | Each 10 seconds | The end of the log |
+| `update` | When an online update runs and its progress changes | Update progress |
+| `notification` | When the connection opens, and when the notification center changes | Notification center state, with the unread count `unread_count` |
+| `bus` | When an event goes on the event bus | `{"kind": <event name>, "payload": {...}}`, for host events and plugin events |
 
-## Program Control
-
-### Get Status
-
-```
-GET /status
-```
-
-Get program status including version, running state, and first_run flag.
-
-**Response:**
-```json
-{
-  "status": "running",
-  "version": "3.2.0",
-  "first_run": false
-}
-```
-
-### Start Program
-
-```
-GET /start
-```
-
-Start the main program (RSS checking, downloading, renaming).
-
-### Restart Program
-
-```
-GET /restart
+```bash
+curl -N -H "Authorization: Bearer $AB_TOKEN" http://your-host:7892/api/v1/events/stream
 ```
 
-Restart the main program.
+For the event names and fields in `bus` frames, refer to [Plugin development → Events](/en/dev/plugins/events). Frontend plugin components use `host.events.on(kind, callback)` to get the same frames.
 
-### Stop Program
+## Plugins
 
-```
-GET /stop
-```
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/plugins` | Plugins that AB found, their state, the config form schema and the current config (masked) |
+| `PUT` | `/plugins/settings` | Change `allow_unsigned` (allow unsigned plugins) |
+| `PUT` | `/plugins/{plugin_id}` | Enable / disable a plugin or change its config. The change applies at once. A bad config gets `422` |
+| `GET` | `/plugins/providers` | Provider ids from plugins, grouped by extension point |
+| `GET` | `/plugins/ui` | Frontend slots that enabled plugins declare |
+| `GET` | `/plugins/catalog` | Plugins in the signed catalog. `502` if AB cannot get the catalog |
+| `POST` | `/plugins/{plugin_id}/install` | Install or upgrade a plugin from the signed catalog, then enable it |
+| `DELETE` | `/plugins/{plugin_id}` | Remove a plugin that came from the signed catalog |
+| `GET` | `/plugins/{plugin_id}/web/{path}` | Static frontend files in the `web/` directory of the plugin |
+| Any | `/plugins/{plugin_id}/{path}` | Routes of the plugin. Refer to [REST routes](/en/dev/plugins/points/api-router) |
 
-Stop the main program (WebUI remains accessible).
+## Setup wizard
 
-### Shutdown
+These endpoints need no authentication. `GET /setup/status` is always available and returns `need_setup` (`false` after setup). The other endpoints are available only before the first setup is complete. After that, they return `403`. `/setup/complete` also needs a browser session, or an `admin` account that still has the factory password `adminadmin`. Otherwise it returns `403`.
 
-```
-GET /shutdown
-```
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/setup/status` | Tells if the setup wizard is necessary |
+| `POST` | `/setup/test-downloader` | Test the downloader connection |
+| `POST` | `/setup/test-rss` | Test an RSS link |
+| `POST` | `/setup/test-notification` | Send a test notification |
+| `POST` | `/setup/complete` | Save all wizard settings and mark the setup as complete |
 
-Shutdown the entire application (restarts the Docker container).
+## MCP
 
-### Check Downloader
+AB provides an MCP server under `/mcp` at the root path (SSE transport). A client connects to `GET /mcp/sse` and sends messages to `POST /mcp/messages/`.
 
-```
-GET /check/downloader
-```
+- Access control is different from the REST API. The client IP must be in `security.mcp_whitelist`, or the request must have a token with `scope=mcp` (`Authorization: Bearer <token>`). If `mcp_whitelist` is empty, AB refuses all IP-based access. Tokens still work.
+- Built-in tools: `list_anime`, `get_anime`, `search_anime`, `subscribe_anime`, `unsubscribe_anime`, `list_downloads`, `list_rss_feeds`, `get_program_status`, `refresh_feeds`, `update_anime`.
+- Built-in resources: `autobangumi://anime/list`, `autobangumi://anime/{id}`, `autobangumi://status`, `autobangumi://rss/feeds`.
+- A tool from an enabled plugin has the name `<plugin id>__<id>`. A resource from a plugin has the URI `autobangumi://plugins/<plugin id>/<id>`. Refer to [MCP tools and resources](/en/dev/plugins/points/mcp).
 
-Test connectivity to the configured downloader (qBittorrent).
+## Responses and errors
 
----
-
-## Downloader Management <Badge type="tip" text="v3.2+" />
-
-Manage torrents in the downloader directly from AutoBangumi.
-
-### List Torrents
-
-```
-GET /downloader/torrents
-```
-
-Get all torrents in the Bangumi category.
-
-### Pause Torrents
-
-```
-POST /downloader/torrents/pause
-```
-
-Pause torrents by hash.
-
-**Request Body:**
-```json
-{
-  "hashes": ["hash1", "hash2"]
-}
-```
-
-### Resume Torrents
-
-```
-POST /downloader/torrents/resume
-```
-
-Resume paused torrents by hash.
-
-**Request Body:**
-```json
-{
-  "hashes": ["hash1", "hash2"]
-}
-```
-
-### Delete Torrents
-
-```
-POST /downloader/torrents/delete
-```
-
-Delete torrents with optional file deletion.
-
-**Request Body:**
-```json
-{
-  "hashes": ["hash1", "hash2"],
-  "delete_files": false
-}
-```
-
----
-
-## Setup Wizard <Badge type="tip" text="v3.2+" />
-
-These endpoints are only available during first-run setup (before setup is complete). They do **not** require authentication. After setup completes, all endpoints return `403 Forbidden`.
-
-### Check Setup Status
-
-```
-GET /setup/status
-```
-
-Check if setup wizard is needed (first run).
-
-**Response:**
-```json
-{
-  "need_setup": true
-}
-```
-
-### Test Downloader Connection
-
-```
-POST /setup/test-downloader
-```
-
-Test connection to a downloader with provided credentials.
-
-**Request Body:**
-```json
-{
-  "type": "qbittorrent",
-  "host": "172.17.0.1:8080",
-  "username": "admin",
-  "password": "adminadmin",
-  "ssl": false
-}
-```
-
-### Test RSS Feed
-
-```
-POST /setup/test-rss
-```
-
-Validate an RSS feed URL is accessible and parseable.
-
-**Request Body:**
-```json
-{
-  "url": "https://mikanime.tv/RSS/MyBangumi?token=xxx"
-}
-```
-
-### Test Notification
-
-```
-POST /setup/test-notification
-```
-
-Send a test notification with provided settings.
-
-**Request Body:**
-```json
-{
-  "type": "telegram",
-  "token": "bot_token",
-  "chat_id": "chat_id"
-}
-```
-
-### Complete Setup
-
-```
-POST /setup/complete
-```
-
-Save all configuration and mark setup as complete. Creates the sentinel file `config/.setup_complete`.
-
-**Request Body:** Full configuration object.
-
----
-
-## Logs
-
-### Get Logs
-
-```
-GET /log
-```
-
-Retrieve the full application log file.
-
-### Clear Logs
-
-```
-GET /log/clear
-```
-
-Clear the log file.
-
----
-
-## Response Format
-
-All API responses follow a consistent format:
-
-```json
-{
-  "msg_en": "Success message in English",
-  "msg_zh": "Success message in Chinese",
-  "status": true
-}
-```
-
-Error responses include appropriate HTTP status codes (400, 401, 403, 404, 500) with error messages in both languages.
+- Many action endpoints return `{"status": true, "msg_en": "...", "msg_zh": "..."}`. Query endpoints return the data directly. For the exact structure, refer to `/docs`.
+- Errors use standard HTTP status codes: `401` not authenticated, `403` not permitted, `404` not found, `422` validation failed, `500` server error.

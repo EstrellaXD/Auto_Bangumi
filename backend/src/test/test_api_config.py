@@ -61,13 +61,6 @@ def mock_settings():
     settings.program.rss_time = 900
     settings.program.rename_time = 60
     settings.program.webui_port = 7892
-    settings.downloader = MagicMock()
-    settings.downloader.type = "qbittorrent"
-    settings.downloader.host = "172.17.0.1:8080"
-    settings.downloader.username = "admin"
-    settings.downloader.password = "adminadmin"
-    settings.downloader.path = "/downloads/Bangumi"
-    settings.downloader.ssl = False
     settings.rss_parser = MagicMock()
     settings.rss_parser.enable = True
     settings.rss_parser.filter = ["720", r"\d+-\d"]
@@ -76,7 +69,6 @@ def mock_settings():
     settings.bangumi_manage = MagicMock()
     settings.bangumi_manage.enable = True
     settings.bangumi_manage.eps_complete = False
-    settings.bangumi_manage.rename_method = "pn"
     settings.bangumi_manage.group_tag = False
     settings.bangumi_manage.remove_bad_torrent = False
     settings.log = MagicMock()
@@ -87,8 +79,6 @@ def mock_settings():
     settings.notification.enable = False
     settings.llm = MagicMock()
     settings.llm.enable = False
-    settings.experimental_openai = MagicMock()
-    settings.experimental_openai.enable = False
     settings.save = MagicMock()
     settings.load = MagicMock()
     return settings
@@ -128,7 +118,8 @@ class TestGetConfig:
         assert response.status_code == 200
         data = response.json()
         assert "program" in data
-        assert "downloader" in data
+        assert "downloader" not in data
+        assert data["plugins"]["instances"][0]["id"] == "default"
         assert "rss_parser" in data
         assert data["program"]["rss_time"] == 900
         assert data["program"]["webui_port"] == 7892
@@ -192,7 +183,6 @@ class TestUpdateConfig:
             "bangumi_manage": {
                 "enable": True,
                 "eps_complete": False,
-                "rename_method": "pn",
                 "group_tag": False,
                 "remove_bad_torrent": False,
             },
@@ -210,15 +200,6 @@ class TestUpdateConfig:
                 "type": "telegram",
                 "token": "",
                 "chat_id": "",
-            },
-            "experimental_openai": {
-                "enable": False,
-                "api_key": "",
-                "api_base": "https://api.openai.com/v1",
-                "api_type": "openai",
-                "api_version": "2023-05-15",
-                "model": "gpt-3.5-turbo",
-                "deployment_id": "",
             },
         }
         with patch("module.api.config.settings", mock_settings):
@@ -257,7 +238,6 @@ class TestUpdateConfig:
             "bangumi_manage": {
                 "enable": True,
                 "eps_complete": False,
-                "rename_method": "pn",
                 "group_tag": False,
                 "remove_bad_torrent": False,
             },
@@ -275,15 +255,6 @@ class TestUpdateConfig:
                 "type": "telegram",
                 "token": "",
                 "chat_id": "",
-            },
-            "experimental_openai": {
-                "enable": False,
-                "api_key": "",
-                "api_base": "https://api.openai.com/v1",
-                "api_type": "openai",
-                "api_version": "2023-05-15",
-                "model": "gpt-3.5-turbo",
-                "deployment_id": "",
             },
         }
         with patch("module.api.config.settings", mock_settings):
@@ -418,11 +389,10 @@ class TestSanitizeDict:
         assert response.status_code == 200
         data = response.json()
         # Downloader password should be masked
-        assert data["downloader"]["password"] == "********"
+        assert data["plugins"]["instances"][0]["options"]["password"] == "********"
         # Unset (empty) secrets must NOT be masked: a phantom mask makes the
         # UI show a password where none exists (TG report)
         assert data["llm"]["api_key"] == ""
-        assert data["experimental_openai"]["api_key"] == ""
 
 
 # ---------------------------------------------------------------------------
@@ -466,17 +436,17 @@ class TestRestoreMasked:
         incoming = {
             "downloader": {"password": "********"},
             "proxy": {"password": "new_proxy_pass"},
-            "experimental_openai": {"api_key": "********"},
+            "llm": {"api_key": "********"},
         }
         current = {
             "downloader": {"password": "qb_pass"},
             "proxy": {"password": "old_proxy_pass"},
-            "experimental_openai": {"api_key": "sk-real-key"},
+            "llm": {"api_key": "sk-real-key"},
         }
         _restore_masked(incoming, current)
         assert incoming["downloader"]["password"] == "qb_pass"
         assert incoming["proxy"]["password"] == "new_proxy_pass"
-        assert incoming["experimental_openai"]["api_key"] == "sk-real-key"
+        assert incoming["llm"]["api_key"] == "sk-real-key"
 
     def test_non_sensitive_mask_value_untouched(self):
         """A non-sensitive key with '********' value is not modified."""
@@ -629,25 +599,66 @@ class TestRestoreMasked:
         assert incoming["providers"][0]["token"] == "tg-token"
         assert incoming["providers"][1]["token"] == "new-bark-token"
 
+    def test_config_plugin_notifier_extras_masked_and_restored(
+        self, authed_client, mock_settings
+    ):
+        """插件渠道的自定义字段没有 schema：读接口掩码，保存时按身份还原。"""
+        config = Config.model_validate(
+            {
+                "notification": {
+                    "providers": [
+                        {"type": "telegram", "token": "tg", "chat_id": "1"},
+                        {"type": "ext", "sendkey": "sk", "webhook": "https://h"},
+                    ]
+                }
+            }
+        )
+        with patch("module.api.config.settings", config):
+            data = authed_client.get("/api/v1/config/get").json()
+        providers = data["notification"]["providers"]
+        assert (providers[1]["sendkey"], providers[1]["webhook"]) == (
+            "********",
+            "********",
+        )
+        assert providers[0]["chat_id"] == "1"
+
+        # 删除第一个渠道后保存：插件渠道取回自己的值
+        providers.pop(0)
+        mock_settings.dict.return_value = config.dict()
+        with patch("module.api.config.settings", mock_settings):
+            response = authed_client.patch("/api/v1/config/update", json=data)
+        assert response.status_code == 200
+        [saved] = mock_settings.save.call_args[1]["config_dict"]["notification"][
+            "providers"
+        ]
+        assert (saved["sendkey"], saved["webhook"]) == ("sk", "https://h")
+
     def test_update_config_preserves_password_when_masked(
         self, authed_client, mock_settings
     ):
         """PATCH /config/update must not overwrite a real password with '********'."""
         mock_settings.dict.return_value = {
             "program": {"rss_time": 900, "rename_time": 60, "webui_port": 7892},
-            "downloader": {
-                "type": "qbittorrent",
-                "host": "192.168.1.1:8080",
-                "username": "admin",
-                "password": "realpassword",
-                "path": "/downloads",
-                "ssl": True,
+            "plugins": {
+                "instances": [
+                    {
+                        "id": "default",
+                        "point": "downloader",
+                        "provider": "qbittorrent",
+                        "options": {
+                            "host": "192.168.1.1:8080",
+                            "username": "admin",
+                            "password": "realpassword",
+                            "path": "/downloads",
+                            "ssl": True,
+                        },
+                    }
+                ]
             },
             "rss_parser": {"enable": True, "filter": [], "language": "zh"},
             "bangumi_manage": {
                 "enable": True,
                 "eps_complete": False,
-                "rename_method": "pn",
                 "group_tag": False,
                 "remove_bad_torrent": False,
             },
@@ -665,32 +676,30 @@ class TestRestoreMasked:
                 "type": "telegram",
                 "token": "",
                 "chat_id": "",
-            },
-            "experimental_openai": {
-                "enable": False,
-                "api_key": "",
-                "api_base": "https://api.openai.com/v1",
-                "api_type": "openai",
-                "api_version": "2023-05-15",
-                "model": "gpt-3.5-turbo",
-                "deployment_id": "",
             },
         }
         payload = {
             "program": {"rss_time": 900, "rename_time": 60, "webui_port": 7892},
-            "downloader": {
-                "type": "qbittorrent",
-                "host": "192.168.1.1:8080",
-                "username": "admin",
-                "password": "********",
-                "path": "/downloads",
-                "ssl": False,
+            "plugins": {
+                "instances": [
+                    {
+                        "id": "default",
+                        "point": "downloader",
+                        "provider": "qbittorrent",
+                        "options": {
+                            "host": "192.168.1.1:8080",
+                            "username": "admin",
+                            "password": "********",
+                            "path": "/downloads",
+                            "ssl": False,
+                        },
+                    }
+                ]
             },
             "rss_parser": {"enable": True, "filter": [], "language": "zh"},
             "bangumi_manage": {
                 "enable": True,
                 "eps_complete": False,
-                "rename_method": "pn",
                 "group_tag": False,
                 "remove_bad_torrent": False,
             },
@@ -708,15 +717,6 @@ class TestRestoreMasked:
                 "type": "telegram",
                 "token": "",
                 "chat_id": "",
-            },
-            "experimental_openai": {
-                "enable": False,
-                "api_key": "",
-                "api_base": "https://api.openai.com/v1",
-                "api_type": "openai",
-                "api_version": "2023-05-15",
-                "model": "gpt-3.5-turbo",
-                "deployment_id": "",
             },
         }
         with patch("module.api.config.settings", mock_settings):
@@ -724,8 +724,9 @@ class TestRestoreMasked:
 
         assert response.status_code == 200
         saved = mock_settings.save.call_args[1]["config_dict"]
-        assert saved["downloader"]["password"] == "realpassword"
-        assert saved["downloader"]["ssl"] is False
+        options = saved["plugins"]["instances"][0]["options"]
+        assert options["password"] == "realpassword"
+        assert options["ssl"] is False
 
 
 class TestListLLMModels:

@@ -84,10 +84,12 @@ class TestDownloaderPayload:
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=False)
 
-        with patch("module.api.events.DownloadClient", return_value=mock_client):
+        with patch(
+            "module.downloader.download_client.DownloadClient", return_value=mock_client
+        ):
             result = await _downloader_payload()
 
-        assert result == torrents
+        assert result == [{**torrents[0], "downloader_id": "default"}]
         mock_client.get_torrent_info.assert_called_once_with(
             category="Bangumi", status_filter=None
         )
@@ -99,7 +101,9 @@ class TestDownloaderPayload:
         mock_client.__aenter__ = AsyncMock(side_effect=RuntimeError("no downloader"))
         mock_client.__aexit__ = AsyncMock(return_value=False)
 
-        with patch("module.api.events.DownloadClient", return_value=mock_client):
+        with patch(
+            "module.downloader.download_client.DownloadClient", return_value=mock_client
+        ):
             result = await _downloader_payload()
 
         assert result is None
@@ -132,7 +136,10 @@ class TestDownloaderPayloadTimeout:
         mock_client = _make_hung_client(cancelled)
 
         with (
-            patch("module.api.events.DownloadClient", return_value=mock_client),
+            patch(
+                "module.downloader.download_client.DownloadClient",
+                return_value=mock_client,
+            ),
             patch("module.api.events._DOWNLOADER_TIMEOUT_SECONDS", 0.05),
         ):
             start = time.monotonic()
@@ -163,7 +170,10 @@ class TestEventGeneratorNonBlocking:
         mock_client = _make_hung_client(cancelled)
 
         with (
-            patch("module.api.events.DownloadClient", return_value=mock_client),
+            patch(
+                "module.downloader.download_client.DownloadClient",
+                return_value=mock_client,
+            ),
             patch("module.api.events._DOWNLOADER_TIMEOUT_SECONDS", 0.05),
             patch("module.api.events.LOG_PATH", tmp_path / "missing.log"),
         ):
@@ -214,7 +224,18 @@ class TestLogPayload:
 
 
 class TestNotificationEvent:
-    def _generator(self, tmp_path):
+    """notification 帧由事件总线上的 inbox.changed 驱动（P5），线格式不变。"""
+
+    @pytest.fixture
+    def bus(self, monkeypatch):
+        from module.plugin import host
+        from module.plugin.bus import EventBus
+
+        bus = EventBus()
+        monkeypatch.setattr(host, "_bus", bus)
+        return bus
+
+    def _generator(self, tmp_path, *, tick=0.01, payload=None):
         from module.api.events import _event_generator
 
         request = AsyncMock()
@@ -222,17 +243,17 @@ class TestNotificationEvent:
         ctx = MagicMock()
         ctx.is_running = True
         ctx.first_run = False
+        notification = payload or AsyncMock(
+            return_value={"unread_count": 2, "latest_id": 9}
+        )
         patches = (
             patch(
                 "module.api.events._downloader_payload",
                 new=AsyncMock(return_value=None),
             ),
             patch("module.api.events.LOG_PATH", tmp_path / "missing.log"),
-            patch(
-                "module.api.events._notification_payload",
-                new=AsyncMock(return_value={"unread_count": 2, "latest_id": 9}),
-            ),
-            patch("module.api.events.asyncio.sleep", new=AsyncMock()),
+            patch("module.api.events._notification_payload", new=notification),
+            patch("module.api.events._TICK_SECONDS", tick),
         )
         return _event_generator(request, ctx), patches
 
@@ -242,7 +263,7 @@ class TestNotificationEvent:
             events.append(await asyncio.wait_for(gen.__anext__(), timeout=1.0))
         return events
 
-    async def test_first_tick_emits_notification_frame(self, tmp_path):
+    async def test_first_tick_emits_notification_frame(self, tmp_path, bus):
         from module.notification.inbox import inbox_revision
 
         gen, patches = self._generator(tmp_path)
@@ -252,14 +273,12 @@ class TestNotificationEvent:
             finally:
                 await gen.aclose()
 
-        by_name = {e["event"]: e for e in events}
-        assert set(by_name) == {"status", "downloader", "notification"}
-        data = json.loads(by_name["notification"]["data"])
-        assert data["unread_count"] == 2
-        assert data["latest_id"] == 9
-        assert data["revision"] == inbox_revision()
+        assert [e["event"] for e in events] == ["status", "downloader", "notification"]
+        # 线格式与 3.x 一致：unread_count / latest_id / revision 三个字段
+        data = json.loads(events[2]["data"])
+        assert data == {"unread_count": 2, "latest_id": 9, "revision": inbox_revision()}
 
-    async def test_no_frame_when_revision_unchanged(self, tmp_path):
+    async def test_no_frame_without_inbox_change(self, tmp_path, bus):
         gen, patches = self._generator(tmp_path)
         with patches[0], patches[1], patches[2], patches[3]:
             try:
@@ -271,18 +290,81 @@ class TestNotificationEvent:
 
         assert [e["event"] for e in more] == ["status", "downloader"]
 
-    async def test_frame_emitted_after_revision_bump(self, tmp_path):
+    async def test_inbox_change_pushes_frame_immediately(self, tmp_path, bus):
         from module.notification.inbox import bump_inbox_revision, inbox_revision
 
-        gen, patches = self._generator(tmp_path)
+        # tick 设为 30s：若不是事件推送，1s 内不可能收到下一帧
+        gen, patches = self._generator(tmp_path, tick=30)
         with patches[0], patches[1], patches[2], patches[3]:
             try:
                 await self._collect(gen, 3)  # 第一个 tick
                 bump_inbox_revision()
-                # tick3：status + notification（修订号变了）
-                more = await self._collect(gen, 2)
+                [frame] = await self._collect(gen, 1)
             finally:
                 await gen.aclose()
 
-        assert [e["event"] for e in more] == ["status", "notification"]
-        assert json.loads(more[1]["data"])["revision"] == inbox_revision()
+        assert frame["event"] == "notification"
+        assert json.loads(frame["data"])["revision"] == inbox_revision()
+
+    async def test_bus_event_is_forwarded_as_bus_frame(self, tmp_path, bus):
+        from dataclasses import dataclass
+        from typing import ClassVar
+
+        from ab_sdk import Event
+
+        @dataclass(frozen=True, slots=True)
+        class Picked(Event):
+            kind: ClassVar[str] = "demo.picked"
+            torrent_id: int
+
+        gen, patches = self._generator(tmp_path, tick=30)
+        with patches[0], patches[1], patches[2], patches[3]:
+            try:
+                await self._collect(gen, 3)  # 第一个 tick
+                bus.publish(Picked(torrent_id=7))
+                [frame] = await self._collect(gen, 1)
+            finally:
+                await gen.aclose()
+
+        assert frame["event"] == "bus"
+        assert json.loads(frame["data"]) == {
+            "kind": "demo.picked",
+            "payload": {"torrent_id": 7},
+        }
+
+    async def test_unsubscribes_when_stream_closes(self, tmp_path, bus):
+        gen, patches = self._generator(tmp_path)
+        with patches[0], patches[1], patches[2], patches[3]:
+            await self._collect(gen, 3)
+            assert len(bus._subscribers) == 1
+            await gen.aclose()
+        assert bus._subscribers == []
+
+    async def test_failed_query_is_retried_next_tick(self, tmp_path, bus):
+        payload = AsyncMock(
+            side_effect=[RuntimeError("db busy"), {"unread_count": 1, "latest_id": 3}]
+        )
+        gen, patches = self._generator(tmp_path, payload=payload)
+        with patches[0], patches[1], patches[2], patches[3]:
+            try:
+                events = await self._collect(gen, 3)
+            finally:
+                await gen.aclose()
+
+        # tick0：status + downloader（notification 查库失败）；tick1 重试成功
+        assert [e["event"] for e in events] == ["status", "downloader", "notification"]
+        assert json.loads(events[2]["data"])["latest_id"] == 3
+        assert payload.await_count == 2
+
+    async def test_without_bus_only_initial_frame(self, tmp_path, monkeypatch):
+        from module.plugin import host
+
+        monkeypatch.setattr(host, "_bus", None)
+        gen, patches = self._generator(tmp_path)
+        with patches[0], patches[1], patches[2], patches[3]:
+            try:
+                events = await self._collect(gen, 5)
+            finally:
+                await gen.aclose()
+
+        assert [e["event"] for e in events].count("notification") == 1

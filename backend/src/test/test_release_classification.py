@@ -108,3 +108,31 @@ def test_pr_title_is_never_a_version_source(pr_title):
 
     assert result["version"] == "Test"
     assert result["release"] == "0"
+
+
+def test_release_job_marks_dev_tags_prerelease_and_attaches_plugin_assets():
+    """beta 与稳定版共用 release 作业；dev=1 即预发布，两者都带 SDK 轮子与 skill。"""
+    workflow = SCRIPT_PATH.parents[1] / ".github" / "workflows" / "build.yml"
+    source = workflow.read_text(encoding="utf-8")
+    release = source[source.index("\n  release:\n") : source.index("\n  telegram:\n")]
+    assert "needs.version-info.outputs.release == 1" in release
+    assert "pre_release=true" in release
+    assert "sdk-dist/*.whl" in release
+    assert "autobangumi-plugin-skill-" in release
+    assert (
+        SCRIPT_PATH.parents[1] / "skills" / "autobangumi-plugin" / "SKILL.md"
+    ).is_file()
+
+
+def test_update_bundle_carries_sdk_and_requires_4x_image():
+    """4.x bundle 带 ab_sdk 与新依赖；3.3 镜像在 beta 通道会选中它，
+    只能靠 min_image_version 拒绝（3.3 的 boot_overlay 不会替换 ab_sdk）。"""
+    workflow = SCRIPT_PATH.parents[1] / ".github" / "workflows" / "build.yml"
+    source = workflow.read_text(encoding="utf-8")
+    step = source[
+        source.index("- name: Build update bundle") : source.index(
+            "- name: Sign update bundle"
+        )
+    ]
+    assert 'MIN_IMAGE_VERSION="4.0.0-beta.1"' in step
+    assert 'cp -r backend/src/ab_sdk "$STAGE/backend/src/ab_sdk"' in step

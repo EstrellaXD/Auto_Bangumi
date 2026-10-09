@@ -10,8 +10,7 @@ import logging
 import time
 
 from module.checker import Checker
-from module.conf import LEGACY_DATA_PATH, VERSION, settings
-from module.database import Database
+from module.conf import VERSION, settings
 from module.downloader.download_client import clear_credential_latch
 from module.downloader.download_client import shutdown as downloader_shutdown
 from module.models import ResponseModel
@@ -20,17 +19,13 @@ from module.notification import DownloaderUnavailableEvent, NotificationManager
 from module.parser.analyser.mikan_parser import reset_cache as reset_mikan_cache
 from module.parser.analyser.tmdb_parser import reset_cache as reset_tmdb_cache
 from module.parser.title_parser import reset_cache as reset_llm_parser
+from module.plugin import PluginManager
+from module.plugin.host import get_registry, set_bus, set_runner
 from module.rss import RSSAnalyser
 from module.searcher.searcher import reset_cache as reset_poster_cache
-from module.update import (
-    cache_image,
-    data_migration,
-    first_run,
-    from_30_to_31,
-    from_31_to_32,
-    migrate_legacy_auth_tokens,
-    run_migrations,
-)
+from module.update.auth import migrate_legacy_auth_tokens
+from module.update.startup import cache_image, first_run, run_migrations
+from module.update.version_check import refuse_legacy_data
 
 from .loops import (
     calendar_tick,
@@ -39,6 +34,8 @@ from .loops import (
     rss_tick,
     update_check_tick,
 )
+from .plugin_routes import PluginRoutes
+from .plugin_tasks import PluginTasks
 from .scheduler import PeriodicTask, Scheduler
 
 logger = logging.getLogger(__name__)
@@ -79,11 +76,23 @@ class AppContext:
         notifier: NotificationManager,
         scheduler: Scheduler,
         analyser: RSSAnalyser,
+        plugins: PluginManager | None = None,
     ) -> None:
         self.settings = settings_obj
         self.notifier = notifier
         self.scheduler = scheduler
         self.analyser = analyser
+        # 插件随进程生命周期启停（lifespan），不随 /start、/stop 程序控制启停
+        self.plugins = plugins or PluginManager(settings_obj, registry=get_registry())
+        self._plugin_tasks = PluginTasks(
+            scheduler, self.plugins.registry, self.plugins.breaker
+        )
+        self.plugin_routes = PluginRoutes(self.plugins.registry, self.plugins.breaker)
+        self.plugins.on_change = self._on_plugins_changed
+        # 宿主各处（通知管理器、站内通知中心、流水线）经 module.plugin.host 发布
+        # 事件与执行钩子，统一指向本进程的插件管理器
+        set_bus(self.plugins.bus)
+        set_runner(self.plugins.runner)
         # Downloader-status TTL cache (was ProgramStatus.check_downloader_status).
         self._downloader_status = False
         self._downloader_reason: str | None = None
@@ -99,6 +108,15 @@ class AppContext:
         # Program.startup() early-return.
         self.first_run_boot = False
 
+    async def _on_plugins_changed(self) -> None:
+        """插件加载/重载/停用后，重建依赖插件 Provider 的派生状态。"""
+        await self._plugin_tasks.sync()
+        self.plugin_routes.sync()
+        # 插件提供的通知渠道在插件加载后才可解析；LLM 解析器可能缓存了旧的
+        # 插件适配器。下载器客户端缓存键包含 Provider 登记项，会自动换新。
+        self.notifier.rebuild()
+        reset_llm_parser()
+
     # ------------------------------------------------------------------ build
 
     @classmethod
@@ -110,7 +128,9 @@ class AppContext:
         reflected without re-wiring the tasks; ``interval`` reads settings live.
         """
         analyser = RSSAnalyser()
-        notifier = NotificationManager()
+        # 渠道可能由插件提供，插件启动后（plugins.on_change）才首次加载，
+        # 避免启动时对插件渠道误报「未知类型」
+        notifier = NotificationManager(load_providers=False)
         scheduler = Scheduler(
             [
                 PeriodicTask(
@@ -200,6 +220,7 @@ class AppContext:
         if self._startup_done:
             return
         self._start_info()
+        refuse_legacy_data()
         if not Checker.check_database():
             await first_run()
             await migrate_legacy_auth_tokens()
@@ -207,28 +228,10 @@ class AppContext:
             self.first_run_boot = True
             self._startup_done = True
             return
-        if LEGACY_DATA_PATH.exists():
-            logger.info(
-                "Legacy data detected, starting data migration, please wait patiently."
-            )
-            # data_migration() writes into the bangumi/rssitem tables directly,
-            # so the schema must exist and be up to date first.
-            async with Database() as db:
-                await db.create_table()
-                await db.run_migrations()
-            await data_migration()
-        else:
-            is_same, last_minor = Checker.check_version()
-            if not is_same:
-                if last_minor is not None and last_minor == 0:
-                    await from_30_to_31()
-                    logger.info("Database migrated from 3.0 to 3.1.")
-                await from_31_to_32()
-                logger.info("Database updated.")
-            else:
-                # Always check schema version and run pending migrations,
-                # in case a previous migration was interrupted or failed.
-                await run_migrations()
+        # 低于 3.3 的数据会在这里抛 UnsupportedUpgradeError，中止启动。
+        Checker.check_version()
+        # 每次启动都检查 schema 版本，补跑新增或上次中断的迁移。
+        await run_migrations()
         await migrate_legacy_auth_tokens()
         if not Checker.check_img_cache():
             logger.info("No image cache exists, create image cache.")
@@ -270,7 +273,9 @@ class AppContext:
         try:
             await self.notifier.send_event(
                 DownloaderUnavailableEvent(
-                    host=self.settings.downloader.host, reason=reason
+                    host=self.settings.downloader.host,
+                    reason=reason,
+                    instance_id=self.settings.plugins.slots.downloader,
                 )
             )
         except Exception:
@@ -428,6 +433,7 @@ class AppContext:
         # 允许重试（哪怕保存的值没变——qB 侧密码可能被改回来了）。
         clear_credential_latch()
         self.notifier.rebuild()
+        await self.plugins.apply_settings()
         if self.scheduler.running:
             await self.scheduler.stop_all()
             self.scheduler.start_all()

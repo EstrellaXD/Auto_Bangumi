@@ -140,6 +140,8 @@ def _make_v19_auth_engine() -> Engine:
     engine = create_engine("sqlite://")
     with engine.begin() as conn:
         conn.execute(text("PRAGMA foreign_keys=ON"))
+        # 真实数据库总有 bangumi 表；v27 重建 aria2_gid 时外键检查要求它存在
+        conn.execute(text("CREATE TABLE bangumi (id INTEGER PRIMARY KEY)"))
         conn.execute(
             text(
                 "CREATE TABLE user ("
@@ -703,6 +705,74 @@ class TestRunMigrations:
             ).scalar_one()
             assert get_schema_version(conn) == CURRENT_SCHEMA_VERSION
         assert prefix == "legacy_cccccccc"
+
+    @pytest.mark.parametrize("preexisting", [None, "torrent"])
+    def test_v26_downloader_id_existing_rows_follow_default(
+        self, preexisting, monkeypatch
+    ):
+        """v26：存量种子归属实例 default；番剧 / 电影 / 订阅为空（跟随默认实例）。
+        已有该列的表（如被 create_all 提前建出）跳过，其它表照常补列。"""
+        engine = _make_v0_engine()
+        with engine.begin() as conn:
+            if preexisting:
+                conn.execute(
+                    text(
+                        f"ALTER TABLE {preexisting} ADD COLUMN downloader_id VARCHAR "
+                        "DEFAULT 'default'"
+                    )
+                )
+            conn.execute(
+                text("INSERT INTO bangumi (id, official_title) VALUES (1, 'a')")
+            )
+            conn.execute(text("INSERT INTO rssitem (id, name) VALUES (1, 'r')"))
+            conn.execute(text("INSERT INTO torrent (id, name) VALUES (1, 't')"))
+        _run_through_version(engine, 25, monkeypatch)
+        with engine.begin() as conn:
+            conn.execute(text("INSERT INTO movie (official_title) VALUES ('m')"))
+
+        run_migrations(engine)
+
+        expected = {"bangumi": None, "movie": None, "rssitem": None}
+        with engine.connect() as conn:
+            for table in ("bangumi", "movie", "rssitem", "torrent"):
+                values = conn.execute(
+                    text(f"SELECT downloader_id FROM {table}")
+                ).scalars()
+                assert list(values) == [expected.get(table, "default")], table
+
+    def test_v27_aria2_gid_existing_rows_scoped_to_default_instance(self, monkeypatch):
+        """v27：aria2_gid 主键加上实例 id，存量行归属 default，各列原样保留；
+        另一个实例可以有同一个 gid。"""
+        engine = _make_v0_engine()
+        _run_through_version(engine, 26, monkeypatch)
+        with engine.begin() as conn:
+            conn.execute(
+                text(
+                    "INSERT INTO aria2_gid (gid, category, dedup_key, renamed_paths, "
+                    "rename_intent, created_at) "
+                    "VALUES ('g1', 'Bangumi', 'url:x', '{}', 'i', '2026-01-01')"
+                )
+            )
+
+        run_migrations(engine)
+
+        with engine.begin() as conn:
+            row = conn.execute(
+                text(
+                    "SELECT downloader_id, category, dedup_key, renamed_paths, "
+                    "rename_intent FROM aria2_gid"
+                )
+            ).one()
+            conn.execute(
+                text(
+                    "INSERT INTO aria2_gid (downloader_id, gid, created_at) "
+                    "VALUES ('b', 'g1', '2026-01-01')"
+                )
+            )
+        assert tuple(row) == ("default", "Bangumi", "url:x", "{}", "i")
+        assert "ix_aria2_gid_dedup_key" in {
+            ix["name"] for ix in inspect(engine).get_indexes("aria2_gid")
+        }
 
     def test_is_idempotent(self):
         engine = _make_v0_engine()

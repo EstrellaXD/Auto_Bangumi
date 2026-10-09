@@ -28,33 +28,36 @@ describe('Downloader API contract (path + HTTP method)', () => {
 
   it('should POST api/v1/downloader/torrents/pause with hashes when pausing', async () => {
     (axios.post as any).mockResolvedValue({ data: mockApiSuccess });
-    await apiDownloader.pause(['abc123', 'def456']);
+    await apiDownloader.pause(['abc123', 'def456'], 'default');
     expect(axios.post).toHaveBeenCalledWith(
       'api/v1/downloader/torrents/pause',
       {
         hashes: ['abc123', 'def456'],
+        downloader_id: 'default',
       }
     );
   });
 
   it('should POST api/v1/downloader/torrents/resume with hashes when resuming', async () => {
     (axios.post as any).mockResolvedValue({ data: mockApiSuccess });
-    await apiDownloader.resume(['abc123']);
+    await apiDownloader.resume(['abc123'], 'nas');
     expect(axios.post).toHaveBeenCalledWith(
       'api/v1/downloader/torrents/resume',
       {
         hashes: ['abc123'],
+        downloader_id: 'nas',
       }
     );
   });
 
   it('should POST api/v1/downloader/torrents/delete with hashes and delete_files when deleting', async () => {
     (axios.post as any).mockResolvedValue({ data: mockApiSuccess });
-    await apiDownloader.deleteTorrents(['abc123'], true);
+    await apiDownloader.deleteTorrents(['abc123'], 'default', true);
     expect(axios.post).toHaveBeenCalledWith(
       'api/v1/downloader/torrents/delete',
       {
         hashes: ['abc123'],
+        downloader_id: 'default',
         delete_files: true,
       }
     );
@@ -62,11 +65,12 @@ describe('Downloader API contract (path + HTTP method)', () => {
 
   it('should default delete_files to false when deleting without the flag', async () => {
     (axios.post as any).mockResolvedValue({ data: mockApiSuccess });
-    await apiDownloader.deleteTorrents(['abc123']);
+    await apiDownloader.deleteTorrents(['abc123'], 'default');
     expect(axios.post).toHaveBeenCalledWith(
       'api/v1/downloader/torrents/delete',
       {
         hashes: ['abc123'],
+        downloader_id: 'default',
         delete_files: false,
       }
     );

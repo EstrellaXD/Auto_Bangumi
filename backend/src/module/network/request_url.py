@@ -1,12 +1,16 @@
 import asyncio
 import logging
 import math
+from collections.abc import Mapping
 from typing import Any
 
 import httpx
 from httpx_socks import AsyncProxyTransport
 
+from ab_sdk import points
+from ab_sdk.ingest import HttpRequest
 from module.conf import settings
+from module.plugin import host as plugin_host
 
 logger = logging.getLogger(__name__)
 
@@ -108,6 +112,26 @@ async def reset_shared_client():
     _shared_client_proxy_key = None
 
 
+def _valid_http_request(request: HttpRequest) -> bool:
+    """请求头须是 str → str 的映射，否则每个 GET 都会失败。"""
+    return isinstance(request.headers, Mapping) and all(
+        isinstance(k, str) and isinstance(v, str) for k, v in request.headers.items()
+    )
+
+
+async def _apply_http_hooks(url: str, headers: dict) -> dict:
+    """``http.request``：插件按 URL 修改请求头（私有站 Cookie、UA 等）。"""
+    runner = plugin_host.hook_runner(points.HTTP_REQUEST)
+    if runner is None:
+        return headers
+    request = HttpRequest(method="GET", url=url, headers=dict(headers))
+    result = await runner.transform(
+        points.HTTP_REQUEST, request, expect=HttpRequest, check=_valid_http_request
+    )
+    # url / method 不允许被改写，只取请求头
+    return dict(result.headers)
+
+
 class RequestURL:
     # More complete User-Agent to avoid Cloudflare blocking
     DEFAULT_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -138,7 +162,7 @@ class RequestURL:
             self._client is not None
         ), "RequestURL must be used as an async context manager"
         try_time = 0
-        headers = self._get_headers(url)
+        headers = await _apply_http_hooks(url, self._get_headers(url))
         while True:
             try:
                 req = await self._client.get(url=url, headers=headers)
@@ -219,20 +243,6 @@ class RequestURL:
         logger.error(f"Failed connecting to {url}")
         logger.warning("Please check DNS/Connection settings")
         return None
-
-    async def check_url(self, url: str):
-        assert (
-            self._client is not None
-        ), "RequestURL must be used as an async context manager"
-        if "://" not in url:
-            url = f"http://{url}"
-        try:
-            req = await self._client.head(url=url, headers=self.header)
-            req.raise_for_status()
-            return True
-        except (httpx.RequestError, httpx.HTTPStatusError):
-            logger.debug("Cannot connect to %s.", url)
-            return False
 
     async def post_form(self, url: str, data: dict, files):
         assert (

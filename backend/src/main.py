@@ -38,6 +38,8 @@ async def lifespan(app: FastAPI):
     ctx: AppContext = app.state.ctx
     # Run migrations before serving; failure here aborts boot loudly.
     await ctx.startup()
+    # 插件在迁移之后启动（插件 KV 表由迁移创建），且早于后台任务
+    await ctx.plugins.start()
     # First run just created the DB — do not auto-start loops (matches the old
     # Program.startup early return); the user starts them after setup.
     if not ctx.first_run_boot:
@@ -48,6 +50,7 @@ async def lifespan(app: FastAPI):
     yield
     # Shutdown
     await ctx.stop()
+    await ctx.plugins.stop()
 
 
 def create_app() -> FastAPI:
@@ -90,28 +93,38 @@ def posters(path: str):
     return FileResponse(str(resolved))
 
 
-if VERSION != "DEV_VERSION":
-    app.mount("/assets", StaticFiles(directory="dist/assets"), name="assets")
-    app.mount("/images", StaticFiles(directory="dist/images"), name="images")
+# 前端插件组件与宿主同源（第 3.8 节），只允许加载本站脚本：远程脚本与内联脚本
+# 都被拒绝。只加在 SPA 文档上，/docs 的 Swagger 页面依赖内联脚本与 CDN。
+_SPA_HEADERS = {"Content-Security-Policy": "script-src 'self'"}
+
+
+def mount_webui(app: FastAPI, dist: Path) -> None:
+    app.mount("/assets", StaticFiles(directory=dist / "assets"), name="assets")
+    app.mount("/images", StaticFiles(directory=dist / "images"), name="images")
     # 自托管 Inter 字体：index.html 以 /fonts/*.woff2 预加载，不挂载则被下面的
     # SPA 兜底路由回成 index.html，全站字体静默回退。在线更新可能覆盖进来
     # 更旧的、没有 fonts/ 的 dist，故按存在性挂载。
-    if os.path.isdir("dist/fonts"):
-        app.mount("/fonts", StaticFiles(directory="dist/fonts"), name="fonts")
+    if (dist / "fonts").is_dir():
+        app.mount("/fonts", StaticFiles(directory=dist / "fonts"), name="fonts")
     # app.mount("/icons", StaticFiles(directory="dist/icons"), name="icons")
-    templates = Jinja2Templates(directory="dist")
+    templates = Jinja2Templates(directory=dist)
 
     # dist/ is immutable inside the container — snapshot once instead of
     # hitting the filesystem on every request.
-    _DIST_FILES = frozenset(os.listdir("dist"))
+    dist_files = frozenset(os.listdir(dist))
 
     @app.get("/{path:path}")
     def html(request: Request, path: str):
-        if path in _DIST_FILES:
-            return FileResponse(f"dist/{path}")
+        if path in dist_files:
+            return FileResponse(dist / path, headers=_SPA_HEADERS)
         else:
-            context = {"request": request}
-            return templates.TemplateResponse("index.html", context)
+            return templates.TemplateResponse(
+                request, "index.html", headers=_SPA_HEADERS
+            )
+
+
+if VERSION != "DEV_VERSION":
+    mount_webui(app, Path("dist"))
 
 else:
 

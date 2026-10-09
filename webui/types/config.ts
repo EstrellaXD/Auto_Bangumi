@@ -7,7 +7,7 @@ export type RssParserLang = ['zh', 'en', 'jp'];
 /** RSS 标题解析引擎（tokenizer 仍处于 Preview） */
 export type RssParserEngine = ['classic', 'tokenizer'];
 /** 重命名方式 */
-export type RenameMethod = ['normal', 'pn', 'advance', 'none'];
+export type RenameMethod = ['pn', 'advance', 'none'];
 /** 修订版文件名冲突处理策略 */
 export type RevisionConflictPolicy = ['hold', 'replace'];
 /** 代理类型 */
@@ -33,10 +33,6 @@ export interface LLMProviderOverride {
 }
 /** LLM 解析模式（fallback：正则优先；primary：LLM 优先） */
 export type LLMParseMode = ['fallback', 'primary'];
-/** OpenAI Model List */
-export type OpenAIModel = ['gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo'];
-/** OpenAI API Type */
-export type OpenAIType = ['openai', 'azure'];
 
 export interface Program {
   rss_time: number;
@@ -44,8 +40,8 @@ export interface Program {
   webui_port: number;
 }
 
-export interface Downloader {
-  type: TupleToUnion<DownloaderType>;
+/** 下载器实例的连接参数（plugins.instances[].options） */
+export interface DownloaderOptions {
   host: string;
   username: string;
   password: string;
@@ -61,8 +57,6 @@ export interface RssParser {
 export interface BangumiManage {
   enable: boolean;
   eps_complete: boolean;
-  rename_method: TupleToUnion<RenameMethod>;
-  revision_conflict_policy: TupleToUnion<RevisionConflictPolicy>;
   group_tag: boolean;
   remove_bad_torrent: boolean;
   track_orphans: boolean;
@@ -87,7 +81,8 @@ export interface Network {
 }
 /** Notification provider configuration */
 export interface NotificationProviderConfig {
-  type: TupleToUnion<NotificationType>;
+  /** 内置渠道，或插件提供的渠道 id */
+  type: TupleToUnion<NotificationType> | (string & {});
   enabled: boolean;
   // Common fields
   token?: string;
@@ -105,10 +100,6 @@ export interface NotificationProviderConfig {
 export interface Notification {
   enable: boolean;
   providers: NotificationProviderConfig[];
-  // Legacy fields (deprecated, for backward compatibility)
-  type?: 'telegram' | 'server-chan' | 'bark' | 'wecom';
-  token?: string;
-  chat_id?: string;
 }
 export interface LLM {
   enable: boolean;
@@ -132,18 +123,6 @@ export interface LLM {
   providers: Record<string, LLMProviderOverride>;
 }
 
-/** @deprecated 旧版 OpenAI 解析配置，已被 LLM 段取代（保留向后兼容） */
-export interface ExperimentalOpenAI {
-  enable: boolean;
-  api_key: string;
-  api_base: string;
-  model: TupleToUnion<OpenAIModel>;
-  // azure
-  api_type: TupleToUnion<OpenAIType>;
-  api_version?: string;
-  deployment_id?: string;
-}
-
 /** Access control for the login endpoint and MCP server.
  *  Whitelist entries are IPv4/IPv6 CIDR strings (e.g. "192.168.0.0/16").
  *  An empty login_whitelist allows all IPs; an empty mcp_whitelist denies all IP-based MCP access.
@@ -163,9 +142,38 @@ export interface Update {
   auto_check: boolean;
 }
 
+/** 多实例扩展点（目前只有下载器）的一个实例 */
+export interface PluginInstance {
+  id: string;
+  point: string;
+  /** 内置类型，或插件提供的 Provider id */
+  provider: TupleToUnion<DownloaderType> | (string & {});
+  options: Record<string, unknown>;
+}
+
+/** Provider 选择：扩展点 → Provider id；下载器选的是实例 id */
+export interface PluginSlots {
+  downloader: string;
+  /** 内置方式，或插件提供的重命名方式 id（如 template） */
+  rename_strategy: TupleToUnion<RenameMethod> | (string & {});
+  conflict_policy: TupleToUnion<RevisionConflictPolicy> | (string & {});
+  media_files: string;
+}
+
+/** 插件系统配置；启用状态缺省时内置插件启用、其它来源禁用 */
+export interface Plugins {
+  /** 允许加载未签名（本地目录 / pip）插件 */
+  allow_unsigned: boolean;
+  enabled: Record<string, boolean>;
+  options: Record<string, Record<string, unknown>>;
+  /** 各扩展点的显式钩子顺序（插件 id 列表） */
+  hook_order: Record<string, string[]>;
+  slots: PluginSlots;
+  instances: PluginInstance[];
+}
+
 export interface Config {
   program: Program;
-  downloader: Downloader;
   rss_parser: RssParser;
   bangumi_manage: BangumiManage;
   log: Log;
@@ -173,10 +181,9 @@ export interface Config {
   network: Network;
   notification: Notification;
   llm: LLM;
-  /** @deprecated 已被 llm 段取代 */
-  experimental_openai: ExperimentalOpenAI;
   security: Security;
   update: Update;
+  plugins: Plugins;
 }
 
 export const initConfig: Config = {
@@ -184,14 +191,6 @@ export const initConfig: Config = {
     rss_time: 0,
     rename_time: 0,
     webui_port: 0,
-  },
-  downloader: {
-    type: 'qbittorrent',
-    host: '',
-    username: '',
-    password: '',
-    path: '',
-    ssl: false,
   },
   rss_parser: {
     enable: true,
@@ -202,8 +201,6 @@ export const initConfig: Config = {
   bangumi_manage: {
     enable: true,
     eps_complete: true,
-    rename_method: 'normal',
-    revision_conflict_policy: 'hold',
     group_tag: true,
     remove_bad_torrent: true,
     track_orphans: true,
@@ -244,16 +241,6 @@ export const initConfig: Config = {
     failure_backoff: 300,
     providers: {},
   },
-  experimental_openai: {
-    enable: false,
-    api_key: '',
-    api_base: 'https://api.openai.com/v1/',
-    model: 'gpt-3.5-turbo',
-    // azure
-    api_type: 'openai',
-    api_version: '2020-05-03',
-    deployment_id: '',
-  },
   security: {
     login_whitelist: [],
     login_tokens: [],
@@ -263,5 +250,25 @@ export const initConfig: Config = {
   update: {
     channel: 'stable',
     auto_check: true,
+  },
+  plugins: {
+    allow_unsigned: false,
+    enabled: {},
+    options: {},
+    hook_order: {},
+    slots: {
+      downloader: 'default',
+      rename_strategy: 'pn',
+      conflict_policy: 'hold',
+      media_files: 'default',
+    },
+    instances: [
+      {
+        id: 'default',
+        point: 'downloader',
+        provider: 'qbittorrent',
+        options: { host: '', username: '', password: '', path: '', ssl: false },
+      },
+    ],
   },
 };

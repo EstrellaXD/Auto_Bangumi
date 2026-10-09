@@ -2,19 +2,15 @@
 
 import json
 import os
-from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
 from module.conf.config import Settings
-from module.conf.const import BCOLORS, DEFAULT_SETTINGS
 from module.models.config import (
     Config,
-    Downloader,
+    DownloaderOptions,
     NotificationProvider,
-    Program,
-    Proxy,
     RSSParser,
     Security,
 )
@@ -65,10 +61,10 @@ class TestConfigDefaults:
         """BangumiManage has correct default values."""
         config = Config()
         assert config.bangumi_manage.enable is True
-        assert config.bangumi_manage.rename_method == "pn"
+        assert config.plugins.slots.rename_strategy == "pn"
         assert config.bangumi_manage.group_tag is False
         assert config.bangumi_manage.remove_bad_torrent is False
-        assert config.bangumi_manage.revision_conflict_policy == "hold"
+        assert config.plugins.slots.conflict_policy == "hold"
         assert config.bangumi_manage.eps_complete is False
 
     def test_proxy_defaults(self):
@@ -89,14 +85,65 @@ class TestConfigDefaults:
 # ---------------------------------------------------------------------------
 
 
+class TestPluginInstances:
+    @pytest.mark.parametrize(
+        "plugins",
+        [
+            {"slots": {"downloader": "missing"}},
+            {
+                "instances": [
+                    {"id": "default", "point": "downloader", "provider": "qb"},
+                    {"id": "default", "point": "downloader", "provider": "aria2"},
+                ]
+            },
+            {
+                "instances": [
+                    {
+                        "id": "default",
+                        "point": "downloader",
+                        "provider": "qbittorrent",
+                        "options": {"ssl": "sometimes"},
+                    }
+                ]
+            },
+        ],
+    )
+    def test_invalid_downloader_instances_rejected(self, plugins):
+        with pytest.raises(ValueError):
+            Config.model_validate({"plugins": plugins})
+
+    def test_downloader_view_follows_slot(self):
+        config = Config.model_validate(
+            {
+                "plugins": {
+                    "slots": {"downloader": "nas"},
+                    "instances": [
+                        {"id": "default", "point": "downloader", "provider": "qb"},
+                        {
+                            "id": "nas",
+                            "point": "downloader",
+                            "provider": "aria2",
+                            "options": {"host": "nas:6800"},
+                        },
+                    ],
+                }
+            }
+        )
+        assert (config.downloader.id, config.downloader.type) == ("nas", "aria2")
+        assert config.downloader.host == "nas:6800"
+        # 未填写的字段取默认值
+        assert config.downloader.path == "/downloads/Bangumi"
+
+
 class TestConfigSerialization:
     def test_dict_uses_alias(self):
         """Config.dict() uses field aliases (by_alias=True)."""
         config = Config()
         d = config.dict()
-        # Downloader uses alias 'host' not 'host_'
-        assert "host" in d["downloader"]
-        assert "host_" not in d["downloader"]
+        # 下载器实例的 options 用别名 host 而不是 host_
+        options = d["plugins"]["instances"][0]["options"]
+        assert "host" in options
+        assert "host_" not in options
 
     def test_roundtrip_json(self, tmp_path):
         """Config can be serialized to JSON and loaded back."""
@@ -121,53 +168,6 @@ class TestConfigSerialization:
 
 
 class TestMigrateOldConfig:
-    def test_sleep_time_to_rss_time(self):
-        """Migrates sleep_time → rss_time."""
-        old_config = {
-            "program": {"sleep_time": 1800},
-            "rss_parser": {},
-        }
-        result = Settings._migrate_old_config(old_config)
-        assert result["program"]["rss_time"] == 1800
-        assert "sleep_time" not in result["program"]
-
-    def test_times_to_rename_time(self):
-        """Migrates times → rename_time."""
-        old_config = {
-            "program": {"times": 120},
-            "rss_parser": {},
-        }
-        result = Settings._migrate_old_config(old_config)
-        assert result["program"]["rename_time"] == 120
-        assert "times" not in result["program"]
-
-    def test_removes_data_version(self):
-        """Removes deprecated data_version field."""
-        old_config = {
-            "program": {"data_version": 2},
-            "rss_parser": {},
-        }
-        result = Settings._migrate_old_config(old_config)
-        assert "data_version" not in result["program"]
-
-    def test_removes_deprecated_rss_parser_fields(self):
-        """Removes deprecated type, custom_url, token, enable_tmdb from rss_parser."""
-        old_config = {
-            "program": {},
-            "rss_parser": {
-                "type": "mikan",
-                "custom_url": "https://custom.url",
-                "token": "abc",
-                "enable_tmdb": True,
-                "enable": True,
-            },
-        }
-        result = Settings._migrate_old_config(old_config)
-        assert "type" not in result["rss_parser"]
-        assert "custom_url" not in result["rss_parser"]
-        assert "token" not in result["rss_parser"]
-        assert "enable_tmdb" not in result["rss_parser"]
-        assert result["rss_parser"]["enable"] is True
 
     def test_no_migration_needed(self):
         """Already-current config passes through unchanged."""
@@ -178,98 +178,6 @@ class TestMigrateOldConfig:
         result = Settings._migrate_old_config(current_config)
         assert result["program"]["rss_time"] == 900
         assert result["program"]["rename_time"] == 60
-
-    def test_both_old_and_new_fields(self):
-        """When both sleep_time and rss_time exist, removes sleep_time."""
-        config = {
-            "program": {"sleep_time": 1800, "rss_time": 900},
-            "rss_parser": {},
-        }
-        result = Settings._migrate_old_config(config)
-        assert result["program"]["rss_time"] == 900
-        assert "sleep_time" not in result["program"]
-
-
-class TestMigrateOpenAIToLLM:
-    """experimental_openai → llm 自动迁移（provider=openai，mode=primary）。"""
-
-    def test_old_openai_config_populates_llm_section(self):
-        """旧配置有 enable/api_key 且无 llm 段时，迁移到 llm 段。"""
-        old_config = {
-            "program": {},
-            "rss_parser": {},
-            "experimental_openai": {
-                "enable": True,
-                "api_key": "sk-old",
-                "api_base": "https://api.deepseek.com/v1",
-                "model": "deepseek-chat",
-            },
-        }
-        result = Settings._migrate_old_config(old_config)
-        assert result["llm"] == {
-            "enable": True,
-            "provider": "openai",
-            "api_key": "sk-old",
-            "model": "deepseek-chat",
-            "base_url": "https://api.deepseek.com/v1",
-            # 旧版语义是 LLM 优先解析
-            "mode": "primary",
-        }
-        # 旧段保留，便于降级回滚
-        assert result["experimental_openai"]["api_key"] == "sk-old"
-
-    def test_official_api_base_migrates_to_empty_base_url(self):
-        """官方 API 地址迁移为空串（空串即官方 API）。"""
-        old_config = {
-            "program": {},
-            "rss_parser": {},
-            "experimental_openai": {
-                "enable": True,
-                "api_key": "sk-old",
-                "api_base": "https://api.openai.com/v1",
-            },
-        }
-        result = Settings._migrate_old_config(old_config)
-        assert result["llm"]["base_url"] == ""
-
-    def test_already_migrated_config_untouched(self):
-        """llm 段已有有效内容时不再迁移（幂等）。"""
-        migrated = {
-            "program": {},
-            "rss_parser": {},
-            "experimental_openai": {"enable": True, "api_key": "sk-old"},
-            "llm": {
-                "enable": False,
-                "provider": "gemini",
-                "api_key": "AIza-new",
-                "model": "gemini-2.5-flash",
-                "base_url": "",
-                "mode": "fallback",
-            },
-        }
-        result = Settings._migrate_old_config(json.loads(json.dumps(migrated)))
-        assert result["llm"] == migrated["llm"]
-
-    def test_unconfigured_openai_section_not_migrated(self):
-        """旧段未启用且无 api_key 时，不注入 llm 段（用默认值即可）。"""
-        config = {
-            "program": {},
-            "rss_parser": {},
-            "experimental_openai": {"enable": False, "api_key": ""},
-        }
-        result = Settings._migrate_old_config(config)
-        assert "llm" not in result
-
-    def test_migrated_defaults_fill_model(self):
-        """旧段缺 model 时迁移用默认模型。"""
-        config = {
-            "program": {},
-            "rss_parser": {},
-            "experimental_openai": {"enable": True, "api_key": "sk-old"},
-        }
-        result = Settings._migrate_old_config(config)
-        assert result["llm"]["model"] == "gpt-5-mini"
-        assert result["llm"]["mode"] == "primary"
 
 
 # ---------------------------------------------------------------------------
@@ -322,32 +230,30 @@ class TestSettingsLoad:
         with open(config_file) as f:
             data = json.load(f)
         assert "program" in data
-        assert "downloader" in data
-        # 新配置文件包含 llm 段（旧 experimental_openai 段同样保留）
+        assert "downloader" not in data
+        assert data["plugins"]["instances"][0]["provider"] == "qbittorrent"
+        # 新配置文件包含 llm 段
         assert "llm" in data
         assert data["rss_parser"]["engine"] == "classic"
 
-    def test_load_old_openai_config_migrates_to_llm(self, tmp_path):
-        """加载含旧 experimental_openai 的文件后，llm 段生效且为 primary 模式。"""
+    def test_removed_legacy_sections_are_dropped_on_save(self, tmp_path):
+        """3.3 遗留的 experimental_openai / 通知旧字段不再进入运行时，也不会被写回。"""
         config_data = Config().dict()
-        del config_data["llm"]
-        config_data["experimental_openai"].update(
-            {"enable": True, "api_key": "sk-old", "model": "gpt-4o"}
-        )
+        config_data["experimental_openai"] = {"enable": True, "api_key": "sk-old"}
+        config_data["notification"].update({"type": "telegram", "token": "t"})
         config_file = tmp_path / "config.json"
-        with open(config_file, "w") as f:
-            json.dump(config_data, f)
+        config_file.write_text(json.dumps(config_data))
 
         with patch("module.conf.config.CONFIG_PATH", config_file):
             s = Settings.__new__(Settings)
             Config.__init__(s)
             s.load()
+            s.save()
 
-        assert s.llm.enable is True
-        assert s.llm.provider == "openai"
-        assert s.llm.api_key == "sk-old"
-        assert s.llm.model == "gpt-4o"
-        assert s.llm.mode == "primary"
+        saved = json.loads(config_file.read_text())
+        assert "experimental_openai" not in saved
+        assert "type" not in saved["notification"]
+        assert "token" not in saved["notification"]
 
 
 # ---------------------------------------------------------------------------
@@ -356,18 +262,34 @@ class TestSettingsLoad:
 
 
 class TestEnvOverrides:
-    def test_downloader_host_from_env(self, tmp_path):
-        """AB_DOWNLOADER_HOST env var overrides downloader host."""
+    def test_downloader_env_maps_onto_default_instance(self, tmp_path):
+        """AB_DOWNLOADER_* / AB_DOWNLOAD_PATH / AB_METHOD 写入默认下载器实例与 slots。"""
         config_file = tmp_path / "config.json"
 
-        env = {"AB_DOWNLOADER_HOST": "192.168.1.100:9090"}
+        env = {
+            "AB_DOWNLOADER_HOST": "192.168.1.100:9090",
+            "AB_DOWNLOADER_USERNAME": "ab",
+            "AB_DOWNLOADER_PASSWORD": "pw",
+            "AB_DOWNLOAD_PATH": "/data/Bangumi",
+            "AB_METHOD": "Advance",
+        }
         with patch.dict(os.environ, env, clear=False):
             with patch("module.conf.config.CONFIG_PATH", config_file):
                 s = Settings.__new__(Settings)
                 Config.__init__(s)
                 s.init()
 
-        assert "192.168.1.100:9090" in s.downloader.host
+        assert (s.downloader.host, s.downloader.username, s.downloader.password) == (
+            "192.168.1.100:9090",
+            "ab",
+            "pw",
+        )
+        assert s.downloader.path == "/data/Bangumi"
+        assert s.downloader.type == "qbittorrent"
+        assert s.plugins.slots.rename_strategy == "advance"
+        saved = json.loads(config_file.read_text())
+        assert "downloader" not in saved
+        assert len(saved["plugins"]["instances"]) == 1
 
     def test_rss_parser_engine_from_env(self, tmp_path):
         """AB_RSS_PARSER_ENGINE selects a supported parser engine."""
@@ -394,7 +316,7 @@ class TestEnvOverrides:
                 Config.__init__(s)
                 s.init()
 
-        assert s.bangumi_manage.revision_conflict_policy == "replace"
+        assert s.plugins.slots.conflict_policy == "replace"
 
 
 # ---------------------------------------------------------------------------
@@ -507,11 +429,11 @@ class TestNotificationProvider:
 
 
 # ---------------------------------------------------------------------------
-# Notification model - legacy migration
+# Notification model
 # ---------------------------------------------------------------------------
 
 
-class TestNotificationLegacyMigration:
+class TestNotificationProviders:
     def test_new_format_no_migration(self):
         """New format with providers list is not touched."""
         n = NotificationConfig(
@@ -520,32 +442,6 @@ class TestNotificationLegacyMigration:
         )
         assert len(n.providers) == 1
         assert n.providers[0].type == "telegram"
-
-    def test_old_format_migrates_to_provider(self):
-        """Old single-provider fields (type, token, chat_id) migrate to providers list."""
-        n = NotificationConfig(
-            enable=True,
-            type="telegram",
-            token="bot_token",
-            chat_id="-100123",
-        )
-        assert len(n.providers) == 1
-        provider = n.providers[0]
-        assert provider.type == "telegram"
-        assert provider.enabled is True
-
-    def test_old_format_no_migration_when_providers_already_set(self):
-        """When providers already exist, legacy fields do not create additional providers."""
-        n = NotificationConfig(
-            enable=True,
-            type="telegram",
-            token="unused",
-            providers=[
-                NotificationProvider(type="discord", webhook_url="https://d.co")
-            ],
-        )
-        assert len(n.providers) == 1
-        assert n.providers[0].type == "discord"
 
     def test_notification_empty_providers_by_default(self):
         """Default Notification has no providers."""
@@ -561,135 +457,52 @@ class TestNotificationLegacyMigration:
 
 class TestDownloaderEnvExpansion:
     def test_host_expands_env_var(self, monkeypatch):
-        """Downloader.host expands $VAR references."""
+        """DownloaderOptions.host expands $VAR references."""
         monkeypatch.setenv("QB_HOST", "192.168.5.10:8080")
-        d = Downloader(host="$QB_HOST")
+        d = DownloaderOptions(host="$QB_HOST")
         assert d.host == "192.168.5.10:8080"
 
     def test_username_expands_env_var(self, monkeypatch):
-        """Downloader.username expands $VAR references."""
+        """DownloaderOptions.username expands $VAR references."""
         monkeypatch.setenv("QB_USER", "myuser")
-        d = Downloader(username="$QB_USER")
+        d = DownloaderOptions(username="$QB_USER")
         assert d.username == "myuser"
 
     def test_password_expands_env_var(self, monkeypatch):
-        """Downloader.password expands $VAR references."""
+        """DownloaderOptions.password expands $VAR references."""
         monkeypatch.setenv("QB_PASS", "s3cret")
-        d = Downloader(password="$QB_PASS")
+        d = DownloaderOptions(password="$QB_PASS")
         assert d.password == "s3cret"
 
     def test_literal_host_not_expanded(self):
         """Literal host strings without $ are returned as-is."""
-        d = Downloader(host="localhost:8080")
+        d = DownloaderOptions(host="localhost:8080")
         assert d.host == "localhost:8080"
 
 
 # ---------------------------------------------------------------------------
-# DEFAULT_SETTINGS structure
+# Factory defaults
 # ---------------------------------------------------------------------------
 
 
 class TestDefaultSettings:
-    def test_security_section_present(self):
-        """DEFAULT_SETTINGS contains a security section."""
-        assert "security" in DEFAULT_SETTINGS
-
-    def test_security_default_mcp_whitelist(self):
-        """Default MCP whitelist contains private network ranges."""
-        mcp_wl = DEFAULT_SETTINGS["security"]["mcp_whitelist"]
-        assert "127.0.0.0/8" in mcp_wl
-        assert "192.168.0.0/16" in mcp_wl
-        assert "10.0.0.0/8" in mcp_wl
+    """出厂默认值来自 Config 模型本身（首次运行由 Settings.init() 写出）。"""
 
     def test_security_default_tokens_empty(self):
-        """Default security token lists are empty."""
-        assert DEFAULT_SETTINGS["security"]["login_tokens"] == []
-        assert DEFAULT_SETTINGS["security"]["mcp_tokens"] == []
+        assert Config().security.login_tokens == []
+        assert Config().security.mcp_tokens == []
 
     def test_notification_uses_providers_format(self):
-        """DEFAULT_SETTINGS notification uses new providers format."""
-        notif = DEFAULT_SETTINGS["notification"]
-        assert "providers" in notif
+        notif = Config().model_dump()["notification"]
         assert notif["providers"] == []
         assert "type" not in notif
 
     def test_rss_parser_defaults_to_classic_engine(self):
         """Factory defaults preserve the pre-Preview parser behaviour."""
-        assert DEFAULT_SETTINGS["rss_parser"]["engine"] == "classic"
+        assert Config().rss_parser.engine == "classic"
 
     def test_revision_conflict_policy_defaults_to_hold(self):
-        assert DEFAULT_SETTINGS["bangumi_manage"]["revision_conflict_policy"] == "hold"
-
-
-# ---------------------------------------------------------------------------
-# BCOLORS utility
-# ---------------------------------------------------------------------------
-
-
-class TestBCOLORS:
-    def test_wrap_single_string(self):
-        """BCOLORS._() wraps a string with color codes and reset."""
-        result = BCOLORS._(BCOLORS.OKGREEN, "hello")
-        assert "hello" in result
-        assert BCOLORS.OKGREEN in result
-        assert BCOLORS.ENDC in result
-
-    def test_wrap_multiple_strings(self):
-        """BCOLORS._() joins multiple args with commas."""
-        result = BCOLORS._(BCOLORS.WARNING, "foo", "bar")
-        assert "foo" in result
-        assert "bar" in result
-
-    def test_wrap_non_string_arg(self):
-        """BCOLORS._() converts non-string args to str."""
-        result = BCOLORS._(BCOLORS.FAIL, 42)
-        assert "42" in result
-
-    def test_all_color_constants_are_strings(self):
-        """All BCOLORS constants are strings."""
-        for attr in [
-            "HEADER",
-            "OKBLUE",
-            "OKCYAN",
-            "OKGREEN",
-            "WARNING",
-            "FAIL",
-            "ENDC",
-        ]:
-            assert isinstance(getattr(BCOLORS, attr), str)
-
-
-# ---------------------------------------------------------------------------
-# Migration: security section injection
-# ---------------------------------------------------------------------------
-
-
-class TestMigrateSecuritySection:
-    def test_adds_security_when_missing(self):
-        """_migrate_old_config injects a default security section when absent."""
-        old_config: dict = {
-            "program": {},
-            "rss_parser": {},
-        }
-        result = Settings._migrate_old_config(old_config)
-        assert "security" in result
-        assert "mcp_whitelist" in result["security"]
-
-    def test_preserves_existing_security_section(self):
-        """_migrate_old_config does not overwrite an existing security section."""
-        existing_config = {
-            "program": {},
-            "rss_parser": {},
-            "security": {
-                "login_whitelist": ["10.0.0.0/8"],
-                "login_tokens": ["mytoken"],
-                "mcp_whitelist": [],
-                "mcp_tokens": [],
-            },
-        }
-        result = Settings._migrate_old_config(existing_config)
-        assert result["security"]["login_tokens"] == ["mytoken"]
-        assert result["security"]["login_whitelist"] == ["10.0.0.0/8"]
+        assert Config().plugins.slots.conflict_policy == "hold"
 
 
 class TestNetworkBaseUrls:
@@ -716,7 +529,7 @@ class TestNetworkBaseUrls:
             assert tp.info_url("1", "zh").startswith("https://tmdb.mirror.test/3/tv/1")
 
     async def test_bgm_calendar_uses_configured_base(self):
-        from unittest.mock import AsyncMock, patch
+        from unittest.mock import patch
 
         from module.parser.analyser import bgm_calendar
 

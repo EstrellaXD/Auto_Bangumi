@@ -6,9 +6,10 @@ from fastapi.testclient import TestClient
 
 from module.api.deps import get_context
 from module.api.setup import SENTINEL_PATH, router
+from module.models.config import Config
 from module.models.user import User
 from module.security.api import get_auth_service
-from module.security.jwt import get_password_hash
+from module.security.password import get_password_hash
 
 
 @pytest.fixture
@@ -56,12 +57,10 @@ def mock_first_run():
     with (
         patch("module.api.setup.SENTINEL_PATH") as mock_sentinel,
         patch("module.api.setup.settings") as mock_settings,
-        patch("module.api.setup.Config") as mock_config,
     ):
         mock_sentinel.exists.return_value = False
-        mock_settings.dict.return_value = {"test": "default"}
-        mock_config.return_value.dict.return_value = {"test": "default"}
-        yield
+        mock_settings.dict.side_effect = lambda: Config().dict()
+        yield mock_settings
 
 
 @pytest.fixture
@@ -350,6 +349,60 @@ class TestSetupComplete:
             "notification_chat_id": "",
         }
 
+    def test_complete_writes_downloader_to_default_instance(
+        self, client, mock_first_run, auth_service
+    ):
+        auth_service.authenticate_session.return_value = User(
+            id=7, username="admin", password="hashed-password", enabled=True
+        )
+        client.cookies.set("token", "pre-setup-session")
+        payload = self._payload() | {"downloader_type": "aria2"}
+        response = client.post("/api/v1/setup/complete", json=payload)
+
+        assert response.status_code == 200
+        saved = mock_first_run.save.call_args.args[0]
+        assert "downloader" not in saved
+        assert saved["plugins"]["instances"] == [
+            {
+                "id": "default",
+                "point": "downloader",
+                "provider": "aria2",
+                "options": {
+                    "host": "localhost:8080",
+                    "username": "admin",
+                    "password": "admin",
+                    "path": "/downloads",
+                    "ssl": False,
+                },
+            }
+        ]
+
+    @pytest.mark.parametrize(
+        ("provider", "field", "old", "value"),
+        [
+            ("bark", "device_key", "notification_token", "bark-key"),
+            ("wecom", "webhook_url", "notification_chat_id", "https://wecom/hook"),
+        ],
+    )
+    def test_complete_notification_alias_saved_to_provider_field(
+        self, client, mock_first_run, auth_service, provider, field, old, value
+    ):
+        """向导的通用 token / chat_id 输入要写成渠道实际读取的字段。"""
+        auth_service.authenticate_session.return_value = User(
+            id=7, username="admin", password="hashed-password", enabled=True
+        )
+        client.cookies.set("token", "pre-setup-session")
+        payload = self._payload() | {
+            "notification_enable": True,
+            "notification_type": provider,
+            old: value,
+        }
+        response = client.post("/api/v1/setup/complete", json=payload)
+
+        assert response.status_code == 200
+        saved = mock_first_run.save.call_args.args[0]
+        assert saved["notification"]["providers"][0][field] == value
+
     def test_complete_routes_through_ctx_reload_settings(
         self, client, mock_first_run, mock_ctx, auth_service
     ):
@@ -430,6 +483,41 @@ class TestSetupComplete:
 
         assert response.status_code == 403
         auth_service.update_user.assert_not_awaited()
+
+
+@pytest.mark.parametrize(
+    ("provider", "field", "body"),
+    [
+        ("bark", "device_key", {"token": "bark-key"}),
+        ("wecom", "webhook_url", {"token": "k", "chat_id": "https://wecom/hook"}),
+    ],
+)
+def test_test_notification_alias_reaches_provider_field(
+    client, mock_first_run, provider, field, body
+):
+    """测试通知用的配置与保存的一致：Bark 读 device_key，WeCom 读 webhook_url。"""
+    seen = []
+
+    class StubProvider:
+        def __init__(self, config):
+            seen.append(config)
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *exc):
+            return False
+
+        async def test(self):
+            return True, ""
+
+    with patch.dict("module.api.setup.PROVIDER_REGISTRY", {provider: StubProvider}):
+        response = client.post(
+            "/api/v1/setup/test-notification", json={"type": provider, **body}
+        )
+
+    assert response.json()["success"] is True
+    assert getattr(seen[0], field) == list(body.values())[-1]
 
 
 class TestSentinelPath:

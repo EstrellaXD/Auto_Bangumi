@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 
-from module.conf.search_provider import get_provider
 from module.database import Database, get_db
-from module.downloader import DownloadClient
+from module.downloader import DownloadClient, DownloaderPool, resolve_downloader_id
 from module.manager import SeasonCollector
 from module.models import APIResponse, Bangumi, Movie, RSSItem, RSSUpdate, Torrent
 from module.rss import RSSAnalyser, RSSEngine
+from module.searcher import available_sites
 from module.security.api import get_current_user
 
 from .response import u_response
@@ -30,7 +30,9 @@ async def get_rss(db: Database = Depends(get_db)):
 )
 async def add_rss(rss: RSSItem, db: Database = Depends(get_db)):
     engine = RSSEngine(db)
-    result = await engine.add_rss(rss.url, rss.name, rss.aggregate, rss.parser)
+    result = await engine.add_rss(
+        rss.url, rss.name, rss.aggregate, rss.parser, rss.downloader_id
+    )
     return u_response(result)
 
 
@@ -140,9 +142,9 @@ async def update_rss(
     dependencies=[Depends(get_current_user)],
 )
 async def refresh_all(db: Database = Depends(get_db)):
-    async with DownloadClient() as client:
+    async with DownloaderPool() as downloaders:
         engine = RSSEngine(db)
-        await engine.refresh_rss(client)
+        await engine.refresh_rss(downloaders)
     return JSONResponse(
         status_code=200,
         content={
@@ -158,9 +160,9 @@ async def refresh_all(db: Database = Depends(get_db)):
     dependencies=[Depends(get_current_user)],
 )
 async def refresh_rss(rss_id: int, db: Database = Depends(get_db)):
-    async with DownloadClient() as client:
+    async with DownloaderPool() as downloaders:
         engine = RSSEngine(db)
-        await engine.refresh_rss(client, rss_id)
+        await engine.refresh_rss(downloaders, rss_id)
     return JSONResponse(
         status_code=200,
         content={"msg_en": "Refresh RSS successfully.", "msg_zh": "刷新 RSS 成功。"},
@@ -200,7 +202,7 @@ async def analysis(rss: RSSItem):
     "/collect", response_model=APIResponse, dependencies=[Depends(get_current_user)]
 )
 async def download_collection(data: Bangumi):
-    async with DownloadClient() as client:
+    async with DownloadClient(resolve_downloader_id(data.downloader_id)) as client:
         collector = SeasonCollector(client)
         resp = await collector.collect_season(data, data.rss_link)
         return u_response(resp)
@@ -216,7 +218,7 @@ async def subscribe(data: Bangumi, rss: RSSItem):
     # 且不参与站点映射——避免 "mikan" 这类与站点同名的解析器被配置改写。
     parser = rss.parser
     if parser not in PARSER_TYPES:
-        providers = get_provider()
+        providers = available_sites()
         if parser in providers:
             parser = providers[parser]["parser"]
     resp = await SeasonCollector.subscribe_season(data, parser=parser)

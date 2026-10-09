@@ -1,10 +1,15 @@
 <script lang="ts" setup>
 import { Link } from '@icon-park/vue-next';
-import { NSelect, NSpin, NSwitch } from 'naive-ui';
+import { NSpin } from 'naive-ui';
+import AbField from './basic/ab-field.vue';
+import AbSelect from './basic/ab-select.vue';
+import AbSwitch from './basic/ab-switch.vue';
 import type { BangumiRule } from '#/bangumi';
 import type { RSS } from '#/rss';
 import { rssTemplate } from '#/rss';
 import { ruleTemplate } from '#/bangumi';
+import { usePluginProviders } from '@/hooks/usePluginProviders';
+import { useDownloaderInstances } from '@/hooks/useDownloaderInstances';
 
 /** v-model show */
 const show = defineModel('show', { default: false });
@@ -17,7 +22,16 @@ const rss = ref<RSS>({ ...rssTemplate });
 const rule = defineModel<BangumiRule>('rule', {
   default: () => ({ ...ruleTemplate }),
 });
-const parserTypes = ['tmdb', 'mikan', 'parser'] as const;
+const pluginProviders = usePluginProviders();
+// 订阅的下载器实例：由它新建的规则继承；留空跟随默认实例
+const downloaders = useDownloaderInstances(show);
+// 内置元数据源 + 插件登记的元数据源（metadata_provider 扩展点）
+const parserTypes = computed(() => [
+  'tmdb',
+  'mikan',
+  'parser',
+  ...pluginProviders.value.metadata_provider,
+]);
 
 // UI state
 const step = ref<'input' | 'confirm'>('input');
@@ -183,21 +197,30 @@ function subscribe() {
 
       <!-- Options row -->
       <div class="options-row">
-        <!-- Aggregate Switch -->
-        <div class="option-item">
-          <label class="option-label">{{ $t('topbar.add.aggregate') }}</label>
-          <NSwitch v-model:value="rss.aggregate" />
-        </div>
+        <AbField :label="$t('topbar.add.aggregate')">
+          <AbSwitch v-model="rss.aggregate" />
+        </AbField>
 
-        <!-- Parser Select -->
-        <div class="option-item">
-          <label class="option-label">{{ $t('topbar.add.parser') }}</label>
-          <NSelect
-            v-model:value="rss.parser"
-            :options="parserTypes.map((p) => ({ label: p, value: p }))"
-            class="parser-select"
+        <AbField :label="$t('topbar.add.parser')">
+          <AbSelect v-model="rss.parser" :items="parserTypes" />
+        </AbField>
+
+        <AbField
+          v-if="downloaders.multiple.value"
+          :label="$t('topbar.add.downloader')"
+        >
+          <AbSelect
+            v-model="rss.downloader_id"
+            :options="downloaders.options.value"
+            clearable
+            :placeholder="
+              $t('homepage.rule.downloader_default', {
+                id: downloaders.data.value.default,
+              })
+            "
+            :aria-label="$t('topbar.add.downloader')"
           />
-        </div>
+        </AbField>
       </div>
     </div>
 
@@ -353,31 +376,13 @@ function subscribe() {
   }
 }
 
-.parser-select {
-  width: 140px;
-}
-
 .options-row {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  padding: 16px;
+  flex-direction: column;
+  gap: var(--layout-gap);
+  padding: var(--layout-padding);
   background: var(--color-surface-hover);
   border-radius: var(--radius-md);
-}
-
-.option-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.option-label {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--color-text-secondary);
 }
 
 // Footer
@@ -431,16 +436,4 @@ function subscribe() {
 }
 
 // Modal transition
-// Responsive
-@media (max-width: 480px) {
-  .options-row {
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .option-item {
-    justify-content: space-between;
-    width: 100%;
-  }
-}
 </style>

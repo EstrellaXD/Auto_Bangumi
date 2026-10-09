@@ -401,7 +401,9 @@ class TestDispatch:
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=False)
 
-        with patch("module.mcp.tools.DownloadClient", return_value=mock_client):
+        with patch(
+            "module.downloader.download_client.DownloadClient", return_value=mock_client
+        ):
             result = await _dispatch("list_downloads", {"status": "all"})
 
         mock_client.get_torrent_info.assert_called_once_with(
@@ -417,7 +419,9 @@ class TestDispatch:
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=False)
 
-        with patch("module.mcp.tools.DownloadClient", return_value=mock_client):
+        with patch(
+            "module.downloader.download_client.DownloadClient", return_value=mock_client
+        ):
             await _dispatch("list_downloads", {"status": "downloading"})
 
         mock_client.get_torrent_info.assert_called_once_with(
@@ -443,7 +447,9 @@ class TestDispatch:
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=False)
 
-        with patch("module.mcp.tools.DownloadClient", return_value=mock_client):
+        with patch(
+            "module.downloader.download_client.DownloadClient", return_value=mock_client
+        ):
             result = await _dispatch("list_downloads", {})
 
         expected_keys = {
@@ -454,6 +460,7 @@ class TestDispatch:
             "dlspeed",
             "upspeed",
             "eta",
+            "downloader",
         }
         assert set(result[0].keys()) == expected_keys
 
@@ -516,7 +523,7 @@ class TestDispatch:
         mock_engine.refresh_rss = AsyncMock(return_value=None)
 
         with (
-            patch("module.mcp.tools.DownloadClient", return_value=mock_client),
+            patch("module.mcp.tools.DownloaderPool", return_value=mock_client),
             patch("module.mcp.tools.RSSEngine", return_value=mock_engine),
         ):
             result = await _dispatch("refresh_feeds", {})

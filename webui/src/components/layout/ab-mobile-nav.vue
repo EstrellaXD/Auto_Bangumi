@@ -1,16 +1,19 @@
 <script lang="ts" setup>
 import {
+  AppStore,
   Calendar,
   Download,
   Home,
   Log,
   Moon,
+  Puzzle,
   SettingTwo,
   Sun,
 } from '@icon-park/vue-next';
 import InlineSvg from 'vue-inline-svg';
+import { slotTitle, usePluginPages } from '@/hooks/usePluginUi';
 
-const { t } = useMyI18n();
+const { t, lang } = useMyI18n();
 const route = useRoute();
 const { isDark, toggle: toggleDark } = useDarkMode();
 
@@ -46,6 +49,12 @@ const navItems = [
   },
   { id: 6, icon: Log, label: () => t('sidebar.log'), path: '/log' },
   {
+    id: 8,
+    icon: AppStore,
+    label: () => t('sidebar.market_short'),
+    path: '/market',
+  },
+  {
     id: 7,
     icon: SettingTwo,
     label: () => t('sidebar.config'),
@@ -53,7 +62,18 @@ const navItems = [
   },
 ];
 
-const visibleItems = computed(() => navItems.filter((i) => !i.hidden));
+// 插件经 page 挂载点提供的页面，排在设置之前；导航栏可横向滚动
+const pageSlots = usePluginPages();
+const visibleItems = computed(() => {
+  const pluginItems = pageSlots.value.map((ui, index) => ({
+    id: 100 + index,
+    icon: Puzzle,
+    label: () => slotTitle(ui, lang.value === 'zh-CN' ? 'zh-CN' : 'en-US'),
+    path: `/plugins/${encodeURIComponent(ui.plugin_id)}`,
+  }));
+  const shown = navItems.filter((i) => !i.hidden);
+  return [...shown.slice(0, -1), ...pluginItems, shown[shown.length - 1]];
+});
 </script>
 
 <template>
@@ -64,7 +84,10 @@ const visibleItems = computed(() => navItems.filter((i) => !i.hidden));
       :to="item.path"
       replace
       class="mobile-nav__item"
-      :class="{ 'mobile-nav__item--active': route.path === item.path }"
+      :class="{
+        'mobile-nav__item--active':
+          route.path === item.path || route.path.startsWith(`${item.path}/`),
+      }"
       :aria-label="item.label()"
     >
       <Component :is="item.icon" :size="18" class="mobile-nav__icon" />
@@ -108,13 +131,14 @@ const visibleItems = computed(() => navItems.filter((i) => !i.hidden));
   }
 
   &__item {
-    flex: 1;
+    // 不收缩：项多时导航栏横向滚动，保持 44px 以上的触控区域
+    flex: 1 0 auto;
+    min-width: 56px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 2px;
-    min-width: 0;
     height: 56px;
     padding: 6px 4px;
     cursor: pointer;
@@ -159,7 +183,7 @@ const visibleItems = computed(() => navItems.filter((i) => !i.hidden));
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 100%;
+    max-width: 6em;
     line-height: 1.2;
   }
 }

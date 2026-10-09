@@ -49,7 +49,9 @@ def _write_test_pubkey(dest_dir: Path) -> Path:
 # ---------------------------------------------------------------------------
 
 
-def _make_bundle(version: str, min_image_version: str = "3.3.0-beta.1") -> bytes:
+def _make_bundle(
+    version: str, min_image_version: str = "3.3.0-beta.1", with_sdk: bool = True
+) -> bytes:
     """构造一个合法的 update bundle zip（内存字节）。"""
     lock_content = f"# uv.lock for {version}\n".encode()
     lock_sha = hashlib.sha256(lock_content).hexdigest()
@@ -62,6 +64,8 @@ def _make_bundle(version: str, min_image_version: str = "3.3.0-beta.1") -> bytes
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as zf:
         zf.writestr("backend/src/module/__marker__.txt", f"module {version}")
+        if with_sdk:
+            zf.writestr("backend/src/ab_sdk/__marker__.txt", f"sdk {version}")
         zf.writestr("backend/pyproject.toml", "[project]\nname='x'\n")
         zf.writestr("backend/uv.lock", lock_content)
         zf.writestr("webui-dist/index.html", f"<html>{version}</html>")
@@ -421,14 +425,23 @@ class TestApplyUpdate:
         assert (tmp_path / "u" / "bundle.zip.sig").exists()
 
     @pytest.mark.asyncio
-    async def test_incompatible_min_image_version_aborts(self, tmp_path):
-        data = _make_bundle("3.3.0-beta.2", min_image_version="9.9.9")
+    @pytest.mark.parametrize(
+        ("image", "min_image_version"),
+        # 第二组：已发布的 3.3 镜像在 beta 通道拿到 4.x bundle（缺 ab_sdk 与新依赖）
+        [("3.3.0-beta.1", "9.9.9"), ("3.3.6", "4.0.0-beta.1")],
+    )
+    async def test_incompatible_min_image_version_aborts(
+        self, tmp_path, image, min_image_version
+    ):
+        data = _make_bundle("4.0.0-beta.2", min_image_version=min_image_version)
         sha = hashlib.sha256(data).hexdigest()
-        up = _updater_for_apply(tmp_path, data, sha, image="3.3.0-beta.1")
+        up = _updater_for_apply(tmp_path, data, sha, image=image)
         res = await up.apply_update("beta")
         assert res.success is False
         assert "too old" in res.message.lower()
         assert not (tmp_path / "u" / "current").exists()
+        # boot_overlay 不看 min_image_version，只要没有留存的 bundle 就不会应用
+        assert not (tmp_path / "u" / "bundle.zip").exists()
 
     @pytest.mark.asyncio
     async def test_second_apply_moves_current_to_backup(self, tmp_path, bundle):
@@ -672,7 +685,9 @@ class TestRollback:
 
 
 class TestBootOverlay:
-    def _seed(self, tmp_path, overlay_version, sign=True, stage_venv=True):
+    def _seed(
+        self, tmp_path, overlay_version, sign=True, stage_venv=True, with_sdk=True
+    ):
         """构造一个假的 /app 布局 + 已验签覆盖层。返回相关路径。
 
         module 树与前端 dist 现在从已验签的 bundle.zip 解包，不再从 current/
@@ -683,10 +698,12 @@ class TestBootOverlay:
         (app / "module" / "old.txt").write_text("image module")
         (app / "dist").mkdir(parents=True)
         (app / "dist" / "old.html").write_text("image dist")
+        (app / "ab_sdk").mkdir(parents=True)
+        (app / "ab_sdk" / "old.txt").write_text("image sdk")
 
         updates = app / "config" / "updates"
         updates.mkdir(parents=True)
-        bundle_bytes = _make_bundle(overlay_version)
+        bundle_bytes = _make_bundle(overlay_version, with_sdk=with_sdk)
         (updates / "bundle.zip").write_bytes(bundle_bytes)
         sig = _sign_bytes(bundle_bytes)
         if not sign:
@@ -722,8 +739,27 @@ class TestBootOverlay:
         # module 树来自 zip 内 backend/src/module/__marker__.txt
         assert (app / "module" / "__marker__.txt").exists()
         assert not (app / "module" / "old.txt").exists()  # tree replaced, not merged
+        # module 依赖同版本的 ab_sdk，两者一起替换
+        assert (app / "ab_sdk" / "__marker__.txt").exists()
+        assert not (app / "ab_sdk" / "old.txt").exists()
         assert (app / "dist" / "index.html").exists()
         assert (app / ".venv" / "pyvenv.cfg").read_text() == "overlay venv"
+
+    def test_skips_overlay_without_sdk_tree(self, tmp_path):
+        """只换 module 不换 ab_sdk 会让新 module 在旧 SDK 上 ImportError。"""
+        import boot_overlay
+
+        app, updates, ivp, lock, pubkey = self._seed(tmp_path, "3.4.0", with_sdk=False)
+        applied = boot_overlay.apply_overlay(
+            app_root=app,
+            updates_root=updates,
+            image_version_path=ivp,
+            baseline_lock=lock,
+            pubkey_path=pubkey,
+        )
+        assert applied is False
+        assert (app / "module" / "old.txt").exists()
+        assert (app / "ab_sdk" / "old.txt").exists()
 
     def test_applies_overlay_when_rename_hits_exdev(self, tmp_path, monkeypatch):
         """overlayfs refuses to rename a lower-layer dir (EXDEV); the overlay

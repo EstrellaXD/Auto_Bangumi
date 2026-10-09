@@ -25,7 +25,7 @@ from module.downloader.client.aria2_downloader import (
 
 
 def _aria2() -> Aria2Downloader:
-    return Aria2Downloader("http://localhost:6800", "u", "secret-token")
+    return Aria2Downloader("http://localhost:6800", "u", "secret-token", "default")
 
 
 def _rename_intent(old_path: str, new_path: str, source) -> Aria2RenameIntent:
@@ -218,7 +218,7 @@ class TestAddTorrents:
             )
         assert result is AddResult.ADDED
         async with Database() as db:
-            record = await db.aria2.get("gid001")
+            record = await db.aria2("default").get("gid001")
         assert record is not None
         assert record.bangumi_id == 42
         assert record.category == "Bangumi"
@@ -244,8 +244,8 @@ class TestAddTorrents:
 
         assert result is AddResult.ADDED
         async with Database() as db:
-            assert await db.aria2.get("metadata-gid") is None
-            record = await db.aria2.get("payload-gid")
+            assert await db.aria2("default").get("metadata-gid") is None
+            record = await db.aria2("default").get("payload-gid")
         assert record is not None
         assert record.bangumi_id == 42
         assert record.dedup_key == "url:magnet:?xt=urn:btih:abc"
@@ -356,7 +356,10 @@ class TestAddTorrents:
         async with Database() as db:
             # Nothing to persist -- addUri never returned a gid.
             assert (
-                await db.aria2.find_by_dedup_key("url:magnet:?xt=urn:btih:zzz") is None
+                await db.aria2("default").find_by_dedup_key(
+                    "url:magnet:?xt=urn:btih:zzz"
+                )
+                is None
             )
 
     async def test_rpc_non_duplicate_error_returns_false_for_that_item(self):
@@ -409,7 +412,7 @@ class TestAddTorrents:
         aria2 = _aria2()
         url = "magnet:?xt=urn:btih:abc"
         async with Database() as db:
-            await db.aria2.upsert(
+            await db.aria2("default").upsert(
                 "gid-stale", bangumi_id=1, category="Bangumi", dedup_key=f"url:{url}"
             )
 
@@ -431,15 +434,15 @@ class TestAddTorrents:
 
         assert result is AddResult.ADDED
         async with Database() as db:
-            assert await db.aria2.get("gid-stale") is None
-            assert await db.aria2.get("gid-fresh") is not None
+            assert await db.aria2("default").get("gid-stale") is None
+            assert await db.aria2("default").get("gid-fresh") is not None
 
     async def test_add_torrents_stale_dedup_gid_removed_status_readds(self):
         """gid 还在 aria2 里但 status 是 removed（用户在 UI 删除）→ 视作陈旧，重新添加。"""
         aria2 = _aria2()
         url = "magnet:?xt=urn:btih:abc"
         async with Database() as db:
-            await db.aria2.upsert("gid-removed", dedup_key=f"url:{url}")
+            await db.aria2("default").upsert("gid-removed", dedup_key=f"url:{url}")
 
         async def fake_call(method, params=None, timeout=10.0):
             if method == "tellStatus":
@@ -458,15 +461,15 @@ class TestAddTorrents:
 
         assert result is AddResult.ADDED
         async with Database() as db:
-            assert await db.aria2.get("gid-removed") is None
-            assert await db.aria2.get("gid-fresh") is not None
+            assert await db.aria2("default").get("gid-removed") is None
+            assert await db.aria2("default").get("gid-fresh") is not None
 
     async def test_add_torrents_dedup_gid_still_active_skips_readd(self):
         """gid 仍活在 aria2 中 → 真重复，不重新添加。"""
         aria2 = _aria2()
         url = "magnet:?xt=urn:btih:abc"
         async with Database() as db:
-            await db.aria2.upsert("gid-alive", dedup_key=f"url:{url}")
+            await db.aria2("default").upsert("gid-alive", dedup_key=f"url:{url}")
 
         async def fake_call(method, params=None, timeout=10.0):
             if method == "tellStatus":
@@ -485,14 +488,14 @@ class TestAddTorrents:
 
         assert result is AddResult.DUPLICATE
         async with Database() as db:
-            assert await db.aria2.get("gid-alive") is not None
+            assert await db.aria2("default").get("gid-alive") is not None
 
     async def test_add_torrents_dedup_verify_unreachable_keeps_record_and_skips(self):
         """aria2 不可达时不能断定记录陈旧：保留本地记录，也不重复添加。"""
         aria2 = _aria2()
         url = "magnet:?xt=urn:btih:abc"
         async with Database() as db:
-            await db.aria2.upsert("gid-unknown", dedup_key=f"url:{url}")
+            await db.aria2("default").upsert("gid-unknown", dedup_key=f"url:{url}")
 
         async def fake_call(method, params=None, timeout=10.0):
             if method == "tellStatus":
@@ -511,7 +514,7 @@ class TestAddTorrents:
 
         assert result is AddResult.FAILED
         async with Database() as db:
-            assert await db.aria2.get("gid-unknown") is not None
+            assert await db.aria2("default").get("gid-unknown") is not None
 
     async def test_add_torrents_stale_dedup_torrent_file_readds(self):
         """种子文件走 content-hash 去重，同样要做陈旧校验。"""
@@ -521,7 +524,7 @@ class TestAddTorrents:
         payload = b"fake torrent bytes"
         dedup_key = f"file:{hashlib.sha1(payload).hexdigest()}"
         async with Database() as db:
-            await db.aria2.upsert("gid-stale-file", dedup_key=dedup_key)
+            await db.aria2("default").upsert("gid-stale-file", dedup_key=dedup_key)
 
         async def fake_call(method, params=None, timeout=10.0):
             if method == "tellStatus":
@@ -540,8 +543,8 @@ class TestAddTorrents:
 
         assert result is AddResult.ADDED
         async with Database() as db:
-            assert await db.aria2.get("gid-stale-file") is None
-            assert await db.aria2.get("gid-fresh-file") is not None
+            assert await db.aria2("default").get("gid-stale-file") is None
+            assert await db.aria2("default").get("gid-fresh-file") is not None
 
     async def test_no_tags_leaves_bangumi_id_unset(self):
         aria2 = _aria2()
@@ -554,7 +557,7 @@ class TestAddTorrents:
                 tags=None,
             )
         async with Database() as db:
-            record = await db.aria2.get("gid-no-tag")
+            record = await db.aria2("default").get("gid-no-tag")
         assert record is not None
         assert record.bangumi_id is None
 
@@ -589,7 +592,9 @@ class TestTorrentsInfo:
 
         with patch.object(aria2, "_call", AsyncMock(side_effect=fake_call)):
             async with Database() as db:
-                await db.aria2.upsert("gidA", bangumi_id=5, category="Bangumi")
+                await db.aria2("default").upsert(
+                    "gidA", bangumi_id=5, category="Bangumi"
+                )
             result = await aria2.torrents_info(status_filter=None, category=None)
 
         assert len(result) == 1
@@ -641,8 +646,8 @@ class TestTorrentsInfo:
 
         with patch.object(aria2, "_call", AsyncMock(side_effect=fake_call)):
             async with Database() as db:
-                await db.aria2.upsert("gidA", category="Bangumi")
-                await db.aria2.upsert("gidB", category="Other")
+                await db.aria2("default").upsert("gidA", category="Bangumi")
+                await db.aria2("default").upsert("gidB", category="Other")
             result = await aria2.torrents_info(status_filter=None, category="Bangumi")
 
         assert [r["hash"] for r in result] == ["gidA"]
@@ -834,7 +839,9 @@ class TestTorrentsInfo:
             return []
 
         async with Database() as db:
-            await db.aria2.upsert("metadata-gid", bangumi_id=5, category="Bangumi")
+            await db.aria2("default").upsert(
+                "metadata-gid", bangumi_id=5, category="Bangumi"
+            )
 
         with patch.object(aria2, "_call", AsyncMock(side_effect=fake_call)):
             result = await aria2.torrents_info(status_filter=None, category="Bangumi")
@@ -845,13 +852,41 @@ class TestTorrentsInfo:
         assert result[0]["tags"] == "ab:5"
         assert result[0]["category"] == "Bangumi"
         async with Database() as db:
-            assert await db.aria2.get("metadata-gid") is None
-            assert await db.aria2.get("payload-gid") is not None
+            assert await db.aria2("default").get("metadata-gid") is None
+            assert await db.aria2("default").get("payload-gid") is not None
 
 
 # ---------------------------------------------------------------------------
 # aria2_gid durable rename intent repository
 # ---------------------------------------------------------------------------
+
+
+async def test_two_instances_same_gid_kept_apart():
+    """两个 aria2 实例分配到同一个 gid：番剧关联与去重都只看本实例。"""
+    url = "magnet:?xt=urn:btih:abc"
+
+    async def fake_call(method, params=None, timeout=10.0):
+        if method == "addUri":
+            return "gid001"
+        if method == "tellStatus":
+            return {"status": "active"}
+        if method == "tellActive":
+            return [_download("gid001", status="active")]
+        return []
+
+    for instance_id, bangumi_id in (("a1", 1), ("a2", 2)):
+        aria2 = Aria2Downloader(f"http://{instance_id}:6800", "u", "s", instance_id)
+        with patch.object(aria2, "_call", AsyncMock(side_effect=fake_call)):
+            result = await aria2.add_torrents(
+                url, None, "/downloads", "Bangumi", tags=f"ab:{bangumi_id}"
+            )
+        assert result is AddResult.ADDED, instance_id
+
+    for instance_id, bangumi_id in (("a1", 1), ("a2", 2)):
+        aria2 = Aria2Downloader(f"http://{instance_id}:6800", "u", "s", instance_id)
+        with patch.object(aria2, "_call", AsyncMock(side_effect=fake_call)):
+            [info] = await aria2.torrents_info(status_filter=None, category=None)
+        assert info["tags"] == f"ab:{bangumi_id}", instance_id
 
 
 class TestRenameIntentDatabase:
@@ -861,9 +896,9 @@ class TestRenameIntentDatabase:
         intent = _rename_intent("old.mkv", "new.mkv", source)
 
         async with Database() as db:
-            await db.aria2.set_rename_intent("gidA", intent)
-            assert await db.aria2.get_rename_intent("gidA") == intent
-            record = await db.aria2.get("gidA")
+            await db.aria2("default").set_rename_intent("gidA", intent)
+            assert await db.aria2("default").get_rename_intent("gidA") == intent
+            record = await db.aria2("default").get("gidA")
 
         assert record is not None
         assert record.rename_intent is not None
@@ -876,13 +911,15 @@ class TestRenameIntentDatabase:
         intent = _rename_intent("old.mkv", "new.mkv", source)
 
         async with Database() as db:
-            await db.aria2.set_rename_intent("gidA", intent)
-            finalized = await db.aria2.finalize_rename_intent("gidA", intent)
+            await db.aria2("default").set_rename_intent("gidA", intent)
+            finalized = await db.aria2("default").finalize_rename_intent("gidA", intent)
 
             assert finalized is True
-            assert await db.aria2.get_renamed_paths("gidA") == {"old.mkv": "new.mkv"}
-            assert await db.aria2.get_rename_intent("gidA") is None
-            record = await db.aria2.get("gidA")
+            assert await db.aria2("default").get_renamed_paths("gidA") == {
+                "old.mkv": "new.mkv"
+            }
+            assert await db.aria2("default").get_rename_intent("gidA") is None
+            record = await db.aria2("default").get("gidA")
             assert record is not None
             assert record.rename_intent is None
 
@@ -902,12 +939,12 @@ class TestRenameIntentDatabase:
         )
 
         async with Database() as db:
-            await db.aria2.set_rename_intent("gidA", persisted)
-            finalized = await db.aria2.finalize_rename_intent("gidA", stale)
+            await db.aria2("default").set_rename_intent("gidA", persisted)
+            finalized = await db.aria2("default").finalize_rename_intent("gidA", stale)
 
             assert finalized is False
-            assert await db.aria2.get_renamed_paths("gidA") == {}
-            assert await db.aria2.get_rename_intent("gidA") == persisted
+            assert await db.aria2("default").get_renamed_paths("gidA") == {}
+            assert await db.aria2("default").get_rename_intent("gidA") == persisted
 
 
 # ---------------------------------------------------------------------------
@@ -948,7 +985,9 @@ class TestTorrentsFiles:
             return None
 
         async with Database() as db:
-            await db.aria2.set_renamed_path("gidA", "ep01.mkv", "Show - 01.mkv")
+            await db.aria2("default").set_renamed_path(
+                "gidA", "ep01.mkv", "Show - 01.mkv"
+            )
 
         with patch.object(aria2, "_call", AsyncMock(side_effect=fake_call)):
             files = await aria2.torrents_files("gidA")
@@ -1053,7 +1092,7 @@ class TestTorrentsRenameFile:
         old_file.write_bytes(b"data")
         intent = _rename_intent("old.mkv", "new.mkv", old_file)
         async with Database() as db:
-            await db.aria2.set_rename_intent("gidA", intent)
+            await db.aria2("default").set_rename_intent("gidA", intent)
         old_file.rename(new_file)
 
         async def fake_call(method, params=None, timeout=10.0):
@@ -1068,7 +1107,7 @@ class TestTorrentsRenameFile:
         assert result.outcome is RenameOutcome.ALREADY_APPLIED
         assert files == [{"name": "new.mkv", "size": 4}]
         async with Database() as db:
-            record = await db.aria2.get("gidA")
+            record = await db.aria2("default").get("gidA")
             assert record is not None
             assert record.rename_intent is None
 
@@ -1088,7 +1127,7 @@ class TestTorrentsRenameFile:
         assert result.outcome is RenameOutcome.DESTINATION_EXISTS
         assert target.read_bytes() == b"unrelated"
         async with Database() as db:
-            assert await db.aria2.get_renamed_paths("gidA") == {}
+            assert await db.aria2("default").get_renamed_paths("gidA") == {}
 
     async def test_crash_recovery_rejects_target_with_mismatched_fingerprint(
         self, tmp_path
@@ -1098,7 +1137,7 @@ class TestTorrentsRenameFile:
         old_file.write_bytes(b"original")
         intent = _rename_intent("old.mkv", "new.mkv", old_file)
         async with Database() as db:
-            await db.aria2.set_rename_intent("gidA", intent)
+            await db.aria2("default").set_rename_intent("gidA", intent)
         old_file.unlink()
         (tmp_path / "new.mkv").write_bytes(b"unrelated")
 
@@ -1110,10 +1149,10 @@ class TestTorrentsRenameFile:
 
         assert result.outcome is RenameOutcome.DESTINATION_EXISTS
         async with Database() as db:
-            record = await db.aria2.get("gidA")
+            record = await db.aria2("default").get("gidA")
             assert record is not None
             assert record.rename_intent is None
-            assert await db.aria2.get_renamed_paths("gidA") == {}
+            assert await db.aria2("default").get_renamed_paths("gidA") == {}
 
     async def test_move_failure_clears_rename_intent(self, tmp_path):
         aria2 = _aria2()
@@ -1130,7 +1169,7 @@ class TestTorrentsRenameFile:
 
         assert result.outcome is RenameOutcome.RETRYABLE_FAILURE
         async with Database() as db:
-            record = await db.aria2.get("gidA")
+            record = await db.aria2("default").get("gidA")
             assert record is not None
             assert record.rename_intent is None
 
@@ -1188,7 +1227,7 @@ class TestTorrentsDelete:
             return None
 
         async with Database() as db:
-            await db.aria2.upsert("gidA", bangumi_id=1)
+            await db.aria2("default").upsert("gidA", bangumi_id=1)
 
         with patch.object(aria2, "_call", AsyncMock(side_effect=fake_call)):
             result = await aria2.torrents_delete("gidA", delete_files=True)
@@ -1200,7 +1239,7 @@ class TestTorrentsDelete:
         assert season_dir.exists()  # boundary directory never removed
 
         async with Database() as db:
-            assert await db.aria2.get("gidA") is None
+            assert await db.aria2("default").get("gidA") is None
 
     async def test_returns_false_on_remove_rpc_error(self):
         aria2 = _aria2()
@@ -1215,7 +1254,7 @@ class TestTorrentsDelete:
             return None
 
         async with Database() as db:
-            await db.aria2.upsert(
+            await db.aria2("default").upsert(
                 "gidA", bangumi_id=1, renamed_paths='{"old.mkv": "staged.mkv"}'
             )
 
@@ -1224,7 +1263,7 @@ class TestTorrentsDelete:
 
         assert result is False
         async with Database() as db:
-            record = await db.aria2.get("gidA")
+            record = await db.aria2("default").get("gidA")
         assert record is not None
         assert record.renamed_paths == '{"old.mkv": "staged.mkv"}'
 
@@ -1247,8 +1286,10 @@ class TestTorrentsDelete:
             return None
 
         async with Database() as db:
-            await db.aria2.upsert("gidA", bangumi_id=1)
-            await db.aria2.set_renamed_path("gidA", original.name, staged.name)
+            await db.aria2("default").upsert("gidA", bangumi_id=1)
+            await db.aria2("default").set_renamed_path(
+                "gidA", original.name, staged.name
+            )
 
         with patch.object(aria2, "_call", AsyncMock(side_effect=fake_call)):
             result = await aria2.torrents_delete("gidA", delete_files=True)
@@ -1257,7 +1298,7 @@ class TestTorrentsDelete:
         assert not staged.exists()
         assert original.read_bytes() == b"new-v2"
         async with Database() as db:
-            assert await db.aria2.get("gidA") is None
+            assert await db.aria2("default").get("gidA") is None
 
     async def test_file_listing_failure_preserves_sidecar_and_task(self):
         aria2 = _aria2()
@@ -1274,7 +1315,7 @@ class TestTorrentsDelete:
             return None
 
         async with Database() as db:
-            await db.aria2.upsert(
+            await db.aria2("default").upsert(
                 "gidA", bangumi_id=1, renamed_paths='{"old.mkv": "staged.mkv"}'
             )
 
@@ -1284,7 +1325,7 @@ class TestTorrentsDelete:
         assert result is False
         assert "forceRemove" not in calls
         async with Database() as db:
-            assert await db.aria2.get("gidA") is not None
+            assert await db.aria2("default").get("gidA") is not None
 
     async def test_not_found_error_is_treated_as_already_gone(self):
         aria2 = _aria2()
@@ -1312,7 +1353,7 @@ class TestTorrentsDelete:
             raise AssertionError(f"unexpected RPC after not-found: {method}")
 
         async with Database() as db:
-            await db.aria2.upsert(
+            await db.aria2("default").upsert(
                 "gidA", bangumi_id=1, renamed_paths='{"old.mkv": "staged.mkv"}'
             )
 
@@ -1321,7 +1362,7 @@ class TestTorrentsDelete:
 
         assert result is True
         async with Database() as db:
-            assert await db.aria2.get("gidA") is None
+            assert await db.aria2("default").get("gidA") is None
 
     async def test_accepts_pipe_joined_hashes(self):
         aria2 = _aria2()
@@ -1426,7 +1467,7 @@ class TestSetCategoryAddTag:
         aria2 = _aria2()
         await aria2.set_category("gidA", "BangumiCollection")
         async with Database() as db:
-            record = await db.aria2.get("gidA")
+            record = await db.aria2("default").get("gidA")
         assert record is not None
         assert record.category == "BangumiCollection"
 
@@ -1434,7 +1475,7 @@ class TestSetCategoryAddTag:
         aria2 = _aria2()
         await aria2.add_tag("gidA", "ab:99")
         async with Database() as db:
-            record = await db.aria2.get("gidA")
+            record = await db.aria2("default").get("gidA")
         assert record is not None
         assert record.bangumi_id == 99
 
@@ -1442,26 +1483,10 @@ class TestSetCategoryAddTag:
         aria2 = _aria2()
         await aria2.add_tag("gidA", "some-other-tag")
         async with Database() as db:
-            record = await db.aria2.get("gidA")
+            record = await db.aria2("default").get("gidA")
         assert record is None
 
 
 # ---------------------------------------------------------------------------
 # check_connection
 # ---------------------------------------------------------------------------
-
-
-class TestCheckConnection:
-    async def test_returns_version_string(self):
-        aria2 = _aria2()
-        with patch.object(
-            aria2, "_call", AsyncMock(return_value={"version": "1.36.0"})
-        ):
-            result = await aria2.check_connection()
-        assert result == "1.36.0"
-
-    async def test_missing_version_field_returns_unknown(self):
-        aria2 = _aria2()
-        with patch.object(aria2, "_call", AsyncMock(return_value={})):
-            result = await aria2.check_connection()
-        assert result == "unknown"

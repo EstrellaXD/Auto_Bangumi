@@ -1,0 +1,13 @@
+# 只用于本地开发与测试，不会被打进插件包（ab-plugin pack 排除它）
+[project]
+name = "ab-plugin-manual-pick"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = ["autobangumi-sdk"]
+
+[dependency-groups]
+dev = ["pytest>=8.0.0"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

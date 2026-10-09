@@ -21,6 +21,7 @@ from module.models import ApiToken, AuthSession, Bangumi, Movie, RenameOperation
 from module.models.inbox import InboxMessage
 from module.models.llm_credential import LLMCredential
 from module.models.passkey import Passkey
+from module.models.plugin_kv import PluginKV
 from module.models.rss import RSSItem
 from module.models.torrent import Torrent
 
@@ -39,6 +40,7 @@ TABLE_MODELS: list[type[SQLModel]] = [
     AuthSession,
     ApiToken,
     RenameOperation,
+    PluginKV,
 ]
 
 # already_applied 守卫：接收 inspector，返回该迁移是否已生效
@@ -96,6 +98,26 @@ class Migration:
         if self.already_applied(inspector):
             return ()
         return self.statements
+
+
+# 规则与订阅的 downloader_id 为空表示「用默认实例」，存量行保持为空；
+# 种子记录实际所在的实例，存量种子都在 3.3 的下载器，即实例 default
+_DOWNLOADER_ID_COLUMNS = {
+    "bangumi": "downloader_id VARCHAR",
+    "movie": "downloader_id VARCHAR",
+    "rssitem": "downloader_id VARCHAR",
+    "torrent": "downloader_id VARCHAR DEFAULT 'default'",
+}
+
+
+def _has_downloader_id(table: str) -> AppliedCheck:
+    # 表不存在时由 create_all 按模型建表，自带该列
+    def check(inspector) -> bool:
+        return table not in inspector.get_table_names() or column_exists(
+            table, "downloader_id"
+        )(inspector)
+
+    return check
 
 
 # 迁移按版本顺序执行；版本号与 3.2.x 的历史保持一致，旧数据库照常升级。
@@ -780,6 +802,61 @@ MIGRATIONS: tuple[Migration, ...] = (
                 column_exists("aria2_gid", "rename_intent"),
             ),
         ),
+    ),
+    Migration(
+        25,
+        "add plugin key-value store",
+        (
+            """CREATE TABLE IF NOT EXISTS plugin_kv (
+                id INTEGER NOT NULL PRIMARY KEY,
+                plugin_id VARCHAR NOT NULL,
+                key VARCHAR NOT NULL,
+                value VARCHAR NOT NULL,
+                updated_at DATETIME NOT NULL,
+                CONSTRAINT uq_plugin_kv UNIQUE (plugin_id, key)
+            )""",
+            "CREATE INDEX IF NOT EXISTS ix_plugin_kv_plugin_id ON plugin_kv (plugin_id)",
+        ),
+        table_exists("plugin_kv"),
+    ),
+    Migration(
+        26,
+        "add downloader_id to bangumi, movie, rssitem and torrent",
+        tuple(
+            f"ALTER TABLE {table} ADD COLUMN {column}"
+            for table, column in _DOWNLOADER_ID_COLUMNS.items()
+        ),
+        all_checks(*(_has_downloader_id(table) for table in _DOWNLOADER_ID_COLUMNS)),
+        tuple(
+            (f"ALTER TABLE {table} ADD COLUMN {column}", _has_downloader_id(table))
+            for table, column in _DOWNLOADER_ID_COLUMNS.items()
+        ),
+    ),
+    Migration(
+        27,
+        "scope aria2_gid by downloader instance",
+        # SQLite 不能修改主键，重建表；存量映射都属于 3.3 的下载器，即实例 default
+        (
+            """CREATE TABLE aria2_gid_new (
+                downloader_id VARCHAR NOT NULL,
+                gid VARCHAR NOT NULL,
+                bangumi_id INTEGER REFERENCES bangumi(id),
+                category VARCHAR,
+                dedup_key VARCHAR,
+                renamed_paths TEXT DEFAULT NULL,
+                rename_intent TEXT DEFAULT NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (downloader_id, gid)
+            )""",
+            "INSERT INTO aria2_gid_new (downloader_id, gid, bangumi_id, category, "
+            "dedup_key, renamed_paths, rename_intent, created_at) "
+            "SELECT 'default', gid, bangumi_id, category, dedup_key, renamed_paths, "
+            "rename_intent, created_at FROM aria2_gid",
+            "DROP TABLE aria2_gid",
+            "ALTER TABLE aria2_gid_new RENAME TO aria2_gid",
+            "CREATE INDEX ix_aria2_gid_dedup_key ON aria2_gid(dedup_key)",
+        ),
+        _has_downloader_id("aria2_gid"),
     ),
 )
 

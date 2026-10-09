@@ -45,6 +45,9 @@ importers:
       '@antfu/eslint-config':
         specifier: ^0.38.6
         version: 0.38.6(eslint@8.57.1)(typescript@4.9.5)
+      '@autobangumi/plugin-ui':
+        specifier: workspace:*
+        version: link:packages/plugin-ui
       '@icon-park/vue-next':
         specifier: ^1.4.2
         version: 1.4.2(vue@3.5.8(typescript@4.9.5))
@@ -156,6 +159,8 @@ importers:
       vue-tsc:
         specifier: ^1.8.27
         version: 1.8.27(typescript@4.9.5)
+
+  packages/plugin-ui: {}
 
 packages:
 

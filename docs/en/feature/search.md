@@ -14,6 +14,8 @@ The search bar is located in the AB top bar. Click to open the search panel.
 
 Select the source site, enter keywords, and AB will automatically parse and display search results. To add an anime, click the add button on the right side of the card.
 
+A series that you add from search uses the default downloader. When you have more than one downloader, you can change it later in the Advanced Settings of the series. See [Multiple Downloaders](./downloaders.md).
+
 ::: tip
 When the source is **Mikan**, AB uses the `mikan` parser by default. For other sources, the TMDB parser is used.
 :::

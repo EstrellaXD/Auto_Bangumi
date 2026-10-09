@@ -1,5 +1,6 @@
 <script lang="tsx" setup>
 import {
+  AppStore,
   Calendar,
   Download,
   Home,
@@ -8,10 +9,12 @@ import {
   MenuUnfold,
   Moon,
   Play,
+  Puzzle,
   SettingTwo,
   Sun,
 } from '@icon-park/vue-next';
 import InlineSvg from 'vue-inline-svg';
+import { slotTitle, usePluginPages } from '@/hooks/usePluginUi';
 
 const props = withDefaults(
   defineProps<{
@@ -22,7 +25,7 @@ const props = withDefaults(
   }
 );
 
-const { t } = useMyI18n();
+const { t, lang } = useMyI18n();
 const { logout } = useAuth();
 const route = useRoute();
 const { isMobile, isTablet, isMobileOrTablet } = useBreakpointQuery();
@@ -84,12 +87,36 @@ const items = [
     path: '/log',
   },
   {
+    id: 8,
+    icon: AppStore,
+    label: () => t('sidebar.market'),
+    path: '/market',
+  },
+  {
     id: 7,
     icon: SettingTwo,
     label: () => t('sidebar.config'),
     path: '/config',
   },
 ];
+
+// 子路由（如 /market/:id）也高亮所属入口
+function isActive(path: string) {
+  return route.path === path || route.path.startsWith(`${path}/`);
+}
+
+// 插件经 page 挂载点提供的页面，排在设置之前
+const pageSlots = usePluginPages();
+const navItems = computed(() => {
+  const pluginItems = pageSlots.value.map((ui, index) => ({
+    id: 100 + index,
+    icon: Puzzle,
+    label: () => slotTitle(ui, lang.value === 'zh-CN' ? 'zh-CN' : 'en-US'),
+    path: `/plugins/${encodeURIComponent(ui.plugin_id)}`,
+    hidden: false,
+  }));
+  return [...items.slice(0, -1), ...pluginItems, items[items.length - 1]];
+});
 
 function Exit() {
   return (
@@ -139,14 +166,14 @@ function Exit() {
         <!-- Navigation -->
         <nav class="sidebar-nav">
           <RouterLink
-            v-for="i in items"
+            v-for="i in navItems"
             :key="i.id"
             :to="i.path"
             replace
             :title="i.label()"
             class="sidebar-item"
             :class="[
-              route.path === i.path && 'sidebar-item--active',
+              isActive(i.path) && 'sidebar-item--active',
               i.hidden && 'hidden',
             ]"
           >
@@ -182,14 +209,14 @@ function Exit() {
         <div class="sidebar-inner">
           <nav class="sidebar-nav">
             <RouterLink
-              v-for="i in items"
+              v-for="i in navItems"
               :key="i.id"
               :to="i.path"
               replace
               :title="i.label()"
               class="sidebar-item"
               :class="[
-                route.path === i.path && 'sidebar-item--active',
+                isActive(i.path) && 'sidebar-item--active',
                 i.hidden && 'hidden',
               ]"
             >

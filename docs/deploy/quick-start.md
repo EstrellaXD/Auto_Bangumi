@@ -3,6 +3,10 @@
 我们推荐使用 Docker 部署 AutoBangumi。
 部署前，请确保已安装 [Docker Engine][docker-engine] 或 [Docker Desktop][docker-desktop]。
 
+::: tip 4.0 测试版
+本页命令使用 `latest` 标签，安装的是 3.3 正式版。要使用 4.0 测试版，把镜像标签换成 `4.0.0-beta.N`（例如 `4.0.0-beta.1`）；挂载卷与环境变量不变。从 3.3 升级前请阅读 [从 3.3 升级到 4.0](./upgrade-4.0)。4.0 的硬链接插件需要把媒体库目录也挂载进容器，见 [番剧管理设置](../config/manager)。
+:::
+
 ## 创建数据和配置目录
 
 为确保 AB 的数据和配置在更新时持久化，我们建议使用绑定挂载或 Docker 卷。

@@ -6,12 +6,9 @@ from pydantic import BaseModel
 
 from module.conf import settings
 from module.database import Database, get_db
-from module.downloader import DownloadClient
-from module.manager import Renamer, TorrentManager
+from module.manager import TorrentManager
+from module.manager.renamer import rename_all
 from module.models import APIResponse, Bangumi, BangumiUpdate, ResponseModel, Torrent
-from module.parser.analyser.offset_detector import (
-    OffsetSuggestion as DetectorSuggestion,
-)
 from module.parser.analyser.offset_detector import detect_offset_mismatch
 from module.parser.analyser.tmdb_parser import tmdb_parser
 from module.security.api import get_current_user
@@ -379,9 +376,7 @@ async def dismiss_review(bangumi_id: int):
 
 async def _trigger_rename() -> None:
     """Run a rename pass so applied offsets take effect immediately."""
-    async with DownloadClient() as client:
-        renamer = Renamer(client)
-        await renamer.rename()
+    await rename_all()
 
 
 # Registered before /apply-offset/{bangumi_id} so "many" is never captured as an id.

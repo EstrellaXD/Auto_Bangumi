@@ -2,7 +2,7 @@
 
 ![search provider](/image/config/search-provider.png){width=700}{class=ab-shadow-card}
 
-検索プロバイダーはWebUIのTorrent検索と検索ベースの購読に使われます。内蔵providerは `mikan`、`nyaa`、`dmhy` です。既定providerは削除できませんが、URLテンプレートは編集できます。
+検索プロバイダーはWebUIのTorrent検索と検索ベースの購読に使われます。内蔵providerは `mikan`、`anibt`、`nyaa`、`dmhy` です。既定providerは削除できませんが、URLテンプレートは編集できます。
 
 検索プロバイダーの変更は `config/search_provider.json` に即時保存されます。下部の **保存して再起動** は不要です。
 

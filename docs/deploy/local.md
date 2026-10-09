@@ -30,7 +30,7 @@ cd AutoBangumi
 ```bash
 cd src
 python3 -m venv env
-python3 pip install -r requirements.txt
+env/bin/pip install -r requirements.txt
 ```
 
 ## 创建配置和数据目录

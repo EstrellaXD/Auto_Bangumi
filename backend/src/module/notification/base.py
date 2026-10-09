@@ -7,6 +7,7 @@ from module.conf import settings
 from module.models.bangumi import Notification
 from module.network import RequestContent
 from module.notification.events import SystemEvent
+from module.notification.template import render_event
 
 if TYPE_CHECKING:
     from module.models.config import NotificationProvider as ProviderConfig
@@ -26,6 +27,8 @@ class NotificationProvider(ABC):
         # 单集通知模板（{{title}}/{{season}}/{{episode}}/{{poster_url}}）；
         # 未设置时 ``_format_message`` 回退到默认中文文案。
         self.template = config.template
+        # 渠道类型（如 telegram），传给 message_template 钩子按渠道定制文案
+        self.channel = str(config.type).lower()
 
     async def __aenter__(self) -> "NotificationProvider":
         await self._http.__aenter__()
@@ -62,7 +65,8 @@ class NotificationProvider(ABC):
         System events use each provider's default title/body delivery
         (:meth:`_deliver_text`) -- the per-episode template only covers
         {{title}}/{{season}}/{{episode}}/{{poster_url}}, which don't apply
-        here.
+        here. 标题与正文默认取 ``event.describe()``，插件可通过
+        ``message_template`` 钩子按事件类型与渠道改写。
 
         Args:
             event: The system event to send.
@@ -70,7 +74,7 @@ class NotificationProvider(ABC):
         Returns:
             True if the event was delivered successfully, False otherwise.
         """
-        title, body = event.describe()
+        title, body = await render_event(event, self.channel)
         return await self._deliver_text(title, body)
 
     @abstractmethod

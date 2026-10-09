@@ -2,9 +2,6 @@ import logging
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import SQLModel
-
-from module.models import Bangumi, User
 
 from .aria2 import Aria2GidDatabase
 from .auth import AuthDatabase
@@ -20,6 +17,7 @@ from .migrations import (  # noqa: F401  (re-exported for existing importers)
     run_migrations_async,
 )
 from .movie import MovieDatabase
+from .plugin_kv import PluginKVDatabase
 from .rename_operation import RenameOperationDatabase
 from .rss import RSSDatabase
 from .torrent import TorrentDatabase
@@ -48,11 +46,15 @@ class Database:
         self.bangumi = BangumiDatabase(self.session)
         self.movie = MovieDatabase(self.session)
         self.user = UserDatabase(self.session)
-        self.aria2 = Aria2GidDatabase(self.session)
         self.auth = AuthDatabase(self.session)
         self.inbox = InboxDatabase(self.session)
         self.llm_credential = LLMCredentialDatabase(self.session)
         self.rename_operation = RenameOperationDatabase(self.session)
+        self.plugin_kv = PluginKVDatabase(self.session)
+
+    def aria2(self, downloader_id: str) -> Aria2GidDatabase:
+        """某个 aria2 实例的 gid 映射（gid 只在实例内唯一）。"""
+        return Aria2GidDatabase(self.session, downloader_id)
 
     async def __aenter__(self):
         return self
@@ -95,31 +97,3 @@ class Database:
 
     async def run_migrations(self):
         await run_migrations_async(async_engine)
-
-    async def drop_table(self):
-        async with async_engine.begin() as conn:
-            await conn.run_sync(SQLModel.metadata.drop_all)
-
-    async def migrate(self):
-        # Run migration online
-        bangumi_data = await self.bangumi.search_all()
-        result = await self.session.execute(text("SELECT * FROM user"))
-        user_data = result.mappings().all()
-        if not user_data:
-            logger.warning("No user data found, skipping migration.")
-            return
-        readd_bangumi = []
-        for bangumi in bangumi_data:
-            dict_data = bangumi.dict()
-            del dict_data["id"]
-            readd_bangumi.append(Bangumi(**dict_data))
-        await self.drop_table()
-        await self.create_table()
-        await self.commit()
-        try:
-            await self.bangumi.add_all(readd_bangumi)
-            self.add(User(**user_data[0]))
-            await self.commit()
-        except Exception:
-            await self.rollback()
-            raise

@@ -2,6 +2,10 @@
 
 A one-click deployment method for **AutoBangumi** using a `docker-compose.yml` file.
 
+::: tip 4.0 beta
+The commands on this page use the `latest` tag, which installs the 3.3 stable release. To use the 4.0 beta, change the image tag to `4.0.0-beta.N` (for example `4.0.0-beta.1`). The volumes and the environment variables do not change. Before you upgrade from 3.3, read [Upgrade from 3.3 to 4.0](./upgrade-4.0). The 4.0 hard link plugin also needs the media library directory mounted into the container. Refer to [Bangumi Manager](../config/manager).
+:::
+
 ## Install Docker Compose
 
 Docker Compose usually comes bundled with Docker. Check with:
