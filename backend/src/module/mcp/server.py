@@ -10,9 +10,11 @@ endpoint at ``/mcp/sse``.
 
 import logging
 
+from fastapi import APIRouter
 from mcp import types
 from mcp.server import Server
 from mcp.server.sse import SseServerTransport
+from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 from pydantic import AnyUrl
 from starlette.applications import Starlette
 from starlette.routing import Mount, Route
@@ -75,6 +77,31 @@ class _SseEndpoint:
 
 
 handle_sse = _SseEndpoint()
+
+
+class _StreamableHttpEndpoint:
+    """Streamable HTTP 裸 ASGI 端点，响应由 session manager 直接写出。"""
+
+    def __init__(self, session_manager: StreamableHTTPSessionManager):
+        self.session_manager = session_manager
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        await self.session_manager.handle_request(scope, receive, send)
+
+
+def create_mcp_router() -> APIRouter:
+    """在 ``/mcp`` 提供 Streamable HTTP 传输。
+
+    用精确路径路由：Mount 只匹配 ``/mcp/...``，``/mcp`` 会落到 SPA 兜底路由。
+    session manager 随路由 lifespan 运行（FastAPI 会合并进主应用；挂载子应用的
+    lifespan 不会执行）。
+    """
+    session_manager = StreamableHTTPSessionManager(app=server, stateless=True)
+    endpoint = McpAccessMiddleware(_StreamableHttpEndpoint(session_manager))
+    router = APIRouter(lifespan=lambda _: session_manager.run())
+    router.routes.append(Route("/mcp", endpoint=endpoint))
+    router.routes.append(Route("/mcp/", endpoint=endpoint))
+    return router
 
 
 def create_mcp_starlette_app(ctx=None) -> Starlette:

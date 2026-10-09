@@ -14,7 +14,7 @@ from module.api import v1
 from module.api.health import router as health_router
 from module.conf import VERSION, settings, setup_logger
 from module.core import AppContext
-from module.mcp import create_mcp_app
+from module.mcp import create_mcp_app, create_mcp_router
 
 setup_logger(reset=True)
 logger = logging.getLogger(__name__)
@@ -73,7 +73,8 @@ def create_app() -> FastAPI:
     # it stays reachable without auth for container/orchestrator health checks
     app.include_router(health_router)
 
-    # mount MCP server (SSE transport for LLM tool integration)
+    # MCP：Streamable HTTP 在 /mcp，SSE 在 /mcp/sse
+    app.include_router(create_mcp_router())
     app.mount("/mcp", create_mcp_app(ctx))
 
     return app
