@@ -37,6 +37,10 @@ test('mobile rule editor saves advanced keyboard-accessible fields @mobile', asy
 
     const dialog = page.getByRole('dialog', { name: 'Edit Rule' });
     const panel = dialog.getByTestId('bottom-sheet-panel');
+    // 抽屉从底部滑入：等入场动画结束再量位置
+    await expect
+      .poll(async () => (await panel.boundingBox())?.y)
+      .toBeCloseTo(0, 0);
     const initialBox = await panel.boundingBox();
     expect(initialBox).not.toBeNull();
     expect(initialBox!.x).toBeCloseTo(0, 0);

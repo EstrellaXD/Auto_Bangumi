@@ -84,9 +84,10 @@ function formatEta(seconds: number): string {
   if (seconds <= 0 || seconds === 8640000) return '-';
   if (seconds < 60) return `${seconds}s`;
   if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
-  const h = Math.floor(seconds / 3600);
+  // 不能叫 h：unimport 按名字判断，模块里出现 `const h` 就不再自动导入 vue 的 h()
+  const hours = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
-  return `${h}h${m}m`;
+  return `${hours}h${m}m`;
 }
 
 function stateLabel(state: string): string {
