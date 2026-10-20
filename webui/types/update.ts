@@ -30,15 +30,15 @@ export interface UpdateApplyResult {
 /** SSE `update` 事件推送的进度负载 */
 export interface UpdateProgress {
   phase:
-    | 'idle'
-    | 'checking'
-    | 'downloading'
-    | 'verifying'
-    | 'unpacking'
-    | 'promoting'
-    | 'restarting'
-    | 'error'
-    | 'done';
+    | 'idle' |
+    'checking' |
+    'downloading' |
+    'verifying' |
+    'unpacking' |
+    'promoting' |
+    'restarting' |
+    'error' |
+    'done';
   percent: number;
   message: string;
   version: string | null;

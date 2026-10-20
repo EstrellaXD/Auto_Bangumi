@@ -6,11 +6,15 @@ const setupStore = useSetupStore();
 <template>
   <ab-container :title="t('setup.welcome.title')" class="wizard-step">
     <div class="welcome-content">
-      <p class="welcome-subtitle">{{ t('setup.welcome.subtitle') }}</p>
-      <p class="welcome-description">{{ t('setup.welcome.description') }}</p>
+      <p class="welcome-subtitle">
+        {{ t('setup.welcome.subtitle') }}
+      </p>
+      <p class="welcome-description">
+        {{ t('setup.welcome.description') }}
+      </p>
 
       <div class="wizard-actions">
-        <div></div>
+        <div />
         <ab-button variant="primary" size="sm" @click="setupStore.nextStep()">
           {{ t('setup.welcome.start') }}
         </ab-button>

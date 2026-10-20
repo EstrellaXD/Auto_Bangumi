@@ -3,7 +3,7 @@ import { defineComponent, ref } from 'vue';
 import { mount } from '@vue/test-utils';
 import AbModal from '../ab-modal.vue';
 
-// headlessui teleports dialogs into document.body and its leave transition
+// NModal teleports dialogs into document.body and its leave transition
 // never completes under happy-dom — wipe the body between tests.
 afterEach(() => {
   document.body.innerHTML = '';
@@ -16,7 +16,7 @@ async function mountModal(props = {}, slots = {}) {
     slots: { default: '<p>body text</p>', ...slots },
     attachTo: document.body,
   });
-  // headlessui mounts dialog content on the next tick (transition setup)
+  // NModal mounts dialog content on the next tick (transition setup)
   await new Promise((resolve) => setTimeout(resolve));
   return wrapper;
 }
@@ -89,7 +89,7 @@ describe('ab-modal', () => {
 
     const innerBody = document.querySelector('#inner-body') as HTMLElement;
     expect(innerBody).not.toBeNull();
-    // headlessui 的 outside-click 走 pointer/mouse 事件序列
+    // naive-ui 的 clickoutside 走 pointer/mouse 事件序列
     for (const type of ['pointerdown', 'mousedown', 'click']) {
       innerBody.dispatchEvent(
         new MouseEvent(type, { bubbles: true, cancelable: true })

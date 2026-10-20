@@ -20,7 +20,7 @@ export const test = base.extend<E2EFixtures>({
   },
   uniqueName: async ({ browserName: _browserName }, use, testInfo) => {
     const value = `${testInfo.project.name}-${testInfo.testId}`
-      .replace(/[^A-Za-z0-9_-]+/g, '-')
+      .replace(/[^\w-]+/g, '-')
       .slice(-48);
     await use(value);
   },

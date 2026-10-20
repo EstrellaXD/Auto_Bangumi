@@ -1,27 +1,24 @@
 <script lang="ts" setup>
 // 图标按钮：label 必填（即 aria-label）；触屏下命中区 ≥ 44px。
-const props = withDefaults(
-  defineProps<{
-    /** 无文本按钮的可访问名称（必填） */
-    label: string;
-    size?: 'sm' | 'md';
-    /** solid：主色填充（用于卡片上的主要动作）；round：圆形 */
-    variant?: 'ghost' | 'solid';
-    round?: boolean;
-    disabled?: boolean;
-  }>(),
-  {
-    size: 'md',
-    variant: 'ghost',
-    round: false,
-    disabled: false,
-  }
-);
+const {
+  size = 'md',
+  variant = 'ghost',
+  round = false,
+  disabled = false,
+} = defineProps<{
+  /** 无文本按钮的可访问名称（必填） */
+  label: string;
+  size?: 'sm' | 'md';
+  /** solid：主色填充（用于卡片上的主要动作）；round：圆形 */
+  variant?: 'ghost' | 'solid';
+  round?: boolean;
+  disabled?: boolean;
+}>();
 
 const emit = defineEmits<{ click: [event: MouseEvent] }>();
 
 function onClick(event: MouseEvent) {
-  if (props.disabled) return;
+  if (disabled) return;
   emit('click', event);
 }
 </script>
@@ -40,7 +37,7 @@ function onClick(event: MouseEvent) {
     :disabled="disabled"
     @click="onClick"
   >
-    <slot></slot>
+    <slot />
   </button>
 </template>
 

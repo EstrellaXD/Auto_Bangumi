@@ -1,8 +1,8 @@
 type AnyAsyncFunction<TData = any> = (...args: any[]) => Promise<TData>;
 
 export type ApiExecuteResult<TData> =
-  | { ok: true; data: TData }
-  | { ok: false; error: unknown };
+  | { ok: true; data: TData } |
+  { ok: false; error: unknown };
 
 interface Options<T = any> {
   showMessage?: boolean;

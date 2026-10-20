@@ -5,12 +5,12 @@ import zhCN from '@/i18n/zh-CN.json';
 
 const t = (key: string) => `t:${key}`;
 
-// 应用里 @intlify/unplugin-vue-i18n 把 i18n/*.json 的文案预编译成消息函数，
-// 这里同样把叶子换成函数，按生产环境的形态测试
+// 应用里 @intlify/unplugin-vue-i18n 把 i18n/*.json 的文案预编译成 AST，
+// 这里同样把叶子换成生产构建的 AST，按生产环境的形态测试
 vi.mock('@/i18n/en.json', async (importOriginal) => {
   const compile = (node: unknown): unknown =>
     typeof node === 'string'
-      ? () => node
+      ? { t: 0, b: { t: 2, i: [{ t: 3 }], s: node } }
       : Object.fromEntries(
           Object.entries(node as object).map(([k, v]) => [k, compile(v)])
         );

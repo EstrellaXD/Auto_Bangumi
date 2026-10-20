@@ -7,17 +7,11 @@ export interface AbSegmentedOption {
 }
 
 // 视图/筛选切换：Soft Ink 下划线标签页（无浮动滑块），方向键可导航。
-const props = withDefaults(
-  defineProps<{
-    options: AbSegmentedOption[];
-    size?: 'sm' | 'md';
-    ariaLabel?: string;
-  }>(),
-  {
-    size: 'md',
-    ariaLabel: undefined,
-  }
-);
+const { size = 'md', options } = defineProps<{
+  options: AbSegmentedOption[];
+  size?: 'sm' | 'md';
+  ariaLabel?: string;
+}>();
 
 const value = defineModel<string>('value', { required: true });
 
@@ -29,12 +23,12 @@ function select(option: AbSegmentedOption) {
 
 function onKeydown(event: KeyboardEvent, index: number) {
   let next: number | null = null;
-  if (event.key === 'ArrowRight') next = (index + 1) % props.options.length;
+  if (event.key === 'ArrowRight') next = (index + 1) % options.length;
   if (event.key === 'ArrowLeft')
-    next = (index - 1 + props.options.length) % props.options.length;
+    next = (index - 1 + options.length) % options.length;
   if (next === null) return;
   event.preventDefault();
-  value.value = props.options[next].value;
+  value.value = options[next].value;
   tabRefs.value[next]?.focus();
 }
 </script>

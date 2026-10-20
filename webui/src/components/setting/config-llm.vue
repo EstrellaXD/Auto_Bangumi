@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { Info } from '@icon-park/vue-next';
+import { Info } from '@lucide/vue';
 import { NSelect } from 'naive-ui';
 import type { SelectGroupOption, SelectOption } from 'naive-ui';
 import type { LLMProviderView } from '@/api/llm';
@@ -263,7 +263,7 @@ const tuningItems = computed(() => [
   <ab-fold-panel :title="$t('config.llm_set.title')">
     <div class="llm-section">
       <div class="llm-hint">
-        <Info size="16" />
+        <Info :size="16" />
         <span>{{ $t('config.llm_set.hint') }}</span>
       </div>
 
@@ -304,16 +304,18 @@ const tuningItems = computed(() => [
                 size="sm"
                 variant="ghost"
                 @click="onDisconnect(selected.id)"
-                >{{ t('config.llm_set.disconnect') }}</ab-button
               >
+                {{ t('config.llm_set.disconnect') }}
+              </ab-button>
             </div>
             <ab-button
               v-else
               variant="primary"
               size="sm"
               @click="showAuthDialog = true"
-              >{{ t('config.llm_set.connect') }}</ab-button
             >
+              {{ t('config.llm_set.connect') }}
+            </ab-button>
           </div>
 
           <!-- api_key 类（内置 + 预设）：密钥 + 模型 + base_url -->
@@ -359,24 +361,29 @@ const tuningItems = computed(() => [
               size="sm"
               :loading="busyProvider === llm.provider"
               @click="onInstall(llm.provider)"
-              >{{ t('config.llm_set.install') }}</ab-button
             >
+              {{ t('config.llm_set.install') }}
+            </ab-button>
             <div v-else class="llm-risk">
-              <p class="llm-risk-text">{{ t('config.llm_set.risk_notice') }}</p>
+              <p class="llm-risk-text">
+                {{ t('config.llm_set.risk_notice') }}
+              </p>
               <div class="llm-risk-actions">
                 <ab-button
                   size="sm"
                   variant="secondary"
                   @click="confirmRisk = false"
-                  >{{ t('config.llm_set.risk_cancel') }}</ab-button
                 >
+                  {{ t('config.llm_set.risk_cancel') }}
+                </ab-button>
                 <ab-button
                   variant="danger"
                   size="sm"
                   :loading="busyProvider === llm.provider"
                   @click="onInstall(llm.provider)"
-                  >{{ t('config.llm_set.risk_confirm') }}</ab-button
                 >
+                  {{ t('config.llm_set.risk_confirm') }}
+                </ab-button>
               </div>
             </div>
           </div>
@@ -391,8 +398,9 @@ const tuningItems = computed(() => [
               variant="danger"
               :loading="busyProvider === selected.id"
               @click="onUninstall(selected.id)"
-              >{{ t('config.llm_set.uninstall') }}</ab-button
             >
+              {{ t('config.llm_set.uninstall') }}
+            </ab-button>
           </div>
 
           <!-- 超时/缓存/并发/熔断调优项 -->

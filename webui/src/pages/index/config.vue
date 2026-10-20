@@ -247,8 +247,7 @@ const searchQuery = ref('');
 
 function sectionMatches(section: ConfigSection): boolean {
   return configSectionMatches(section, searchQuery.value, (key) =>
-    key === section.titleKey ? sectionTitle(section) : t(key)
-  );
+    key === section.titleKey ? sectionTitle(section) : t(key));
 }
 
 const visibleSections = computed(() => sections.value.filter(sectionMatches));
@@ -263,7 +262,7 @@ const dirtySectionTitles = computed(() =>
 );
 
 // --- 分区定位 ---
-const scrollEl = ref<HTMLElement | null>(null);
+const scrollEl = useTemplateRef<HTMLElement>('scrollEl');
 const activeSection = ref(baseSections[0].id);
 const sectionEls = new Map<string, HTMLElement>();
 
@@ -367,7 +366,7 @@ onBeforeRouteLeave(() => {
             v-if="sectionDirty(s)"
             class="dirty-dot"
             :title="$t('config.unsaved_count', 1)"
-          ></span>
+          />
         </button>
       </nav>
 
@@ -394,7 +393,7 @@ onBeforeRouteLeave(() => {
     <div class="config-actions">
       <span class="unsaved-hint" role="status">
         <template v-if="isDirty">
-          <span class="dirty-dot" aria-hidden="true"></span>
+          <span class="dirty-dot" aria-hidden="true" />
           <b>{{ $t('config.unsaved_count', dirtyGroups.length) }}</b>
           <span v-if="!isMobileOrTablet" class="unsaved-sections">
             · {{ dirtySectionTitles.join(', ') }}

@@ -1,3 +1,4 @@
+import { useClipboard } from '@vueuse/core';
 import type { Ref } from 'vue';
 import type { BangumiRule } from '#/bangumi';
 
@@ -51,22 +52,12 @@ export function useBangumiRuleForm(rule: Ref<BangumiRule>) {
   });
 
   const showAdvanced = ref(true);
-  const copied = ref(false);
-  let copyTimer: ReturnType<typeof setTimeout> | undefined;
+  const { copy, copied } = useClipboard({ copiedDuring: 2000 });
 
   async function copyRssLink(link: string) {
     if (!link) return;
-    await navigator.clipboard.writeText(link);
-    copied.value = true;
-    clearTimeout(copyTimer);
-    copyTimer = setTimeout(() => {
-      copied.value = false;
-    }, 2000);
+    await copy(link);
   }
-
-  onBeforeUnmount(() => {
-    clearTimeout(copyTimer);
-  });
 
   return {
     posterSrc,

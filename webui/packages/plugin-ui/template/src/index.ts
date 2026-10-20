@@ -6,8 +6,7 @@ const ELEMENT = 'ab-plugin-example';
 
 class ExampleElement
   extends HTMLElement
-  implements AbPluginElement<'settings.section'>
-{
+  implements AbPluginElement<'settings.section'> {
   // 宿主在插入文档前设置；用 declare 不生成类字段，否则构造时会被重置为 undefined
   declare host: AbPluginElement['host'];
   declare context: AbPluginElement<'settings.section'>['context'];

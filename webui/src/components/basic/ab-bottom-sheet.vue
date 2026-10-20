@@ -1,50 +1,49 @@
 <script lang="ts" setup>
-import { computed, onUnmounted, ref, watch } from 'vue';
-import { usePointerSwipe } from '@vueuse/core';
 import {
-  Dialog,
-  DialogPanel,
-  DialogTitle,
-  TransitionChild,
-  TransitionRoot,
-} from '@headlessui/vue';
-import { Close } from '@icon-park/vue-next';
+  computed,
+  onWatcherCleanup,
+  ref,
+  useId,
+  useTemplateRef,
+  watch,
+} from 'vue';
+import { usePointerSwipe } from '@vueuse/core';
+import { X } from '@lucide/vue';
+import { NDrawer } from 'naive-ui';
 import AbIconButton from './ab-icon-button.vue';
 
-const props = withDefaults(
-  defineProps<{
-    show: boolean;
-    title?: string;
-    closeable?: boolean;
-    showClose?: boolean;
-    closeLabel?: string;
-    maxHeight?: string;
-    fullscreen?: boolean;
-    avoidKeyboard?: boolean;
-  }>(),
-  {
-    closeable: true,
-    showClose: true,
-    closeLabel: 'Close',
-    maxHeight: '85dvh',
-    fullscreen: false,
-    avoidKeyboard: true,
-  }
-);
+// 底部抽屉：naive-ui NDrawer 提供焦点陷阱、Esc/遮罩关闭与 role="dialog"；
+// NDrawer 本身只当透明外壳，可见面板与拖拽/键盘位移都在内层 div 上。
+const {
+  title,
+  closeable = true,
+  showClose = true,
+  closeLabel = 'Close',
+  maxHeight = '85dvh',
+  fullscreen = false,
+  avoidKeyboard = true,
+} = defineProps<{
+  title?: string;
+  closeable?: boolean;
+  showClose?: boolean;
+  closeLabel?: string;
+  maxHeight?: string;
+  fullscreen?: boolean;
+  avoidKeyboard?: boolean;
+}>();
 
 const emit = defineEmits<{
-  (e: 'update:show', value: boolean): void;
   (e: 'close'): void;
 }>();
 
-const sheetRef = ref<HTMLElement | null>(null);
-const dragHandleRef = ref<HTMLElement | null>(null);
+const show = defineModel<boolean>('show', { required: true });
+
+const titleId = useId();
+const dragHandleRef = useTemplateRef<HTMLElement>('dragHandle');
 const translateY = ref(0);
 const isDragging = ref(false);
 const keyboardHeight = ref(0);
-const panelMaxHeight = computed(() =>
-  props.fullscreen ? '100dvh' : props.maxHeight
-);
+const panelMaxHeight = computed(() => (fullscreen ? '100dvh' : maxHeight));
 
 // Handle iOS Safari virtual keyboard using visualViewport API
 function handleViewportResize() {
@@ -58,27 +57,22 @@ function handleViewportResize() {
 
 // Set up visualViewport listeners when sheet is shown
 watch(
-  () => [props.show, props.avoidKeyboard] as const,
+  () => [show.value, avoidKeyboard] as const,
   ([isVisible, shouldAvoidKeyboard]) => {
-    if (isVisible && shouldAvoidKeyboard && window.visualViewport) {
-      window.visualViewport.addEventListener('resize', handleViewportResize);
-      window.visualViewport.addEventListener('scroll', handleViewportResize);
-      handleViewportResize();
-    } else if (window.visualViewport) {
-      window.visualViewport.removeEventListener('resize', handleViewportResize);
-      window.visualViewport.removeEventListener('scroll', handleViewportResize);
+    const viewport = window.visualViewport;
+    if (!isVisible || !shouldAvoidKeyboard || !viewport) return;
+    viewport.addEventListener('resize', handleViewportResize);
+    viewport.addEventListener('scroll', handleViewportResize);
+    handleViewportResize();
+    // 下次触发或卸载时撤掉监听
+    onWatcherCleanup(() => {
+      viewport.removeEventListener('resize', handleViewportResize);
+      viewport.removeEventListener('scroll', handleViewportResize);
       keyboardHeight.value = 0;
-    }
+    });
   },
   { immediate: true }
 );
-
-onUnmounted(() => {
-  if (window.visualViewport) {
-    window.visualViewport.removeEventListener('resize', handleViewportResize);
-    window.visualViewport.removeEventListener('scroll', handleViewportResize);
-  }
-});
 
 const sheetStyle = computed(() => {
   const style: Record<string, string> = {};
@@ -117,111 +111,74 @@ const { distanceY } = usePointerSwipe(dragHandleRef, {
 });
 
 function close() {
-  if (props.closeable) {
-    emit('update:show', false);
+  if (closeable) {
+    show.value = false;
     emit('close');
   }
 }
 </script>
 
 <template>
-  <TransitionRoot :show="show" as="template">
-    <Dialog class="ab-bottom-sheet" @close="close">
-      <!-- Backdrop -->
-      <TransitionChild
-        enter="overlay-enter-active"
-        enter-from="overlay-enter-from"
-        leave="overlay-leave-active"
-        leave-to="overlay-leave-to"
+  <NDrawer
+    :show="show"
+    placement="bottom"
+    height="auto"
+    class="ab-bottom-sheet"
+    :mask-closable="closeable"
+    :close-on-esc="closeable"
+    :aria-labelledby="title ? titleId : undefined"
+    @update:show="(value: boolean) => value || close()"
+  >
+    <div
+      data-testid="bottom-sheet-panel"
+      class="ab-bottom-sheet__panel"
+      :class="{ 'ab-bottom-sheet__panel--fullscreen': fullscreen }"
+      :style="[sheetStyle, { maxHeight: panelMaxHeight }]"
+    >
+      <!-- Drag handle -->
+      <div ref="dragHandle" class="ab-bottom-sheet__handle">
+        <div class="ab-bottom-sheet__handle-bar" />
+      </div>
+
+      <!-- Title -->
+      <div
+        v-if="title || (closeable && showClose)"
+        class="ab-bottom-sheet__header"
       >
-        <div class="ab-bottom-sheet__backdrop" aria-hidden="true" />
-      </TransitionChild>
+        <h3 v-if="title" :id="titleId" class="ab-bottom-sheet__title">
+          {{ title }}
+        </h3>
+        <AbIconButton
+          v-if="closeable && showClose"
+          class="ab-bottom-sheet__close"
+          size="md"
+          :label="closeLabel"
+          @click="close"
+        >
+          <X :size="16" />
+        </AbIconButton>
+      </div>
 
-      <!-- Sheet panel -->
-      <TransitionChild
-        enter="sheet-enter-active"
-        enter-from="sheet-enter-from"
-        leave="sheet-leave-active"
-        leave-to="sheet-leave-to"
-      >
-        <div class="ab-bottom-sheet__container">
-          <DialogPanel
-            ref="sheetRef"
-            data-testid="bottom-sheet-panel"
-            class="ab-bottom-sheet__panel"
-            :class="{ 'ab-bottom-sheet__panel--fullscreen': fullscreen }"
-            :style="[sheetStyle, { maxHeight: panelMaxHeight }]"
-          >
-            <!-- Drag handle -->
-            <div ref="dragHandleRef" class="ab-bottom-sheet__handle">
-              <div class="ab-bottom-sheet__handle-bar" />
-            </div>
+      <!-- Content -->
+      <div class="ab-bottom-sheet__content">
+        <slot />
+      </div>
 
-            <!-- Title -->
-            <div
-              v-if="title || (closeable && showClose)"
-              class="ab-bottom-sheet__header"
-            >
-              <DialogTitle v-if="title" as="h3" class="ab-bottom-sheet__title">
-                {{ title }}
-              </DialogTitle>
-              <AbIconButton
-                v-if="closeable && showClose"
-                class="ab-bottom-sheet__close"
-                size="md"
-                :label="closeLabel"
-                @click="close"
-              >
-                <Close theme="outline" size="16" />
-              </AbIconButton>
-            </div>
-
-            <!-- Content -->
-            <div class="ab-bottom-sheet__content">
-              <slot />
-            </div>
-
-            <!-- Footer actions -->
-            <div v-if="$slots.footer" class="ab-bottom-sheet__footer">
-              <slot name="footer" />
-            </div>
-          </DialogPanel>
-        </div>
-      </TransitionChild>
-    </Dialog>
-  </TransitionRoot>
+      <!-- Footer actions -->
+      <div v-if="$slots.footer" class="ab-bottom-sheet__footer">
+        <slot name="footer" />
+      </div>
+    </div>
+  </NDrawer>
 </template>
 
 <style lang="scss" scoped>
 .ab-bottom-sheet {
-  position: fixed;
-  inset: 0;
-  z-index: var(--z-modal);
-  display: flex;
-  align-items: flex-end;
-
-  &__backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: var(--z-modal-backdrop);
-    background: var(--color-overlay);
-    backdrop-filter: blur(4px);
-  }
-
-  &__container {
-    position: fixed;
-    inset: 0;
-    z-index: var(--z-modal);
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
-    pointer-events: none;
-  }
-
   &__panel {
     position: relative;
     width: 100%;
     max-width: 640px;
+    margin: 0 auto;
     max-height: 85dvh; // Use dynamic viewport height for iOS Safari keyboard support
     background: var(--color-surface);
     border-radius: var(--radius-xl) var(--radius-xl) 0 0;
@@ -310,5 +267,19 @@ function close() {
     padding: 12px 20px;
     border-top: 1px solid var(--color-border);
   }
+}
+</style>
+
+<!-- 不加 scoped：NDrawer 把 class 合并到传送到 body 的 .n-drawer 上，
+     scoped 选择器命中不了。外壳透明且不接收点击，两侧点击落到遮罩上。 -->
+<style lang="scss">
+.ab-bottom-sheet.n-drawer {
+  background: none;
+  box-shadow: none;
+  pointer-events: none;
+}
+
+.n-drawer-container:has(> .ab-bottom-sheet) > .n-drawer-mask {
+  backdrop-filter: blur(4px);
 }
 </style>

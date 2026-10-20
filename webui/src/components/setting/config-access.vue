@@ -187,7 +187,9 @@ function tokenStatus(token: ApiTokenPublic): ApiTokenStatus {
         </ab-button>
       </div>
 
-      <div v-if="loading" class="empty-state">{{ $t('access.loading') }}</div>
+      <div v-if="loading" class="empty-state">
+        {{ $t('access.loading') }}
+      </div>
       <div v-else class="access-list">
         <div
           v-for="user in users"
@@ -231,7 +233,9 @@ function tokenStatus(token: ApiTokenPublic): ApiTokenStatus {
         </ab-button>
       </div>
 
-      <div v-if="loading" class="empty-state">{{ $t('access.loading') }}</div>
+      <div v-if="loading" class="empty-state">
+        {{ $t('access.loading') }}
+      </div>
       <div v-else-if="tokens.length === 0" class="empty-state">
         {{ $t('access.no_tokens') }}
       </div>

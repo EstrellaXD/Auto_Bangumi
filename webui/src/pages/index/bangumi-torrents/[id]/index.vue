@@ -6,13 +6,13 @@ definePage({
   name: 'Bangumi Torrents',
 });
 
-const route = useRoute();
+const route = useRoute('Bangumi Torrents');
 const router = useRouter();
 const { t } = useI18n();
 
 // KeepAlive 会复用同一实例，路由参数必须保持响应式；非法 id 归一为 null
 const bangumiId = computed(() => {
-  const id = Number((route.params as Record<string, string>).id);
+  const id = Number(route.params.id);
   return Number.isInteger(id) && id > 0 ? id : null;
 });
 

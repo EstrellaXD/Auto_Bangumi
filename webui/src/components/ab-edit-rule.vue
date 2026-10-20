@@ -398,8 +398,8 @@ function emitUnarchive() {
       </advanced-section>
     </div>
 
-    <!-- 删除确认：嵌套在主弹窗组件树内，headlessui 才会把外层的
-         Escape/遮罩点击挂起，只关闭内层 -->
+    <!-- 删除确认：叠在主弹窗之上，naive-ui 的焦点陷阱栈只让最上层响应
+         Escape，遮罩点击也只关闭内层 -->
     <!-- Delete confirmation dialog -->
     <ab-modal
       v-model:show="deleteFileDialog.show"

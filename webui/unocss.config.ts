@@ -1,20 +1,12 @@
-import {
-  defineConfig,
-  presetAttributify,
-  presetIcons,
-  presetUno,
-} from 'unocss';
+import { defineConfig, presetIcons, presetWind3 } from 'unocss';
 import presetRemToPx from '@unocss/preset-rem-to-px';
 
 export default defineConfig({
   presets: [
-    presetUno({
-      dark: 'class',
-    }),
+    presetWind3(),
     presetRemToPx({
       baseFontSize: 4,
     }),
-    presetAttributify(),
     // Icon collections are installed locally so production builds remain
     // reproducible when the E2E runtime has no public network access.
     presetIcons(),
@@ -96,7 +88,7 @@ export default defineConfig({
   ],
   shortcuts: [
     [/^wh-(.*)$/, ([, t]) => `w-${t} h-${t}`],
-    [/^text-limit-(\d{0,})$/, ([, n]) => `line-clamp-${n}`],
+    [/^text-limit-(\d*)$/, ([, n]) => `line-clamp-${n}`],
 
     // position
     {

@@ -84,3 +84,9 @@ input::-webkit-inner-spin-button {
     font-size: 16px !important;
   }
 }
+
+// naive-ui 的遮罩颜色写死在组件样式里，主题覆盖改不到；统一成 ab-* 的 overlay token
+.n-modal-mask,
+.n-drawer-mask {
+  background-color: var(--color-overlay);
+}

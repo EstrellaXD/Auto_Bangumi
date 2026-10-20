@@ -5,8 +5,10 @@ import type { ApiError, ApiErrorResponse, StatusCode } from '#/api';
 
 declare module 'axios' {
   export interface AxiosRequestConfig {
-    /** Suppress the interceptor's error toast — the caller surfaces failures
-     * itself (background polls, optional data with its own inline state). */
+    /**
+     * Suppress the interceptor's error toast — the caller surfaces failures
+     * itself (background polls, optional data with its own inline state).
+     */
     silent?: boolean;
   }
 }
@@ -55,9 +57,11 @@ function normalizeFastApiDetail(detail: unknown): string {
     .join('; ');
 }
 
-/** A 401 means the session is gone — drop the flag and get back to the login
+/**
+ * A 401 means the session is gone — drop the flag and get back to the login
  * page. Skip the redirect when we're already there (a bad-credentials 401 on
- * the login form) so it doesn't fight the login flow. */
+ * the login form) so it doesn't fight the login flow.
+ */
 function handleAuthExpired() {
   const { isLoggedIn } = useAuth();
   isLoggedIn.value = false;
@@ -88,7 +92,8 @@ export function onResponseError(err: AxiosError<ApiErrorResponse>) {
 
   // Handle network errors (no response from server)
   if (!err.response) {
-    if (!silent) {
+    // 页面跳转中断的请求（ECONNABORTED）不是网络故障，不弹提示
+    if (!silent && err.code !== 'ECONNABORTED') {
       showErrorThrottled(
         returnUserLangText({
           en: 'Network error. Please check your connection.',
@@ -123,10 +128,10 @@ export function onResponseError(err: AxiosError<ApiErrorResponse>) {
       handleAuthExpired();
       showErrorThrottled(
         errorMsg ||
-          returnUserLangText({
-            en: 'Authentication failed. Please check your credentials or sign in again.',
-            'zh-CN': '身份验证失败，请检查凭据或重新登录。',
-          })
+        returnUserLangText({
+          en: 'Authentication failed. Please check your credentials or sign in again.',
+          'zh-CN': '身份验证失败，请检查凭据或重新登录。',
+        })
       );
       break;
     /** 执行失败 */
@@ -137,21 +142,23 @@ export function onResponseError(err: AxiosError<ApiErrorResponse>) {
     case 500:
       showErrorThrottled(
         errorMsg ||
-          returnUserLangText({
-            en: 'Server error. Please try again later.',
-            'zh-CN': '服务器错误，请稍后重试。',
-          })
+        returnUserLangText({
+          en: 'Server error. Please try again later.',
+          'zh-CN': '服务器错误，请稍后重试。',
+        })
       );
       break;
-    /** Anything else (400/404/422/...) - still surface it instead of
-     * failing silently */
+    /**
+     * Anything else (400/404/422/...) - still surface it instead of
+     * failing silently
+     */
     default:
       showErrorThrottled(
         errorMsg ||
-          returnUserLangText({
-            en: 'Request failed. Please try again.',
-            'zh-CN': '请求失败，请重试。',
-          })
+        returnUserLangText({
+          en: 'Request failed. Please try again.',
+          'zh-CN': '请求失败，请重试。',
+        })
       );
       break;
   }

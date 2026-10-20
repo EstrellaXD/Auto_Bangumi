@@ -1,16 +1,10 @@
 <script lang="ts" setup>
 // 骨架屏（加载态用骨架，不在内容中放 spinner）。
 // preset 对应真实布局：lines（文本）/ row（列表行）/ card（卡片）。
-withDefaults(
-  defineProps<{
-    preset?: 'lines' | 'row' | 'card';
-    count?: number;
-  }>(),
-  {
-    preset: 'lines',
-    count: 3,
-  }
-);
+const { preset = 'lines', count = 3 } = defineProps<{
+  preset?: 'lines' | 'row' | 'card';
+  count?: number;
+}>();
 
 // 行宽做点参差，避免整齐得像占位框
 const widths = ['62%', '88%', '40%', '75%', '55%'];
@@ -24,21 +18,21 @@ const widths = ['62%', '88%', '40%', '75%', '55%'];
         :key="i"
         class="ab-skeleton-line"
         :style="{ width: widths[(i - 1) % widths.length] }"
-      ></span>
+      />
     </template>
 
     <template v-else-if="preset === 'row'">
       <span v-for="i in count" :key="i" class="ab-skeleton-row">
-        <span class="ab-skeleton-line" style="width: 46%"></span>
+        <span class="ab-skeleton-line" style="width: 46%" />
         <span
           class="ab-skeleton-line ab-skeleton-line--dim"
           style="width: 68%"
-        ></span>
+        />
       </span>
     </template>
 
     <template v-else>
-      <span v-for="i in count" :key="i" class="ab-skeleton-card"></span>
+      <span v-for="i in count" :key="i" class="ab-skeleton-card" />
     </template>
   </div>
 </template>

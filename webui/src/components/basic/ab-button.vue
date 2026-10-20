@@ -1,29 +1,26 @@
 <script lang="ts" setup>
 // Soft Ink 通用按钮：页面中唯一的按钮词汇（禁止裸 <button> / NButton）。
 // danger 变体默认为柔和填充，hover 时升级为实色（Primer 式渐进破坏确认）。
-const props = withDefaults(
-  defineProps<{
-    variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
-    size?: 'sm' | 'md';
-    type?: 'button' | 'submit';
-    loading?: boolean;
-    disabled?: boolean;
-    block?: boolean;
-  }>(),
-  {
-    variant: 'secondary',
-    size: 'md',
-    type: 'button',
-    loading: false,
-    disabled: false,
-    block: false,
-  }
-);
+const {
+  variant = 'secondary',
+  size = 'md',
+  type = 'button',
+  loading = false,
+  disabled = false,
+  block = false,
+} = defineProps<{
+  variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
+  size?: 'sm' | 'md';
+  type?: 'button' | 'submit';
+  loading?: boolean;
+  disabled?: boolean;
+  block?: boolean;
+}>();
 
 const emit = defineEmits<{ click: [event: MouseEvent] }>();
 
 function onClick(event: MouseEvent) {
-  if (props.disabled || props.loading) return;
+  if (disabled || loading) return;
   emit('click', event);
 }
 </script>
@@ -37,9 +34,9 @@ function onClick(event: MouseEvent) {
     :aria-busy="loading || undefined"
     @click="onClick"
   >
-    <span v-if="loading" class="ab-btn-spin" aria-hidden="true"></span>
-    <slot v-else name="icon"></slot>
-    <slot></slot>
+    <span v-if="loading" class="ab-btn-spin" aria-hidden="true" />
+    <slot v-else name="icon" />
+    <slot />
   </button>
 </template>
 

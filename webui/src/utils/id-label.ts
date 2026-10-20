@@ -22,6 +22,9 @@ export function hasKey(key: string): boolean {
       (node, part) => (node as Record<string, unknown> | undefined)?.[part],
       en
     );
-  // 构建时 i18n 插件把文案预编译成消息函数，测试里则是原始字符串
-  return typeof found === 'string' || typeof found === 'function';
+  // 构建时 i18n 插件把文案预编译成 AST（根节点 t 为 0，开发态键名不压缩为 type），
+  // 测试里则是原始字符串
+  if (typeof found === 'string') return true;
+  const node = found as { t?: unknown; type?: unknown } | undefined;
+  return node?.t === 0 || node?.type === 0;
 }

@@ -1,13 +1,13 @@
 /** 插件 config_model 生成的 JSON Schema（只用到表单渲染需要的子集） */
 export interface JsonSchemaProperty {
   type?:
-    | 'string'
-    | 'integer'
-    | 'number'
-    | 'boolean'
-    | 'array'
-    | 'object'
-    | 'null';
+    | 'string' |
+    'integer' |
+    'number' |
+    'boolean' |
+    'array' |
+    'object' |
+    'null';
   title?: string;
   description?: string;
   default?: unknown;

@@ -12,7 +12,7 @@ const props = defineProps<{
   context?: Record<string, unknown>;
 }>();
 
-const container = ref<HTMLElement>();
+const container = useTemplateRef<HTMLElement>('container');
 const failed = ref(false);
 const loading = ref(true);
 const reason = ref('');
@@ -22,7 +22,7 @@ let generation = 0;
 let teardown: (() => void) | null = null;
 
 function fail(error: unknown) {
-  // 不用 `[plugin:id]` 式模板串：UnoCSS 的 attributify 会把它当成样式规则
+  // 不用 `[plugin:id]` 式模板串：UnoCSS 会把它当成任意属性规则
   console.error('plugin component failed:', props.ui.plugin_id, error);
   failed.value = true;
   loading.value = false;
@@ -101,12 +101,14 @@ watch(
       <span v-if="reason" class="plugin-slot__id">{{ reason }}</span>
       {{ $t('plugin.load_failed_hint') }}
       <template #action>
-        <ab-button size="sm" @click="reload">{{
-          $t('plugin.reload')
-        }}</ab-button>
+        <ab-button size="sm" @click="reload">
+          {{
+            $t('plugin.reload')
+          }}
+        </ab-button>
       </template>
     </ab-alert>
-    <div v-show="!failed" ref="container" class="plugin-slot__body"></div>
+    <div v-show="!failed" ref="container" class="plugin-slot__body" />
   </div>
 </template>
 

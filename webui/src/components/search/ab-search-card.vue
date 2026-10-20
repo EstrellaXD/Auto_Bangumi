@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ErrorPicture } from '@icon-park/vue-next';
+import { ImageOff } from '@lucide/vue';
 import type { GroupedBangumi } from '@/store/search';
 
 const props = defineProps<{
@@ -28,11 +28,11 @@ const variantCount = computed(() => props.group.variants.length);
     <!-- Poster -->
     <div class="card-poster">
       <template v-if="group.poster_link">
-        <img :src="posterSrc" :alt="group.official_title" loading="lazy" />
+        <img :src="posterSrc" :alt="group.official_title" loading="lazy">
       </template>
       <template v-else>
         <div class="card-placeholder">
-          <ErrorPicture theme="outline" size="32" />
+          <ImageOff :size="32" />
         </div>
       </template>
       <!-- Variant count badge -->
@@ -43,7 +43,9 @@ const variantCount = computed(() => props.group.variants.length);
 
     <!-- Info -->
     <div class="card-info">
-      <h3 class="card-title">{{ group.official_title }}</h3>
+      <h3 class="card-title">
+        {{ group.official_title }}
+      </h3>
     </div>
   </div>
 </template>

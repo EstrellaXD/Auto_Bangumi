@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ErrorPicture } from '@icon-park/vue-next';
+import { ImageOff } from '@lucide/vue';
 import type { BangumiGroup } from './types';
 
 const props = defineProps<{
@@ -68,9 +68,9 @@ function posterSrc(link: string | null | undefined): string {
                 :alt="group.primary.official_title"
                 class="calendar-row-img"
                 loading="lazy"
-              />
+              >
               <div v-else class="calendar-row-placeholder">
-                <ErrorPicture theme="outline" size="16" />
+                <ImageOff :size="16" />
               </div>
             </div>
             <div class="calendar-row-info">

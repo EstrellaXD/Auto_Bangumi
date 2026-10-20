@@ -1,13 +1,13 @@
 <script lang="ts" setup>
 import {
-  Format,
-  Me,
+  CircleUser,
+  Paintbrush,
   Pause,
-  PlayOne,
+  Play,
   Power,
-  Refresh,
+  RefreshCw,
   Search,
-} from '@icon-park/vue-next';
+} from '@lucide/vue';
 import { ruleTemplate } from '#/bangumi';
 
 const { t, changeLocale } = useMyI18n();
@@ -26,7 +26,7 @@ const items = [
   {
     id: 1,
     label: () => t('topbar.start'),
-    icon: PlayOne,
+    icon: Play,
     handle: start,
   },
   {
@@ -38,7 +38,7 @@ const items = [
   {
     id: 3,
     label: () => t('topbar.restart'),
-    icon: Refresh,
+    icon: RefreshCw,
     handle: restart,
   },
   {
@@ -50,19 +50,19 @@ const items = [
   {
     id: 5,
     label: () => t('topbar.refresh_poster'),
-    icon: Refresh,
+    icon: RefreshCw,
     handle: refreshPoster,
   },
   {
     id: 6,
     label: () => t('topbar.reset_rule'),
-    icon: Format,
+    icon: Paintbrush,
     handle: resetRule,
   },
   {
     id: 7,
     label: () => t('topbar.profile.title'),
-    icon: Me,
+    icon: CircleUser,
     handle: () => {
       showAccount.value = true;
     },
@@ -96,7 +96,7 @@ onUnmounted(() => {
         :src="isDark ? '/images/logo-light.svg' : '/images/logo.svg'"
         alt="favicon"
         class="topbar-logo"
-      />
+      >
       <img
         v-if="!isMobile"
         v-show="onSearchFocus === false"
@@ -105,7 +105,7 @@ onUnmounted(() => {
         "
         alt="AutoBangumi"
         class="topbar-wordmark"
-      />
+      >
     </div>
 
     <!-- Desktop search bar -->
@@ -120,7 +120,7 @@ onUnmounted(() => {
       :aria-label="$t('topbar.search.click_to_search')"
       @click="openSearch"
     >
-      <Search theme="outline" size="18" />
+      <Search :size="18" />
       <span class="topbar-mobile-search-text">{{
         $t('topbar.search.click_to_search')
       }}</span>
@@ -137,8 +137,8 @@ onUnmounted(() => {
       />
     </div>
 
-    <ab-change-account v-model:show="showAccount"></ab-change-account>
-    <ab-add-rss v-model:show="showAddRSS" v-model:rule="rssRule"></ab-add-rss>
+    <ab-change-account v-model:show="showAccount" />
+    <ab-add-rss v-model:show="showAddRSS" v-model:rule="rssRule" />
   </div>
 </template>
 

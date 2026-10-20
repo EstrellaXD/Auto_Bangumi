@@ -45,9 +45,7 @@ function permissionLabel(id: string) {
         }}
       </h2>
       <span class="confirm__version">
-        <template v-if="isUpdate"
-          >{{ entry.installed_version }} → {{ entry.version }}</template
-        >
+        <template v-if="isUpdate">{{ entry.installed_version }} → {{ entry.version }}</template>
         <template v-else>{{ entry.version }}</template>
       </span>
     </header>
@@ -61,9 +59,8 @@ function permissionLabel(id: string) {
             :href="sourceUrl(entry)"
             target="_blank"
             rel="noopener noreferrer"
-            >{{ entry.repo }}@{{ entry.commit.slice(0, 7) }}
-            <span aria-hidden="true">↗</span></a
-          >
+          >{{ entry.repo }}@{{ entry.commit.slice(0, 7) }}
+            <span aria-hidden="true">↗</span></a>
         </dd>
         <dt>{{ $t('market.review') }}</dt>
         <dd>{{ $t('market.reviewed') }}</dd>
@@ -108,7 +105,7 @@ function permissionLabel(id: string) {
     </AbAlert>
 
     <label v-if="diff.added.length" class="confirm__ack">
-      <input v-model="acknowledged" type="checkbox" />
+      <input v-model="acknowledged" type="checkbox">
       <span>{{ $t('market.ack_permissions') }}</span>
     </label>
 

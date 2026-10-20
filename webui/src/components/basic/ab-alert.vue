@@ -1,19 +1,12 @@
 <script lang="ts" setup>
 // Soft Ink 行内提示：透明底 + 细线框，语义由加粗的彩色引导词承载 —
 // 不用图标、不用彩色填充（拒绝 AI 模板味的着色警告框）。
-withDefaults(
-  defineProps<{
-    type?: 'info' | 'warning' | 'danger';
-    /** 加粗引导词，如 “Feed unreachable.”（语义色只落在这里） */
-    title?: string;
-    closable?: boolean;
-  }>(),
-  {
-    type: 'info',
-    title: '',
-    closable: false,
-  }
-);
+const { type = 'info', title = '', closable = false } = defineProps<{
+  type?: 'info' | 'warning' | 'danger';
+  /** 加粗引导词，如 “Feed unreachable.”（语义色只落在这里） */
+  title?: string;
+  closable?: boolean;
+}>();
 
 defineEmits<{ close: [] }>();
 </script>
@@ -26,11 +19,11 @@ defineEmits<{ close: [] }>();
   >
     <p class="ab-alert-text">
       <b v-if="title" class="ab-alert-title">{{ title }}</b>
-      <slot></slot>
+      <slot />
     </p>
 
     <span v-if="$slots.action" class="ab-alert-action">
-      <slot name="action"></slot>
+      <slot name="action" />
     </span>
 
     <button

@@ -123,7 +123,8 @@ export interface LLM {
   providers: Record<string, LLMProviderOverride>;
 }
 
-/** Access control for the login endpoint and MCP server.
+/**
+ * Access control for the login endpoint and MCP server.
  *  Whitelist entries are IPv4/IPv6 CIDR strings (e.g. "192.168.0.0/16").
  *  An empty login_whitelist allows all IPs; an empty mcp_whitelist denies all IP-based MCP access.
  */

@@ -104,7 +104,7 @@ function renderNotes(md: string): string {
   return escaped
     .replace(/^###?\s?#*\s*(.*)$/gm, '<strong>$1</strong>')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/`([^`]+?)`/g, '<code>$1</code>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
     .replace(
       /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
       '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>'
@@ -287,9 +287,11 @@ onBeforeUnmount(() => {
 
       <!-- Release 说明 -->
       <div v-if="hasUpdate && notesHtml" class="update-notes-wrap">
-        <div class="update-key">{{ $t('update.release_notes') }}</div>
+        <div class="update-key">
+          {{ $t('update.release_notes') }}
+        </div>
         <!-- eslint-disable-next-line vue/no-v-html -->
-        <div class="update-notes" v-html="notesHtml"></div>
+        <div class="update-notes" v-html="notesHtml" />
       </div>
 
       <!-- 进度条（apply 期间） -->
@@ -300,7 +302,9 @@ onBeforeUnmount(() => {
           :processing="!isDownloading"
           :indicator-placement="isDownloading ? 'outside' : 'inside'"
         />
-        <div class="update-phase">{{ phaseLabel || progress.message }}</div>
+        <div class="update-phase">
+          {{ phaseLabel || progress.message }}
+        </div>
       </div>
 
       <!-- 重启中 -->
@@ -318,7 +322,9 @@ onBeforeUnmount(() => {
       </p>
 
       <!-- 需要 restart: unless-stopped 的说明 -->
-      <p class="update-note">{{ $t('update.restart_note') }}</p>
+      <p class="update-note">
+        {{ $t('update.restart_note') }}
+      </p>
 
       <!-- 操作按钮 -->
       <div class="update-actions">

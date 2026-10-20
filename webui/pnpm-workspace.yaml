@@ -1,2 +1,12 @@
+minimumReleaseAgeExcludePrune: true
+trustPolicy: no-downgrade
+shellEmulator: true
+
 packages:
   - packages/*
+
+allowBuilds:
+  # sass 的可选依赖，平台预编译包已覆盖，无需跑源码构建
+  '@parcel/watcher': false
+  esbuild: true
+  vue-demi: true

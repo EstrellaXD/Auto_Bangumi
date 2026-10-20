@@ -1,45 +1,31 @@
 <script lang="ts" setup>
 import {
-  AppStore,
   Calendar,
   Download,
-  Home,
-  Log,
+  House,
+  LayoutGrid,
   Moon,
   Puzzle,
-  SettingTwo,
+  Rss,
+  ScrollText,
+  Settings,
   Sun,
-} from '@icon-park/vue-next';
-import InlineSvg from 'vue-inline-svg';
+} from '@lucide/vue';
 import { slotTitle, usePluginPages } from '@/hooks/usePluginUi';
 
 const { t, lang } = useMyI18n();
 const route = useRoute();
 const { isDark, toggle: toggleDark } = useDarkMode();
 
-const RSS = h(
-  'span',
-  {
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      width: '20px',
-      height: '20px',
-    },
-  },
-  h(InlineSvg, { src: './images/RSS.svg', width: '14', height: '14' })
-);
-
 const navItems = [
-  { id: 1, icon: Home, label: () => t('sidebar.homepage'), path: '/bangumi' },
+  { id: 1, icon: House, label: () => t('sidebar.homepage'), path: '/bangumi' },
   {
     id: 2,
     icon: Calendar,
     label: () => t('sidebar.calendar'),
     path: '/calendar',
   },
-  { id: 3, icon: RSS, label: () => t('sidebar.rss'), path: '/rss' },
+  { id: 3, icon: Rss, label: () => t('sidebar.rss'), path: '/rss' },
   {
     id: 5,
     icon: Download,
@@ -47,16 +33,16 @@ const navItems = [
     path: '/downloader',
     hidden: localStorage.getItem('enable_downloader_iframe') !== '1',
   },
-  { id: 6, icon: Log, label: () => t('sidebar.log'), path: '/log' },
+  { id: 6, icon: ScrollText, label: () => t('sidebar.log'), path: '/log' },
   {
     id: 8,
-    icon: AppStore,
+    icon: LayoutGrid,
     label: () => t('sidebar.market_short'),
     path: '/market',
   },
   {
     id: 7,
-    icon: SettingTwo,
+    icon: Settings,
     label: () => t('sidebar.config'),
     path: '/config',
   },

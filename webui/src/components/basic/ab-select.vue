@@ -1,47 +1,42 @@
 <script lang="ts" setup>
 import { computed, inject } from 'vue';
 import { NSelect } from 'naive-ui';
-import { isObject } from 'radash';
 import type { SelectOption } from 'naive-ui';
 import { abFieldInjectionKey } from './ab-field.vue';
 import type { SelectItem } from '#/components';
 
 // NSelect 的统一封装：选项归一化 + ab-field aria 接线在这里定一次。
-const props = withDefaults(
-  defineProps<{
-    /** 允许 string 或 {label?, value} 混合（旧 ab-setting 的格式） */
-    items?: Array<SelectItem | string>;
-    /** 已是 naive 格式时直接传 options */
-    options?: SelectOption[];
-    placeholder?: string;
-    disabled?: boolean;
-    error?: boolean;
-    ariaLabel?: string;
-  }>(),
-  {
-    items: undefined,
-    options: undefined,
-    placeholder: '',
-    disabled: false,
-    error: false,
-    ariaLabel: undefined,
-  }
-);
+const {
+  items,
+  options,
+  placeholder = '',
+  disabled = false,
+  error = false,
+} = defineProps<{
+  /** 允许 string 或 {label?, value} 混合（旧 ab-setting 的格式） */
+  items?: Array<SelectItem | string>;
+  /** 已是 naive 格式时直接传 options */
+  options?: SelectOption[];
+  placeholder?: string;
+  disabled?: boolean;
+  error?: boolean;
+  ariaLabel?: string;
+}>();
 
 const model = defineModel<string | number | null>({ default: null });
 
 const field = inject(abFieldInjectionKey, null);
 
 const normalizedOptions = computed<SelectOption[]>(() => {
-  if (props.options) return props.options;
-  return (props.items ?? []).map((item) =>
-    isObject(item)
+  if (options) return options;
+  return (items ?? []).map((item) =>
+    typeof item === 'object'
       ? { label: item.label ?? String(item.value), value: item.value }
       : { label: item, value: item }
   );
 });
 
-const invalid = computed(() => props.error || field?.invalid.value === true);
+const invalid = computed(() => error || field?.invalid.value === true);
 
 const menuProps = { role: 'listbox' } as const;
 
@@ -65,7 +60,7 @@ function optionNodeProps() {
     :aria-describedby="field?.describedBy.value"
     :menu-props="menuProps"
     :node-props="optionNodeProps"
-  ></NSelect>
+  />
 </template>
 
 <style lang="scss" scoped>

@@ -120,7 +120,7 @@ def test_pr_dependencies_and_generated_outputs_are_cached() -> None:
         assert "uv sync --directory backend --locked --group dev" in job
 
     for job in (runtime, browser, downloader):
-        assert "pnpm/action-setup@v4" in job
+        assert "pnpm/action-setup@v6" in job
         assert "cache: pnpm" in job
         assert "cache-dependency-path: webui/pnpm-lock.yaml" in job
         assert "pnpm --dir webui install --frozen-lockfile" in job
