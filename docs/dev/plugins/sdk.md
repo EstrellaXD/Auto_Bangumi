@@ -11,7 +11,7 @@
 
 ## 安装轮子
 
-轮子要求 Python 3.13 或更高，依赖 `pydantic`、`httpx2` 与 `packaging`，不需要安装 AutoBangumi。
+轮子要求 Python 3.14 或更高，依赖 `pydantic`、`httpx2` 与 `packaging`，不需要安装 AutoBangumi。
 
 只用命令行时，装成全局工具：
 

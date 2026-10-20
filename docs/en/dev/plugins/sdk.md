@@ -11,7 +11,7 @@ The wheel file name contains the SDK version (`ab_sdk.SDK_VERSION`, for example 
 
 ## Install the wheel
 
-The wheel needs Python 3.13 or later. It depends on `pydantic`, `httpx2` and `packaging`. You do not need to install AutoBangumi.
+The wheel needs Python 3.14 or later. It depends on `pydantic`, `httpx2` and `packaging`. You do not need to install AutoBangumi.
 
 To use only the command line, install the wheel as a global tool:
 

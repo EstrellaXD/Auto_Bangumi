@@ -7,16 +7,16 @@
 | `autobangumi_sdk-<SDK バージョン>-py3-none-any.whl` | `ab_sdk` パッケージと `ab-plugin` コマンド |
 | `autobangumi-plugin-skill-<AB バージョン>.zip` | AI コーディングアシスタント向けのプラグイン開発 skill |
 
-wheel のファイル名に入るのは SDK のバージョン（`ab_sdk.SDK_VERSION`、例えば `0.5.0`）で、AB のバージョンではありません。対象とする AB バージョンの Release から wheel をダウンロードしてください。両者の SDK バージョンが一致します。プラグインのマニフェストの `sdk` 範囲（例えば `">=0.5,<1"`）は、このバージョンを含む必要があります。
+wheel のファイル名に入るのは SDK のバージョン（`ab_sdk.SDK_VERSION`、例えば `0.6.0`）で、AB のバージョンではありません。対象とする AB バージョンの Release から wheel をダウンロードしてください。両者の SDK バージョンが一致します。プラグインのマニフェストの `sdk` 範囲（例えば `">=0.5,<1"`）は、このバージョンを含む必要があります。
 
 ## wheel のインストール
 
-wheel には Python 3.13 以上が必要です。依存は `pydantic`、`httpx`、`packaging` で、AutoBangumi 本体のインストールは不要です。
+wheel には Python 3.14 以上が必要です。依存は `pydantic`、`httpx2`、`packaging` で、AutoBangumi 本体のインストールは不要です。
 
 コマンドだけを使う場合は、グローバルなツールとしてインストールします。
 
 ```bash
-uv tool install ./autobangumi_sdk-0.5.0-py3-none-any.whl
+uv tool install ./autobangumi_sdk-0.6.0-py3-none-any.whl
 ab-plugin --help
 ```
 
@@ -24,7 +24,7 @@ ab-plugin --help
 
 ```bash
 cd my-plugin
-uv add ../autobangumi_sdk-0.5.0-py3-none-any.whl
+uv add ../autobangumi_sdk-0.6.0-py3-none-any.whl
 uv run pytest
 ```
 
