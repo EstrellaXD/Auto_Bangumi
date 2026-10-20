@@ -114,28 +114,36 @@ class RSSAnalyser:
         return None
 
     async def rss_to_data(
-        self, rss: RSSItem, engine: RSSEngine, full_parse: bool = True
+        self,
+        rss: RSSItem,
+        torrents: list[Torrent],
+        engine: RSSEngine,
+        bangumi_list: list[Bangumi],
     ) -> list[Bangumi]:
+        """用本轮已拉取的 ``torrents`` 为聚合订阅生成新规则。
+
+        ``bangumi_list`` 是本轮已加载的番剧列表，避免每个订阅各查一次。
+        """
         # One RSS workflow can cross several await boundaries and parse the
         # same resource during Movie match, Bangumi match, and persistence.
         # Keep those stages on the engine selected when the workflow started.
         with parser_engine_snapshot():
-            rss_torrents = await self.get_rss_torrents(rss.url, full_parse)
+            # 只跳过本订阅已记录的种子：其他订阅已知的种子仍要匹配，
+            # 才能把本订阅追加到 bangumi.rss_link（#1053）
+            torrents = await engine.db.torrent.check_new(torrents, rss_id=rss.id)
+            if not torrents:
+                return []
             # Filter out already-known movies first
-            torrents_after_movies = await engine.db.movie.match_list(
-                rss_torrents, rss.url
-            )
+            torrents_after_movies = await engine.db.movie.match_list(torrents, rss.url)
             # Then filter out already-known bangumi
             torrents_to_add = await engine.db.bangumi.match_list(
-                torrents_after_movies, rss.url
+                torrents_after_movies, rss.url, bangumi_list
             )
             if not torrents_to_add:
                 logger.debug("No new title has been found.")
                 return []
             # Parse remaining torrents
-            new_bangumi, new_movies = await self.torrents_to_data(
-                torrents_to_add, rss, full_parse
-            )
+            new_bangumi, new_movies = await self.torrents_to_data(torrents_to_add, rss)
             for movie in new_movies:
                 await engine.db.movie.add(movie)
             if new_bangumi:

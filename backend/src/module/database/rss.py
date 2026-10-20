@@ -116,12 +116,6 @@ class RSSDatabase:
         result = await self.session.execute(select(RSSItem).where(RSSItem.enabled))
         return list(result.scalars().all())
 
-    async def search_aggregate(self) -> list[RSSItem]:
-        result = await self.session.execute(
-            select(RSSItem).where(and_(RSSItem.aggregate, RSSItem.enabled))
-        )
-        return list(result.scalars().all())
-
     async def delete(self, _id: int) -> bool:
         try:
             # 先删除引用该 RSS 的 torrent，避免外键约束报错

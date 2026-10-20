@@ -47,13 +47,18 @@ class TorrentDatabase:
         )
         return list(result.scalars().all())
 
-    async def check_new(self, torrents_list: list[Torrent]) -> list[Torrent]:
+    async def check_new(
+        self, torrents_list: list[Torrent], rss_id: int | None = None
+    ) -> list[Torrent]:
+        """返回库中没有记录的种子；给出 ``rss_id`` 时只看该订阅的记录。"""
         if not torrents_list:
             return []
         urls = [t.url for t in torrents_list]
         # SQLModel 类属性在 mypy 看来是普通字段类型而非 InstrumentedAttribute，
         # 无法识别 .in_()/.is_() 等查询方法（无官方 mypy 插件支持）。
         statement = select(Torrent.url).where(Torrent.url.in_(urls))  # type: ignore[attr-defined]
+        if rss_id is not None:
+            statement = statement.where(Torrent.rss_id == rss_id)
         result = await self.session.execute(statement)
         existing_urls = set(result.scalars().all())
         return [t for t in torrents_list if t.url not in existing_urls]
