@@ -287,6 +287,15 @@ function close() {
   pointer-events: none;
 }
 
+// 自定义 ::-webkit-scrollbar 让 WebKit 用常规滚动条，固定容器的包含块会扣掉
+// 滚动条宽度（html 已 overflow: hidden 也一样），全屏面板（100dvh）就被顶出视口。
+// 容器按视口尺寸铺满，与面板一致
+.n-drawer-container:has(> .ab-bottom-sheet) {
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+}
+
 .n-drawer-container:has(> .ab-bottom-sheet) > .n-drawer-mask {
   backdrop-filter: blur(4px);
 }
