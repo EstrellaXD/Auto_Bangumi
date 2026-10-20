@@ -1,5 +1,7 @@
+from collections.abc import AsyncIterator
+
 from fastapi import APIRouter, Depends, Query
-from sse_starlette.sse import EventSourceResponse
+from fastapi.sse import EventSourceResponse, ServerSentEvent
 
 from module.conf.search_provider import get_provider, save_provider
 from module.searcher import SearchTorrent, available_sites
@@ -11,21 +13,18 @@ router = APIRouter(
 
 
 
-@router.get("/bangumi")
-async def search_torrents(site: str = "mikan", keywords: str = Query(None)):
+@router.get("/bangumi", response_class=EventSourceResponse)
+async def search_torrents(
+    site: str = "mikan", keywords: str = Query(None)
+) -> AsyncIterator[ServerSentEvent]:
     """
     Server Send Event for per Bangumi item
     """
     if not keywords:
-        return []
-    keyword_list = keywords.split(" ")
-
-    async def event_generator():
-        st = SearchTorrent()
-        async for item in st.analyse_keyword(keywords=keyword_list, site=site):
-            yield item
-
-    return EventSourceResponse(content=event_generator())
+        return
+    st = SearchTorrent()
+    async for item in st.analyse_keyword(keywords=keywords.split(" "), site=site):
+        yield ServerSentEvent(raw_data=item)
 
 
 @router.get(
