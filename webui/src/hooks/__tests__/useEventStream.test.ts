@@ -4,7 +4,7 @@
  * store) when available.
  */
 
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ref } from 'vue';
 import { withSetup } from './test-utils';
 
@@ -59,10 +59,29 @@ async function freshEventStream() {
 }
 
 describe('useEventStream', () => {
+  // 单例在模块级注册 visibilitychange 监听且从不卸载；逐测试移除，避免旧实例串扰
+  const visibilityHandlers: EventListener[] = [];
+  const realAddEventListener = document.addEventListener.bind(document);
+
   beforeEach(() => {
+    vi.spyOn(document, 'addEventListener').mockImplementation(
+      (type: string, handler: unknown, opts?: unknown) => {
+        if (type === 'visibilitychange') {
+          visibilityHandlers.push(handler as EventListener);
+        }
+        realAddEventListener(type, handler as EventListener, opts as never);
+      }
+    );
     isLoggedIn.value = false;
     MockEventSource.instances = [];
     vi.stubGlobal('EventSource', MockEventSource);
+  });
+
+  afterEach(() => {
+    for (const h of visibilityHandlers.splice(0)) {
+      document.removeEventListener('visibilitychange', h);
+    }
+    vi.restoreAllMocks();
   });
 
   it('should open a connection to the events stream when logged in', async () => {
@@ -175,5 +194,91 @@ describe('useEventStream', () => {
     es.emit('bus', JSON.stringify({ kind: 'k', payload: 1 }));
 
     expect(second).toHaveBeenCalledWith(1);
+  });
+
+  it('should append log_append frames and replace on a log frame', async () => {
+    isLoggedIn.value = true;
+    const useEventStream = await freshEventStream();
+    const result = withSetup(() => useEventStream());
+    const es = MockEventSource.instances.at(-1)!;
+
+    es.emit('log_append', 'a\n');
+    expect(result.logData.value).toBe('a\n');
+    es.emit('log', 'snapshot\n');
+    es.emit('log_append', 'b\n');
+    expect(result.logData.value).toBe('snapshot\nb\n');
+    es.emit('log', 'rotated\n');
+    expect(result.logData.value).toBe('rotated\n');
+  });
+
+  it('should trim the oldest lines when appended log exceeds the cap', async () => {
+    isLoggedIn.value = true;
+    const useEventStream = await freshEventStream();
+    const result = withSetup(() => useEventStream());
+    const es = MockEventSource.instances.at(-1)!;
+
+    const line = `${'x'.repeat(99)}\n`;
+    es.emit('log', line.repeat(5000));
+    es.emit('log_append', 'tail\n');
+    const text = result.logData.value!;
+    expect(text.length).toBeLessThanOrEqual(512 * 1024);
+    expect(text.endsWith('x\ntail\n')).toBe(true);
+    expect(text.startsWith(`${'x'.repeat(99)}\n`)).toBe(true);
+  });
+
+  describe('hidden tab', () => {
+    let hidden = false;
+    function setHidden(value: boolean) {
+      hidden = value;
+      document.dispatchEvent(new Event('visibilitychange'));
+    }
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+      hidden = false;
+      vi.spyOn(document, 'hidden', 'get').mockImplementation(() => hidden);
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('should close the stream after 30 s hidden and reconnect on visible', async () => {
+      isLoggedIn.value = true;
+      const useEventStream = await freshEventStream();
+      const result = withSetup(() => useEventStream());
+      const es = MockEventSource.instances.at(-1)!;
+      es.onopen?.();
+      // 旧测试遗留的单例也会连接，故以当前数量为基线
+      const baseline = MockEventSource.instances.length;
+
+      setHidden(true);
+      vi.advanceTimersByTime(30_000);
+      expect(es.closed).toBe(true);
+      expect(result.connected.value).toBe(false);
+
+      // 隐藏期间不会重连
+      vi.advanceTimersByTime(60_000);
+      expect(MockEventSource.instances).toHaveLength(baseline);
+
+      setHidden(false);
+      expect(MockEventSource.instances).toHaveLength(baseline + 1);
+      expect(MockEventSource.instances.at(-1)!.closed).toBe(false);
+    });
+
+    it('should keep the stream when hidden for less than 30 s', async () => {
+      isLoggedIn.value = true;
+      const useEventStream = await freshEventStream();
+      withSetup(() => useEventStream());
+      const es = MockEventSource.instances.at(-1)!;
+      const baseline = MockEventSource.instances.length;
+
+      setHidden(true);
+      vi.advanceTimersByTime(29_000);
+      setHidden(false);
+      vi.advanceTimersByTime(60_000);
+
+      expect(es.closed).toBe(false);
+      expect(MockEventSource.instances).toHaveLength(baseline);
+    });
   });
 });
