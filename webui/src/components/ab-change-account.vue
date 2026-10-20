@@ -12,7 +12,7 @@ const { user, update } = useAuth();
     size="sm"
     :title="$t('topbar.profile.pop_title')"
   >
-    <div space-y-16>
+    <div class="space-y-16">
       <ab-field :label="$t('topbar.profile.username')">
         <ab-input
           v-model="user.username"

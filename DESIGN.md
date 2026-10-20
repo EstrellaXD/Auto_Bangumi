@@ -54,7 +54,7 @@ Semantic scale only: `--z-dropdown` 10 · `--z-sticky` 20 · `--z-fixed` 30 · `
 
 - **Universal `ab-*` layer** (`src/components/basic/`): pages and composites use only `ab-*` components — never raw `NButton`/`NInput`/bare styled `<button>`. Where naive-ui fits, the `ab-*` component wraps it (`ab-select`, `ab-switch`, `ab-tooltip`); where it doesn't, the component is custom on tokens (`ab-button`, `ab-tag`, `ab-modal`).
 - **Composites**: app-specific `ab-*` components (`ab-add-rss`, `ab-edit-rule`, calendar pieces, layout shells) compose the universal layer + tokens.
-- **Utility CSS**: UnoCSS with attributify preset; prefer token-backed values over arbitrary literals.
+- **Utility CSS**: UnoCSS (`presetWind3`), utilities go in `class` (no attributify); prefer token-backed values over arbitrary literals.
 - Every interactive component ships all states: default, hover, focus-visible, active, disabled, loading, error — and ≥44px touch targets on mobile (`--touch-target`).
 - Soft Ink component grammar: filled controls on `--color-surface-2` (border only on focus/error); tags are hairline chips with a square semantic mark and ink text; status is a square mark + ink label; tabs underline (no thumb); alerts are hairline outlines led by a bold colored word (no icons, no tinted fills); toasts are inverted ink chips; empty states are left-aligned prose with one action; loading is skeletons, not spinners-in-content.
 - Every universal component ships a Storybook story and (where it has behavior) a vitest test in `__tests__/`.

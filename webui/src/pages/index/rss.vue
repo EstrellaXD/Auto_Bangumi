@@ -1,6 +1,7 @@
-<script lang="tsx" setup>
+<script lang="ts" setup>
 import { type DataTableColumns, NDataTable, NTooltip } from 'naive-ui';
 import AbButton from '@/components/basic/ab-button.vue';
+import AbTag from '@/components/basic/ab-tag.vue';
 import { useConfirm } from '@/hooks/useConfirm';
 import type { RSS } from '#/rss';
 
@@ -63,15 +64,11 @@ const rssColumns = computed<DataTableColumns<RSS>>(() => [
     key: 'name',
     className: 'text-h3',
     render(rss: RSS) {
-      return (
-        <div class="rss-name-cell">
-          <span class="rss-name" title={rss.name}>
-            {rss.name}
-          </span>
-          {rss.parser && <ab-tag type="info" title={rss.parser} />}
-          {rss.aggregate && <ab-tag type="info" title={t('rss.aggregate')} />}
-        </div>
-      );
+      return h('div', { class: 'rss-name-cell' }, [
+        h('span', { class: 'rss-name', title: rss.name }, rss.name),
+        rss.parser && h(AbTag, { type: 'info', title: rss.parser }),
+        rss.aggregate && h(AbTag, { type: 'info', title: t('rss.aggregate') }),
+      ]);
     },
   },
   {
@@ -90,26 +87,18 @@ const rssColumns = computed<DataTableColumns<RSS>>(() => [
     align: 'right',
     minWidth: 140,
     render(rss: RSS) {
-      return (
-        <div flex="~ justify-end gap-x-8">
-          {rss.connection_status === 'healthy' && (
-            <ab-tag type="success" title={t('rss.connected')} />
-          )}
-          {rss.connection_status === 'error' && (
-            <NTooltip>
-              {{
-                trigger: () => <ab-tag type="danger" title={t('rss.error')} />,
-                default: () => rss.last_error || 'Unknown error',
-              }}
-            </NTooltip>
-          )}
-          {rss.enabled ? (
-            <ab-tag type="success" title={t('rss.active')} />
-          ) : (
-            <ab-tag type="neutral" title={t('rss.inactive')} />
-          )}
-        </div>
-      );
+      return h('div', { class: 'flex justify-end gap-x-8' }, [
+        rss.connection_status === 'healthy' &&
+          h(AbTag, { type: 'success', title: t('rss.connected') }),
+        rss.connection_status === 'error' &&
+          h(NTooltip, null, {
+            trigger: () => h(AbTag, { type: 'danger', title: t('rss.error') }),
+            default: () => rss.last_error || 'Unknown error',
+          }),
+        rss.enabled
+          ? h(AbTag, { type: 'success', title: t('rss.active') })
+          : h(AbTag, { type: 'neutral', title: t('rss.inactive') }),
+      ]);
     },
   },
   {
@@ -120,20 +109,21 @@ const rssColumns = computed<DataTableColumns<RSS>>(() => [
     render(rss: RSS) {
       const isRowRefreshing = refreshingId.value === rss.id;
       const isRowFailed = refreshFailedId.value === rss.id;
-      return (
-        <AbButton
-          size="sm"
-          variant={isRowFailed ? 'danger' : 'secondary'}
-          {...{ title: t('rss.refresh') }}
-          disabled={isRowRefreshing}
-          onClick={() => onRefreshOne(rss.id)}
-        >
-          <div
-            class={
-              isRowRefreshing ? 'i-carbon-renew animate-spin' : 'i-carbon-renew'
-            }
-          />
-        </AbButton>
+      return h(
+        AbButton,
+        {
+          size: 'sm',
+          variant: isRowFailed ? 'danger' : 'secondary',
+          title: t('rss.refresh'),
+          disabled: isRowRefreshing,
+          onClick: () => onRefreshOne(rss.id),
+        },
+        () =>
+          h('div', {
+            class: isRowRefreshing
+              ? 'i-carbon-renew animate-spin'
+              : 'i-carbon-renew',
+          })
       );
     },
   },
@@ -184,19 +174,19 @@ function onSelectedRSSUpdate(keys: unknown[]) {
             <div class="rss-card-name">{{ item.name }}</div>
             <div class="rss-card-url">{{ item.url }}</div>
             <div class="rss-card-tags">
-              <ab-tag v-if="item.parser" type="info" :title="item.parser" />
-              <ab-tag v-if="item.aggregate" type="info" title="aggregate" />
-              <ab-tag
+              <AbTag v-if="item.parser" type="info" :title="item.parser" />
+              <AbTag v-if="item.aggregate" type="info" title="aggregate" />
+              <AbTag
                 v-if="item.connection_status === 'healthy'"
                 type="success"
                 :title="$t('rss.connected')"
               />
-              <ab-tag
+              <AbTag
                 v-if="item.connection_status === 'error'"
                 type="danger"
                 :title="$t('rss.error')"
               />
-              <ab-tag
+              <AbTag
                 :type="item.enabled ? 'success' : 'neutral'"
                 :title="
                   item.enabled

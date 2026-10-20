@@ -1,6 +1,7 @@
-<script lang="tsx" setup>
+<script lang="ts" setup>
 import { type DataTableColumns, NDataTable } from 'naive-ui';
 import AbProgress from '@/components/basic/ab-progress.vue';
+import AbTag from '@/components/basic/ab-tag.vue';
 import { useConfirm } from '@/hooks/useConfirm';
 import type { QbTorrentInfo, TorrentGroup } from '#/downloader';
 import { useDownloaderInstances } from '@/hooks/useDownloaderInstances';
@@ -110,7 +111,7 @@ function stateLabel(state: string): string {
   return map[state] || state;
 }
 
-function stateType(state: string): string {
+function stateType(state: string): 'neutral' | 'success' | 'info' | 'danger' {
   if (state.includes('paused') || state.includes('stopped')) return 'neutral';
   if (state === 'downloading' || state === 'forcedDL') return 'success';
   if (state.includes('UP') || state === 'uploading') return 'info';
@@ -142,17 +143,14 @@ const tableColumnsValue = computed<DataTableColumns<QbTorrentInfo>>(() => [
     key: 'progress',
     width: 160,
     render(row: QbTorrentInfo) {
-      return (
-        <AbProgress
-          value={row.progress * 100}
-          label={`${Math.round(row.progress * 100)}%`}
-          state={
-            row.state === 'error' || row.state === 'missingFiles'
-              ? 'error'
-              : 'active'
-          }
-        />
-      );
+      return h(AbProgress, {
+        value: row.progress * 100,
+        label: `${Math.round(row.progress * 100)}%`,
+        state:
+          row.state === 'error' || row.state === 'missingFiles'
+            ? 'error'
+            : 'active',
+      });
     },
   },
   {
@@ -160,9 +158,10 @@ const tableColumnsValue = computed<DataTableColumns<QbTorrentInfo>>(() => [
     key: 'state',
     width: 100,
     render(row: QbTorrentInfo) {
-      return (
-        <ab-tag type={stateType(row.state)} title={stateLabel(row.state)} />
-      );
+      return h(AbTag, {
+        type: stateType(row.state),
+        title: stateLabel(row.state),
+      });
     },
   },
   {

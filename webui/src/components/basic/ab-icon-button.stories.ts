@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/vue3';
+import type { Meta, StoryObj } from '@storybook/vue3-vite';
 import { AddOne, Delete, Edit } from '@icon-park/vue-next';
 
 import AbIconButton from './ab-icon-button.vue';

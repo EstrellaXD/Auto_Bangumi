@@ -1,4 +1,4 @@
-<script lang="tsx" setup>
+<script lang="ts" setup>
 import {
   AppStore,
   Calendar,
@@ -119,21 +119,23 @@ const navItems = computed(() => {
 });
 
 function Exit() {
-  return (
-    <button
-      type="button"
-      aria-label={t('sidebar.logout')}
-      class={[
+  return h(
+    'button',
+    {
+      type: 'button',
+      'aria-label': t('sidebar.logout'),
+      class: [
         'sidebar-item sidebar-item--action',
         isMobileOrTablet.value ? 'h-40' : '',
-      ]}
-      onClick={logout}
-    >
-      <Logout size={20} />
-      {!isMobileOrTablet.value && show.value && (
-        <div class="sidebar-item-label">{t('sidebar.logout')}</div>
-      )}
-    </button>
+      ],
+      onClick: logout,
+    },
+    [
+      h(Logout, { size: 20 }),
+      !isMobileOrTablet.value &&
+        show.value &&
+        h('div', { class: 'sidebar-item-label' }, t('sidebar.logout')),
+    ]
   );
 }
 </script>

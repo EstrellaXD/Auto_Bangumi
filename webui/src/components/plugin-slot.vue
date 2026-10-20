@@ -22,7 +22,7 @@ let generation = 0;
 let teardown: (() => void) | null = null;
 
 function fail(error: unknown) {
-  // 不用 `[plugin:id]` 式模板串：UnoCSS 的 attributify 会把它当成样式规则
+  // 不用 `[plugin:id]` 式模板串：UnoCSS 会把它当成任意属性规则
   console.error('plugin component failed:', props.ui.plugin_id, error);
   failed.value = true;
   loading.value = false;

@@ -218,7 +218,7 @@ const items = computed(() =>
       </div>
     </div>
 
-    <div v-if="downloader" space-y-8>
+    <div v-if="downloader" class="space-y-8">
       <ab-alert v-if="downloader.provider === 'aria2'">
         {{ $t('config.downloader_set.aria2_hint') }}
       </ab-alert>

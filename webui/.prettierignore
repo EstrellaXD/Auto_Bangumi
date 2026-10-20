@@ -1,6 +1,5 @@
 /build
 /dist
-/dev-dist
 /e2e/.auth
 /playwright-report
 /test-results

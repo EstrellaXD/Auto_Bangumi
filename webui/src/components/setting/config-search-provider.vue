@@ -208,19 +208,19 @@ function validateUrl(url: string): boolean {
 
 <template>
   <ab-fold-panel :title="$t('config.search_provider_set.title')">
-    <div space-y-8>
+    <div class="space-y-8">
       <!-- Loading state -->
-      <div v-if="loading" text-gray-500 text-14>
+      <div v-if="loading" class="text-gray-500 text-14">
         {{ $t('passkey.loading') }}
       </div>
 
       <!-- Empty state -->
-      <div v-else-if="providers.length === 0" text-gray-500 text-14>
+      <div v-else-if="providers.length === 0" class="text-gray-500 text-14">
         {{ $t('config.search_provider_set.no_providers') }}
       </div>
 
       <!-- Provider list -->
-      <div v-else space-y-8>
+      <div v-else class="space-y-8">
         <div
           v-for="(provider, index) in providers"
           :key="provider.name"
@@ -261,7 +261,7 @@ function validateUrl(url: string): boolean {
         </div>
       </div>
 
-      <div line></div>
+      <div class="line"></div>
 
       <!-- Hint text -->
       <div class="hint-text">
@@ -269,7 +269,7 @@ function validateUrl(url: string): boolean {
       </div>
 
       <!-- Add button -->
-      <div flex="~ justify-end">
+      <div class="flex justify-end">
         <ab-button size="sm" variant="primary" @click="openAddDialog">
           <Plus size="16" />
           {{ $t('config.search_provider_set.add_new') }}
@@ -283,7 +283,7 @@ function validateUrl(url: string): boolean {
       size="sm"
       :title="$t('config.search_provider_set.add_title')"
     >
-      <div space-y-16>
+      <div class="space-y-16">
         <ab-segmented
           v-model:value="formMode"
           size="sm"
@@ -391,7 +391,7 @@ function validateUrl(url: string): boolean {
       size="sm"
       :title="$t('config.search_provider_set.edit_title')"
     >
-      <div space-y-16>
+      <div class="space-y-16">
         <ab-field :label="$t('config.search_provider_set.name')">
           <ab-input
             v-model="formName"

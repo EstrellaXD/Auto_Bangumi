@@ -155,7 +155,7 @@ const naiveTheme = computed(() => (isDark.value ? darkTheme : null));
 </template>
 
 <style lang="scss">
-@import './style/var';
-@import './style/transition';
-@import './style/global';
+@use './style/var';
+@use './style/transition';
+@use './style/global';
 </style>

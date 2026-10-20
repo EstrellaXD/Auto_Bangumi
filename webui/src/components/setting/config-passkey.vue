@@ -81,43 +81,40 @@ function formatDate(dateString: string | null): string {
 
 <template>
   <ab-fold-panel :title="$t('passkey.title')">
-    <div space-y-8>
+    <div class="space-y-8">
       <!-- 不支持提示 -->
-      <div v-if="!isSupported" text-orange-500 text-14>
+      <div v-if="!isSupported" class="text-orange-500 text-14">
         {{ $t('passkey.not_supported') }}
       </div>
 
       <!-- 加载中 -->
-      <div v-else-if="loading" text-gray-500 text-14>
+      <div v-else-if="loading" class="text-gray-500 text-14">
         {{ $t('passkey.loading') }}
       </div>
 
       <!-- 无 Passkey -->
-      <div v-else-if="passkeys.length === 0" text-gray-500 text-14>
+      <div v-else-if="passkeys.length === 0" class="text-gray-500 text-14">
         {{ $t('passkey.no_passkeys') }}
       </div>
 
       <!-- Passkey 列表 -->
-      <div v-else space-y-8>
+      <div v-else class="space-y-8">
         <div
           v-for="passkey in passkeys"
           :key="passkey.id"
-          flex="~ justify-between items-center"
-          p-12
-          bg-gray-50
-          rounded-8
+          class="flex justify-between items-center p-12 bg-gray-50 rounded-8"
         >
           <div>
-            <div font-medium>{{ passkey.name }}</div>
-            <div text-12 text-gray-500>
+            <div class="font-medium">{{ passkey.name }}</div>
+            <div class="text-12 text-gray-500">
               {{ $t('passkey.created_at') }}:
               {{ formatDate(passkey.created_at) }}
             </div>
-            <div v-if="passkey.last_used_at" text-12 text-gray-500>
+            <div v-if="passkey.last_used_at" class="text-12 text-gray-500">
               {{ $t('passkey.last_used') }}:
               {{ formatDate(passkey.last_used_at) }}
             </div>
-            <div v-if="passkey.backup_eligible" text-12 text-green-600>
+            <div v-if="passkey.backup_eligible" class="text-12 text-green-600">
               {{ $t('passkey.synced') }}
             </div>
           </div>
@@ -132,10 +129,10 @@ function formatDate(dateString: string | null): string {
         </div>
       </div>
 
-      <div line></div>
+      <div class="line"></div>
 
       <!-- 添加按钮 -->
-      <div flex="~ justify-end">
+      <div class="flex justify-end">
         <ab-button
           v-if="isSupported"
           size="sm"
@@ -153,7 +150,7 @@ function formatDate(dateString: string | null): string {
       size="sm"
       :title="$t('passkey.register_title')"
     >
-      <div space-y-16>
+      <div class="space-y-16">
         <ab-field :label="$t('passkey.device_name')">
           <ab-input
             v-model="deviceName"
@@ -163,7 +160,7 @@ function formatDate(dateString: string | null): string {
           />
         </ab-field>
 
-        <div text-14 text-gray-500>
+        <div class="text-14 text-gray-500">
           {{ $t('passkey.register_hint') }}
         </div>
       </div>

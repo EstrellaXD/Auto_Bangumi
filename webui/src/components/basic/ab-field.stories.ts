@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/vue3';
+import type { Meta, StoryObj } from '@storybook/vue3-vite';
 
 import AbField from './ab-field.vue';
 import AbInput from './ab-input.vue';

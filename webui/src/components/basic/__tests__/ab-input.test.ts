@@ -7,7 +7,7 @@ describe('ab-input', () => {
     const wrapper = mount(AbInput, {
       props: {
         modelValue: 'abc',
-        'onUpdate:modelValue': (v: string) =>
+        'onUpdate:modelValue': (v: string | number) =>
           wrapper.setProps({ modelValue: v }),
       },
     });
@@ -27,7 +27,7 @@ describe('ab-input', () => {
       props: {
         modelValue: 'abc',
         clearable: true,
-        'onUpdate:modelValue': (v: string) =>
+        'onUpdate:modelValue': (v: string | number) =>
           wrapper.setProps({ modelValue: v }),
       },
     });

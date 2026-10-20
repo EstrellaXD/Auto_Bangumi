@@ -1,9 +1,10 @@
 packages:
   - packages/*
 publicHoistPattern:
-  - '@vue/runtime-core'
   - '*eslint*'
   - '*prettier*'
 allowBuilds:
   esbuild: true
   vue-demi: true
+  # sass 的可选依赖，平台预编译包已覆盖，无需跑源码构建
+  '@parcel/watcher': false

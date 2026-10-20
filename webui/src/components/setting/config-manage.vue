@@ -91,7 +91,7 @@ const items = computed<SettingItem<BangumiManage>[]>(() => [
 
 <template>
   <ab-fold-panel :title="$t('config.manage_set.title')">
-    <div space-y-8>
+    <div class="space-y-8">
       <ab-setting v-bind="enableItem" v-model:data="manage.enable"></ab-setting>
       <ab-setting
         v-for="i in slotItems"
