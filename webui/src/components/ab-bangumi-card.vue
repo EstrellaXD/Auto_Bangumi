@@ -200,18 +200,40 @@ const posterSrc = computed(() => resolvePosterUrl(bangumi.poster_link));
   display: block;
 }
 
-// Card glow animation when needs review - yellow
+// 待审核的黄色光晕：静态 box-shadow 放在 ::after 上，只动画 opacity（合成器线程，
+// 不触发每帧重绘）。光晕在海报外侧，所以这里取消 overflow 裁剪，由子元素继承圆角
 .card-poster--needs-review {
-  animation: card-glow 2.5s ease-in-out infinite;
+  overflow: visible;
+
+  > * {
+    border-radius: inherit;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: 0 0 16px 4px rgba(251, 191, 36, 0.6);
+    pointer-events: none;
+    animation: card-glow 2.5s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &::after {
+      animation: none;
+      opacity: 0.5;
+    }
+  }
 }
 
 @keyframes card-glow {
   0%,
   100% {
-    box-shadow: var(--shadow-md), 0 0 0 0 rgba(251, 191, 36, 0);
+    opacity: 0;
   }
   50% {
-    box-shadow: var(--shadow-md), 0 0 16px 4px rgba(251, 191, 36, 0.6);
+    opacity: 1;
   }
 }
 

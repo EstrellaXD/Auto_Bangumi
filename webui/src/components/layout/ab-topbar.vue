@@ -18,6 +18,10 @@ const { isMobile } = useBreakpointQuery();
 
 const showAccount = ref(false);
 const rssRule = ref(ruleTemplate);
+const { comp: AddRss, shown: addRssShown } = useLazyModal(
+  showAddRSS,
+  () => import('@/components/ab-add-rss.vue')
+);
 
 const { start, pause, shutdown, restart, resetRule } = useProgramStore();
 const { refreshPoster } = useBangumiStore();
@@ -138,7 +142,13 @@ onUnmounted(() => {
     </div>
 
     <ab-change-account v-model:show="showAccount" />
-    <ab-add-rss v-model:show="showAddRSS" v-model:rule="rssRule" />
+    <component
+      :is="AddRss"
+      v-if="AddRss"
+      v-model:rule="rssRule"
+      :show="addRssShown"
+      @update:show="showAddRSS = $event"
+    />
   </div>
 </template>
 

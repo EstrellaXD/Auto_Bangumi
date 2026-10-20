@@ -67,6 +67,8 @@ declare global {
   const isRef: typeof import('vue').isRef
   const isShallow: typeof import('vue').isShallow
   const isValidNexusPhpCategoryIds: typeof import('../../src/utils/nexusphp').isValidNexusPhpCategoryIds
+  const loadLocale: typeof import('../../src/hooks/useMyI18n').loadLocale
+  const loadSavedLocale: typeof import('../../src/hooks/useMyI18n').loadSavedLocale
   const localizeFields: typeof import('../../src/utils/plugin-text').localizeFields
   const mapActions: typeof import('pinia').mapActions
   const mapGetters: typeof import('pinia').mapGetters
@@ -150,6 +152,7 @@ declare global {
   const useI18n: typeof import('vue-i18n').useI18n
   const useId: typeof import('vue').useId
   const useIntervalFn: typeof import('@vueuse/core').useIntervalFn
+  const useLazyModal: typeof import('../../src/hooks/useLazyModal').useLazyModal
   const useLocalStorage: typeof import('@vueuse/core').useLocalStorage
   const useLogStore: typeof import('../../src/store/log').useLogStore
   const useMessage: typeof import('../../src/hooks/useMessage').useMessage
