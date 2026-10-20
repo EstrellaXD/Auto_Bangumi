@@ -19,9 +19,13 @@ export const useDownloaderStore = defineStore('downloader', () => {
   const loading = ref(false);
 
   const { downloaderData } = useEventStream();
+  // SSE 帧计数：getAll 请求期间收到过新帧时丢弃 HTTP 结果——服务端只在
+  // 负载变化时重推，旧响应覆盖新帧后已删除的种子会一直留在列表里。
+  let sseFrames = 0;
   // SSE 已连接时使用推送数据，省去 downloader.vue 页面自己的 5s 轮询请求。
   watch(downloaderData, (data) => {
     if (data === null) return;
+    sseFrames += 1;
     torrents.value = data;
   });
 
@@ -66,8 +70,10 @@ export const useDownloaderStore = defineStore('downloader', () => {
 
   async function getAll() {
     loading.value = true;
+    const frames = sseFrames;
     try {
-      torrents.value = await apiDownloader.getTorrents();
+      const data = await apiDownloader.getTorrents();
+      if (frames === sseFrames) torrents.value = data;
     } catch {
       // Keep the last known list — a failed 5s poll (e.g. during a backend
       // restart) must not blank the page into a fake "no torrents" state.

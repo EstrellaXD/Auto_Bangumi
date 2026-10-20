@@ -284,17 +284,31 @@ class TestLogCursor:
 
         assert await cursor.frame() == {"event": "log_append", "data": "third\n"}
 
-    async def test_cleared_log_sends_full_frame_once_it_has_content(self, log_file):
+    async def test_empty_log_on_connect_yields_log_clear(self, log_file):
+        """清空后重连：空日志推 log_clear，前端才会丢掉上个连接的旧文本。"""
+        log_file.write_text("")
+        cursor = _LogCursor()
+
+        assert await cursor.frame() == {"event": "log_clear", "data": "1"}
+        assert await cursor.frame() is None
+
+    @pytest.mark.parametrize("clear", ["truncate", "api"])
+    async def test_cleared_log_yields_log_clear_then_appends(self, log_file, clear):
+        """截断或经 /log/clear 清空：推一次 log_clear，之后的新行按增量推。"""
         log_file.write_text("old line\n")
         cursor = _LogCursor()
         await cursor.frame()
 
-        log_file.write_text("")
+        if clear == "truncate":
+            log_file.write_text("")
+        else:
+            _clear_log_files()
+        assert await cursor.frame() == {"event": "log_clear", "data": "1"}
         assert await cursor.frame() is None
         with log_file.open("a") as f:
             f.write("fresh\n")
 
-        assert await cursor.frame() == {"event": "log", "data": "fresh\n"}
+        assert await cursor.frame() == {"event": "log_append", "data": "fresh\n"}
 
     async def test_clear_then_regrow_past_offset_sends_full_frame(self, log_file):
         """清空后、下一次读取前日志已长过旧偏移：仍推整段，而不是从旧偏移增量。"""

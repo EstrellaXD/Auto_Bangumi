@@ -5,7 +5,7 @@ from sqlalchemy import delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import and_, select, true
 
-from module.models import Torrent
+from module.models import Bangumi, RSSItem, Torrent
 
 logger = logging.getLogger(__name__)
 
@@ -48,12 +48,14 @@ class TorrentDatabase:
         return list(result.scalars().all())
 
     async def check_new(
-        self, torrents_list: list[Torrent], rss_id: int | None = None
+        self, torrents_list: list[Torrent], rss: RSSItem | None = None
     ) -> list[Torrent]:
         """返回库中没有记录的种子。
 
-        给出 ``rss_id`` 时只看该订阅已匹配（``bangumi_id`` 非空）的记录：
-        未匹配的孤儿每轮仍要重新分析，新番或上次分析失败的种子才能生成规则。
+        给出 ``rss`` 时只看该订阅已匹配、且所属番剧的 ``rss_link`` 已包含该
+        订阅当前 URL 的记录（与 BangumiDatabase.match_list 的追加判断一致）：
+        未匹配的孤儿每轮仍要重新分析，新番或上次分析失败的种子才能生成规则；
+        订阅改了 URL 时仍要匹配，才能把新 URL 追加到 rss_link（#1053）。
         """
         if not torrents_list:
             return []
@@ -61,10 +63,14 @@ class TorrentDatabase:
         # SQLModel 类属性在 mypy 看来是普通字段类型而非 InstrumentedAttribute，
         # 无法识别 .in_()/.is_() 等查询方法（无官方 mypy 插件支持）。
         statement = select(Torrent.url).where(Torrent.url.in_(urls))  # type: ignore[attr-defined]
-        if rss_id is not None:
-            statement = statement.where(
-                Torrent.rss_id == rss_id,
-                Torrent.bangumi_id.is_not(None),  # type: ignore[union-attr]
+        if rss is not None:
+            # instr 区分大小写，与 Python 的 ``in`` 一致（LIKE 不区分）
+            statement = statement.join(
+                Bangumi,
+                Bangumi.id == Torrent.bangumi_id,  # type: ignore[arg-type]
+            ).where(
+                Torrent.rss_id == rss.id,
+                func.instr(Bangumi.rss_link, rss.url) > 0,
             )
         result = await self.session.execute(statement)
         existing_urls = set(result.scalars().all())

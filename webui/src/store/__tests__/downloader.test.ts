@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ref } from 'vue';
+import { nextTick, ref } from 'vue';
 import { apiDownloader } from '@/api/downloader';
 import {
   hasConfiguredDownloader,
   torrentKey,
   useDownloaderStore,
 } from '@/store/downloader';
+import type { Ref } from 'vue';
 import type { QbTorrentInfo } from '#/downloader';
 import type { PluginInstance } from '#/config';
 
@@ -18,8 +19,14 @@ vi.mock('@/api/downloader', () => ({
   },
 }));
 
+const downloaderData = vi.hoisted(() => ({
+  current: null as Ref<QbTorrentInfo[] | null> | null,
+}));
 vi.mock('@/hooks/useEventStream', () => ({
-  useEventStream: () => ({ downloaderData: ref(null) }),
+  useEventStream: () => {
+    downloaderData.current = ref(null);
+    return { downloaderData: downloaderData.current };
+  },
 }));
 
 vi.mock('@/hooks/useApi', () => ({
@@ -109,6 +116,24 @@ describe('downloader store', () => {
       ]);
     }
   );
+
+  it('should discard an HTTP response when an SSE frame arrived during the request', async () => {
+    const store = useDownloaderStore();
+    let respond!: (list: QbTorrentInfo[]) => void;
+    vi.mocked(apiDownloader.getTorrents).mockReturnValueOnce(
+      new Promise((resolve) => {
+        respond = resolve;
+      })
+    );
+
+    const request = store.getAll();
+    downloaderData.current!.value = [torrent('fresh', 'home')];
+    await nextTick();
+    respond([torrent('fresh', 'home'), torrent('deleted', 'home')]);
+    await request;
+
+    expect(store.torrents.map((t) => t.hash)).toEqual(['fresh']);
+  });
 
   it('should show the failure message when an instance returns status false', async () => {
     const store = useDownloaderStore();

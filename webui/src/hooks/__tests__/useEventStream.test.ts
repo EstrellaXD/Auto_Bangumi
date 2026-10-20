@@ -211,6 +211,19 @@ describe('useEventStream', () => {
     expect(result.logData.value).toBe('rotated\n');
   });
 
+  it('should empty the log when a log_clear frame arrives', async () => {
+    isLoggedIn.value = true;
+    const useEventStream = await freshEventStream();
+    const result = withSetup(() => useEventStream());
+    const es = MockEventSource.instances.at(-1)!;
+
+    es.emit('log', 'stale\n');
+    es.emit('log_clear', '1');
+    expect(result.logData.value).toBe('');
+    es.emit('log_append', 'fresh\n');
+    expect(result.logData.value).toBe('fresh\n');
+  });
+
   it('should trim the oldest lines when appended log exceeds the cap', async () => {
     isLoggedIn.value = true;
     const useEventStream = await freshEventStream();

@@ -8,7 +8,7 @@ from unittest.mock import patch
 import pytest
 
 from module.conf import settings
-from module.models import Movie, Torrent
+from module.models import Movie, RSSItem, Torrent
 from module.models.config import LLM
 from module.parser.analyser import selector
 from module.parser.analyser.selector import parse_configured_release_title
@@ -97,7 +97,7 @@ async def test_rss_to_data_keeps_one_parser_engine_across_awaits(
     torrent = Torrent(name="resource", url="https://example.com/resource")
     analyser = RSSAnalyser()
 
-    async def check_new(torrents, rss_id: int | None = None):
+    async def check_new(torrents, rss: RSSItem | None = None):
         return torrents
 
     async def match_movies(torrents, rss_link: str):

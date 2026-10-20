@@ -128,9 +128,9 @@ class RSSAnalyser:
         # same resource during Movie match, Bangumi match, and persistence.
         # Keep those stages on the engine selected when the workflow started.
         with parser_engine_snapshot():
-            # 只跳过本订阅已记录的种子：其他订阅已知的种子仍要匹配，
-            # 才能把本订阅追加到 bangumi.rss_link（#1053）
-            torrents = await engine.db.torrent.check_new(torrents, rss_id=rss.id)
+            # 只跳过追加 rss_link 已是空操作的种子：其他订阅已知、或本订阅
+            # 改过 URL 的种子仍要匹配，才能把当前 URL 追加到 rss_link（#1053）
+            torrents = await engine.db.torrent.check_new(torrents, rss=rss)
             if not torrents:
                 return []
             # Filter out already-known movies first

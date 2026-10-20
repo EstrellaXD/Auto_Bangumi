@@ -7,8 +7,9 @@
 
 - downloader：所有连接共用一份 5s 缓存查询下载器；连接建立时推一帧，之后
   仅在负载与本连接上次推送的不同时才推。
-- log：连接建立时、以及日志被轮转/截断后推整段尾部（``log``）；其余只推
-  上次之后新增的完整行（``log_append``，总以换行结尾），没有新增不推。
+- log：连接建立时、以及日志被轮转/截断后推整段尾部（``log``，日志为空时推
+  ``log_clear``）；其余只推上次之后新增的完整行（``log_append``，总以换行
+  结尾），没有新增不推。
 
 notification（通知中心未读数）由事件驱动：每个连接在插件事件总线上订阅
 ``inbox.changed``（通知中心写入/已读/删除时发布），收到后立即查库推送，
@@ -130,7 +131,8 @@ class _LogCursor:
     """一个 SSE 连接的日志读取位置。
 
     首帧及日志被轮转（inode 变化）、截断（大小小于已读偏移）、mtime 回退或
-    经 /log/clear 清空（清空计数变化）时推整段尾部 ``log``；否则只推偏移
+    经 /log/clear 清空（清空计数变化）时推整段尾部 ``log``（为空时推
+    ``log_clear``）；否则只推偏移
     之后新增的完整行 ``log_append``。增量截到最后一个换行：不切断多字节
     字符，且每帧都是完整行，前端可直接追加。
     """
@@ -164,10 +166,6 @@ class _LogCursor:
                 event = "log_append"
             else:
                 data, offset = _read_log_tail()
-                if not data:
-                    # EventSource 不派发 data 为空的事件：保持「待全量」状态，
-                    # 等有内容时再推整段，别的标签页清空后才不会残留旧日志
-                    return None
                 self._ino, self._mtime_ns, self._offset, self._generation = (
                     st.st_ino,
                     st.st_mtime_ns,
@@ -175,6 +173,10 @@ class _LogCursor:
                     generation,
                 )
                 event = "log"
+                if not data:
+                    # EventSource 不派发 data 为空的事件：空日志改推 log_clear，
+                    # 别的标签页清空后、或清空后重连时前端才不会残留旧日志
+                    event, data = "log_clear", b"1"
         except FileNotFoundError:
             # 尚未创建，或正处于轮转改名的间隙：本轮跳过
             return None

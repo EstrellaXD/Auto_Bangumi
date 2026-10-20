@@ -118,6 +118,11 @@ export const useEventStream = createSharedComposable(() => {
       logData.value = (e as MessageEvent).data;
     });
 
+    // EventSource 不派发 data 为空的事件，空日志由服务端改推 log_clear
+    es.addEventListener('log_clear', () => {
+      logData.value = '';
+    });
+
     es.addEventListener('log_append', (e) => {
       const text = (logData.value ?? '') + (e as MessageEvent).data;
       if (text.length <= LOG_MAX_CHARS) {

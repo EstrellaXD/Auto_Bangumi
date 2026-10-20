@@ -61,8 +61,11 @@ async def _tick_with_feeds(
 
 class TestAggregateAnalysis:
     async def test_item_matched_for_same_feed_skips_matching(self, rss_engine):
-        """本订阅已匹配入库的种子不再匹配，也不会生成新规则。"""
+        """本订阅已匹配入库、番剧 rss_link 已含本订阅 URL 的种子不再匹配。"""
         await rss_engine.db.rss.add(make_rss_item(url=FEED_A))
+        await rss_engine.db.bangumi.add(
+            make_bangumi(title_raw="Dungeon Meshi", filter="", rss_link=FEED_A)
+        )
         await rss_engine.db.torrent.add(
             make_torrent(
                 name="[Sub] Dungeon Meshi - 01 [1080p].mkv",
@@ -85,7 +88,27 @@ class TestAggregateAnalysis:
 
         bangumi_match.assert_not_awaited()
         movie_match.assert_not_awaited()
-        assert await rss_engine.db.bangumi.search_all() == []
+        assert len(await rss_engine.db.bangumi.search_all()) == 1
+
+    async def test_edited_feed_url_appends_to_rss_link(self, rss_engine):
+        """订阅改了 URL（rss_id 不变）：本订阅已匹配的种子仍要匹配，
+        把新 URL 追加到 rss_link，补下载才不会用过期链接（#1053）。"""
+        await rss_engine.db.rss.add(make_rss_item(url=FEED_B))
+        await rss_engine.db.bangumi.add(
+            make_bangumi(title_raw="Mushoku Tensei", filter="", rss_link=FEED_A)
+        )
+        name = "[Sub] Mushoku Tensei - 12 [1080p].mkv"
+        await rss_engine.db.torrent.add(
+            make_torrent(name=name, url=KNOWN_URL, rss_id=1, bangumi_id=1)
+        )
+
+        await _tick_with_feeds(
+            rss_engine, {FEED_B: [Torrent(name=name, url=KNOWN_URL)]}
+        )
+
+        bangumi = await rss_engine.db.bangumi.search_id(1)
+        assert bangumi is not None
+        assert bangumi.rss_link.split(",") == [FEED_A, FEED_B]
 
     async def test_orphan_for_same_feed_is_analysed_again(self, rss_engine):
         """本订阅记录的未匹配种子（孤儿）每轮仍参与分析，新番能生成规则。"""
@@ -947,10 +970,10 @@ class TestRefreshRssPerHostThrottle:
         }
         check_new = TorrentDatabase.check_new
 
-        async def flaky_check_new(self, torrents, rss_id=None):
+        async def flaky_check_new(self, torrents, rss=None):
             if any(t.url == "a" for t in torrents):
                 raise OperationalError("SELECT", {}, Exception("disk I/O error"))
-            return await check_new(self, torrents, rss_id)
+            return await check_new(self, torrents, rss)
 
         client = AsyncMock()
         client.add_torrent = AsyncMock(return_value=AddResult.ADDED)
