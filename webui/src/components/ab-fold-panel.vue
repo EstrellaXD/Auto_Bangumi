@@ -5,10 +5,13 @@ import { NCollapse, NCollapseItem } from 'naive-ui';
 // 折叠面板 v2：naive-ui NCollapse 负责展开状态与高度动画（reduced-motion 下由全局规则直接切换）。
 // NCollapse 的头部是无语义的 div，可聚焦的 button 与 aria-expanded 由插槽提供；
 // 点击冒泡到 naive-ui 的头部触发切换。正文始终挂载（display-directive="show"）。
+// 正文是以标题命名的 region，按钮用 aria-controls 指向它（headlessui 原先自动提供）。
 const { title = 'title', defaultOpen = true } = defineProps<{
   title: string;
   defaultOpen?: boolean;
 }>();
+
+const id = useId();
 </script>
 
 <template>
@@ -20,10 +23,12 @@ const { title = 'title', defaultOpen = true } = defineProps<{
     <NCollapseItem name="panel">
       <template #header="{ collapsed }">
         <button
+          :id="`${id}-header`"
           type="button"
           class="fold-panel-header"
           :class="{ 'fold-panel-header--open': !collapsed }"
           :aria-expanded="!collapsed"
+          :aria-controls="`${id}-body`"
         >
           <div class="fold-panel-title">
             {{ title }}
@@ -40,7 +45,12 @@ const { title = 'title', defaultOpen = true } = defineProps<{
         <span />
       </template>
 
-      <div class="fold-panel-body">
+      <div
+        :id="`${id}-body`"
+        class="fold-panel-body"
+        role="region"
+        :aria-labelledby="`${id}-header`"
+      >
         <slot />
       </div>
     </NCollapseItem>

@@ -56,7 +56,7 @@ jobs:
         with:
           python-version: "3.14"
       - &uv
-        uses: astral-sh/setup-uv@v10
+        uses: astral-sh/setup-uv@v10.3.0
         with:
           version: "0.13.x"
       - &pnpm
