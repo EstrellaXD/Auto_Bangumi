@@ -88,5 +88,6 @@ def setup_logger(level: int = logging.INFO, reset: bool = False):
         handlers=[queue_handler],
     )
 
-    # Suppress verbose HTTP request logs from httpx
-    logging.getLogger("httpx").setLevel(logging.WARNING)
+    # 压低 HTTP 请求日志：httpx2 是本项目的客户端；google-genai 与 mcp 仍依赖旧 httpx
+    for name in ("httpx2", "httpx"):
+        logging.getLogger(name).setLevel(logging.WARNING)

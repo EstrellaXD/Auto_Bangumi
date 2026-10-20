@@ -10,7 +10,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
-import httpx
+import httpx2
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import (
@@ -88,21 +88,21 @@ def make_installer(tmp_path, keypair, zip_bytes, *, entry=None, tamper_sig=False
     zip_sig = base64.b64encode(b"\x00" * 64).decode() if tamper_sig else sign(zip_bytes)
     requested: list[str] = []
 
-    def handler(request: httpx.Request) -> httpx.Response:
+    def handler(request: httpx2.Request) -> httpx2.Response:
         url = str(request.url)
         requested.append(url)
         assert "/releases/download/plugins/" in url
         if url.endswith("catalog.json"):
-            return httpx.Response(200, content=catalog_bytes)
+            return httpx2.Response(200, content=catalog_bytes)
         if url.endswith("catalog.json.sig"):
-            return httpx.Response(200, text=sign(catalog_bytes))
+            return httpx2.Response(200, text=sign(catalog_bytes))
         if url.endswith(".zip"):
-            return httpx.Response(200, content=zip_bytes)
+            return httpx2.Response(200, content=zip_bytes)
         if url.endswith(".zip.sig"):
-            return httpx.Response(200, text=zip_sig)
-        return httpx.Response(404)
+            return httpx2.Response(200, text=zip_sig)
+        return httpx2.Response(404)
 
-    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    client = httpx2.AsyncClient(transport=httpx2.MockTransport(handler))
     return PluginInstaller(
         root=tmp_path / "plugins",
         pubkey_path=pubkey_path,
@@ -192,7 +192,7 @@ class TestInstall:
     ):
         def sdk_too_new(plugin_dir: Path) -> None:
             manifest = plugin_dir / "plugin.toml"
-            manifest.write_text(manifest.read_text().replace(">=0.5", ">=9"))
+            manifest.write_text(manifest.read_text().replace(">=0.6", ">=9"))
 
         def with_native(plugin_dir: Path) -> None:
             (plugin_dir / "fast.so").write_bytes(b"\x7fELF")
@@ -300,14 +300,14 @@ class TestReleaseScript:
 
         released = tmp_path / "release"
 
-        def handler(request: httpx.Request) -> httpx.Response:
+        def handler(request: httpx2.Request) -> httpx2.Response:
             name = request.url.path.rsplit("/", 1)[-1]
-            return httpx.Response(200, content=(released / name).read_bytes())
+            return httpx2.Response(200, content=(released / name).read_bytes())
 
         installer = PluginInstaller(
             root=tmp_path / "plugins",
             pubkey_path=pubkey_path,
-            client=httpx.AsyncClient(transport=httpx.MockTransport(handler)),
+            client=httpx2.AsyncClient(transport=httpx2.MockTransport(handler)),
             app_version=app_version,
         )
         [entry] = await installer.fetch_catalog()
@@ -409,7 +409,7 @@ class TestPluginsApi:
         monkeypatch.setattr(
             plugins_api.PluginInstaller,
             "fetch_catalog",
-            AsyncMock(side_effect=httpx.ConnectError("down")),
+            AsyncMock(side_effect=httpx2.ConnectError("down")),
         )
 
         assert authed_client.get("/api/v1/plugins/catalog").status_code == 502

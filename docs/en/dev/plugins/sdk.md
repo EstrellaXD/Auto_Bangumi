@@ -7,16 +7,16 @@ The plugin SDK is not on PyPI. Each 4.0 beta and stable [GitHub release](https:/
 | `autobangumi_sdk-<SDK version>-py3-none-any.whl` | The `ab_sdk` package and the `ab-plugin` command |
 | `autobangumi-plugin-skill-<AB version>.zip` | A plugin-development skill for AI coding assistants |
 
-The wheel file name contains the SDK version (`ab_sdk.SDK_VERSION`, for example `0.5.0`). It does not contain the AB version. Download the wheel from the release of your target AB version, so that the two SDK versions are the same. The `sdk` range in the plugin manifest (for example `">=0.5,<1"`) must include this version.
+The wheel file name contains the SDK version (`ab_sdk.SDK_VERSION`, for example `0.6.0`). It does not contain the AB version. Download the wheel from the release of your target AB version, so that the two SDK versions are the same. The `sdk` range in the plugin manifest (for example `">=0.5,<1"`) must include this version.
 
 ## Install the wheel
 
-The wheel needs Python 3.13 or later. It depends on `pydantic`, `httpx` and `packaging`. You do not need to install AutoBangumi.
+The wheel needs Python 3.13 or later. It depends on `pydantic`, `httpx2` and `packaging`. You do not need to install AutoBangumi.
 
 To use only the command line, install the wheel as a global tool:
 
 ```bash
-uv tool install ./autobangumi_sdk-0.5.0-py3-none-any.whl
+uv tool install ./autobangumi_sdk-0.6.0-py3-none-any.whl
 ab-plugin --help
 ```
 
@@ -24,7 +24,7 @@ To write a plugin and run its tests, add the wheel as a dependency of the plugin
 
 ```bash
 cd my-plugin
-uv add ../autobangumi_sdk-0.5.0-py3-none-any.whl
+uv add ../autobangumi_sdk-0.6.0-py3-none-any.whl
 uv run pytest
 ```
 

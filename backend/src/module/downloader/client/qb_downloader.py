@@ -5,7 +5,7 @@ import logging
 import re
 from typing import ClassVar
 
-import httpx
+import httpx2
 
 from module.ab_decorator import qb_connect_failed_wait
 from module.downloader.base import (
@@ -78,7 +78,7 @@ class QbDownloader:
         self.username = username
         self.password = password
         self.ssl = ssl
-        self._client: httpx.AsyncClient | None = None
+        self._client: httpx2.AsyncClient | None = None
         self._authed = False
         # 最近一次 auth 失败的原因（unreachable | credentials | banned），
         # 供上层（checker/startup 等待循环）区分故障类型；成功后清空。
@@ -97,21 +97,21 @@ class QbDownloader:
     def _url(self, endpoint: str) -> str:
         return f"{self.host}/api/v2/{endpoint}"
 
-    def _new_client(self) -> httpx.AsyncClient:
-        timeout = httpx.Timeout(connect=5.0, read=10.0, write=10.0, pool=10.0)
+    def _new_client(self) -> httpx2.AsyncClient:
+        timeout = httpx2.Timeout(connect=5.0, read=10.0, write=10.0, pool=10.0)
         # Keepalive_expiry keeps idle TCP sockets short-lived so they can't
         # outlive a proxy / NAS idle-reap, which would otherwise surface as
         # "Server disconnected without sending a response" when the next
         # renamer cycle reuses the pool (#984). max_connections caps parallel
         # load on the downloader and anything fronting it.
-        limits = httpx.Limits(
+        limits = httpx2.Limits(
             max_keepalive_connections=5,
             max_connections=10,
             keepalive_expiry=30.0,
         )
         # Never verify certificates - self-signed certs are the norm for
         # home-server / NAS / Docker qBittorrent setups.
-        return httpx.AsyncClient(timeout=timeout, limits=limits, verify=False)
+        return httpx2.AsyncClient(timeout=timeout, limits=limits, verify=False)
 
     async def auth(self, retry=3):
         # Session reuse: a live, already-authenticated client short-circuits so
@@ -191,7 +191,7 @@ class QbDownloader:
                     )
                     await asyncio.sleep(5)
                     times += 1
-            except httpx.ConnectError as e:
+            except httpx2.ConnectError as e:
                 self.last_auth_error = "unreachable"
                 if use_https:
                     logger.error(
@@ -216,7 +216,7 @@ class QbDownloader:
                 break
         return False
 
-    async def _request(self, method: str, endpoint: str, **kwargs) -> httpx.Response:
+    async def _request(self, method: str, endpoint: str, **kwargs) -> httpx2.Response:
         """Issue a request, re-authenticating once if the session expired.
 
         qBittorrent answers 403 when the session cookie is no longer valid
@@ -244,10 +244,10 @@ class QbDownloader:
             resp = await self._client.request(method, self._url(endpoint), **kwargs)
         return resp
 
-    async def _get(self, endpoint: str, **kwargs) -> httpx.Response:
+    async def _get(self, endpoint: str, **kwargs) -> httpx2.Response:
         return await self._request("GET", endpoint, **kwargs)
 
-    async def _post(self, endpoint: str, **kwargs) -> httpx.Response:
+    async def _post(self, endpoint: str, **kwargs) -> httpx2.Response:
         return await self._request("POST", endpoint, **kwargs)
 
     async def logout(self):
@@ -255,9 +255,9 @@ class QbDownloader:
             try:
                 await self._client.post(self._url("auth/logout"))
             except (
-                httpx.ConnectError,
-                httpx.RequestError,
-                httpx.TimeoutException,
+                httpx2.ConnectError,
+                httpx2.RequestError,
+                httpx2.TimeoutException,
             ) as e:
                 logger.debug("Logout request failed (non-critical): %s", e)
             await self._client.aclose()
@@ -306,7 +306,7 @@ class QbDownloader:
                 )
                 return None
             payload = resp.json()
-        except (ConnectionError, OSError, ValueError, httpx.RequestError) as e:
+        except (ConnectionError, OSError, ValueError, httpx2.RequestError) as e:
             logger.warning("Could not verify qBittorrent task %s: %s", torrent_hash, e)
             return None
         return isinstance(payload, list) and any(
@@ -374,11 +374,11 @@ class QbDownloader:
             resp = await self._get("torrents/info", params={"hashes": "|".join(hashes)})
             found = {t.get("hash", "").lower() for t in resp.json()}
             return set(hashes) <= found
-        except (httpx.RequestError, ValueError):
+        except (httpx2.RequestError, ValueError):
             return False
 
     @staticmethod
-    def _parse_add_response_json(resp: httpx.Response) -> dict | None:
+    def _parse_add_response_json(resp: httpx2.Response) -> dict | None:
         """qB >= 5.2 的 torrents/add 回 JSON 计数；旧版本回 "Ok."/"Fails."。
         不是该结构（如代理返回的 HTML 错误页）时返回 None，走通用失败路径。
         """
@@ -483,7 +483,7 @@ class QbDownloader:
                     "qBittorrent rejected torrent add: "
                     f"HTTP {resp.status_code} {resp.text!r}"
                 )
-            except (httpx.ReadError, httpx.ConnectError, httpx.RequestError) as e:
+            except (httpx2.ReadError, httpx2.ConnectError, httpx2.RequestError) as e:
                 if attempt < max_retries - 1:
                     logger.warning(
                         f"Network error adding torrent (attempt {attempt + 1}/{max_retries}): {e}"
@@ -600,7 +600,7 @@ class QbDownloader:
                 RenameOutcome.RETRYABLE_FAILURE,
                 detail="qBittorrent did not expose the target path after rename",
             )
-        except (httpx.ConnectError, httpx.RequestError, httpx.TimeoutException) as e:
+        except (httpx2.ConnectError, httpx2.RequestError, httpx2.TimeoutException) as e:
             logger.warning(f"Failed to rename file {old_path}: {e}")
             return RenameResult(RenameOutcome.RETRYABLE_FAILURE, detail=str(e))
 

@@ -10,7 +10,7 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-import httpx
+import httpx2
 import pytest
 
 from test.e2e.support import REPO_ROOT, wait_until
@@ -96,7 +96,7 @@ def _image_version(container_id: str) -> str:
     return _run("docker", "exec", container_id, "cat", "/app/IMAGE_VERSION")
 
 
-def _wait_for_health(client: httpx.Client) -> dict[str, Any]:
+def _wait_for_health(client: httpx2.Client) -> dict[str, Any]:
     def probe() -> dict[str, Any]:
         response = client.get("/health")
         return {
@@ -119,7 +119,7 @@ def _wait_for_health(client: httpx.Client) -> dict[str, Any]:
 
 def test_packaged_image_version_and_config_survive_container_restart():
     environment = _stack_environment()
-    with httpx.Client(
+    with httpx2.Client(
         base_url=environment["AB_E2E_BASE_URL"],
         timeout=10,
         trust_env=False,

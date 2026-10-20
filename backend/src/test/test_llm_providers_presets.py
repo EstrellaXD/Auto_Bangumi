@@ -107,7 +107,7 @@ class TestJsonObjectFallback:
                 ]
             )
         )
-        parser._openai_client.beta.chat.completions.parse = mock_parse
+        parser._openai_client.chat.completions.parse = mock_parse
 
         assert await parser.parse("raw") == EPISODE_DICT
         mock_parse.assert_awaited_once()

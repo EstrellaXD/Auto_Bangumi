@@ -1,6 +1,6 @@
 """LLM 插件安装管线：签名下载 → 校验 → 解包 → 加载 → 解析（克隆 updater 模式）。
 
-用测试 ed25519 密钥对 + 内存构造的假插件 zip + httpx.MockTransport + tmp_path，
+用测试 ed25519 密钥对 + 内存构造的假插件 zip + httpx2.MockTransport + tmp_path，
 覆盖安全路径：sha 不符、无签名、坏签名、zip-slip、版本不兼容、id 不匹配全部拒绝。
 """
 
@@ -10,7 +10,7 @@ import io
 import json
 import zipfile
 
-import httpx
+import httpx2
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import (
@@ -108,21 +108,21 @@ def _installer(tmp_path, keypair, zip_bytes, *, catalog=None, tamper_sig=False):
     if tamper_sig:
         sig = base64.b64encode(b"\x00" * 64).decode()
 
-    def handler(request: httpx.Request) -> httpx.Response:
+    def handler(request: httpx2.Request) -> httpx2.Response:
         url = str(request.url)
         if url.endswith("catalog.json"):
-            return httpx.Response(200, content=catalog_bytes)
+            return httpx2.Response(200, content=catalog_bytes)
         if url.endswith("catalog.json.sig"):
-            return httpx.Response(200, text=_sign(priv, catalog_bytes))
+            return httpx2.Response(200, text=_sign(priv, catalog_bytes))
         if url.endswith(".zip"):
-            return httpx.Response(200, content=zip_bytes)
+            return httpx2.Response(200, content=zip_bytes)
         if url.endswith(".zip.sig"):
-            return httpx.Response(200, text=sig)
+            return httpx2.Response(200, text=sig)
         if url.endswith(".zip.sha256"):
-            return httpx.Response(200, text=hashlib.sha256(zip_bytes).hexdigest())
-        return httpx.Response(404)
+            return httpx2.Response(200, text=hashlib.sha256(zip_bytes).hexdigest())
+        return httpx2.Response(404)
 
-    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    client = httpx2.AsyncClient(transport=httpx2.MockTransport(handler))
     return PluginInstaller(
         root=tmp_path / "plugins",
         pubkey_path=pubkey_path,

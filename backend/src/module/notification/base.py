@@ -151,13 +151,13 @@ class NotificationProvider(ABC):
         return await self._http.post_files(url, data, files)
 
     async def _post_json(self, url: str, json_data: dict):
-        """POST a JSON payload via ``RequestURL.post_json`` (httpx ``json=``).
+        """POST a JSON payload via ``RequestURL.post_json`` (httpx2 ``json=``).
 
         Args:
             url: The target URL.
             json_data: The JSON-serializable payload.
 
         Returns:
-            The httpx response.
+            The httpx2 response.
         """
         return await self._http.post_json(url, json_data)

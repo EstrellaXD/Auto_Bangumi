@@ -11,7 +11,7 @@ A plugin is a Python package, with optional frontend components. It runs inside 
 1. Install the SDK and the command line. The wheel is an attachment of each 4.0 beta and stable release on [GitHub Releases](https://github.com/EstrellaXD/Auto_Bangumi/releases). The file name is `autobangumi_sdk-<SDK version>-py3-none-any.whl`. The wheel is not on PyPI. Refer to [Get the SDK](/en/dev/plugins/sdk).
 
    ```bash
-   uv tool install ./autobangumi_sdk-0.5.0-py3-none-any.whl
+   uv tool install ./autobangumi_sdk-0.6.0-py3-none-any.whl
    ```
 
 2. Create a skeleton and run its tests. The `pyproject.toml` of the skeleton needs `autobangumi-sdk`. This package is not on PyPI. Thus, first use `uv add` to point the dependency to the wheel that you downloaded:
@@ -19,7 +19,7 @@ A plugin is a Python package, with optional frontend components. It runs inside 
    ```bash
    ab-plugin new my-rename --kind rename   # or notifier, search
    cd my-rename
-   uv add ../autobangumi_sdk-0.5.0-py3-none-any.whl   # use the real path of the wheel
+   uv add ../autobangumi_sdk-0.6.0-py3-none-any.whl   # use the real path of the wheel
    uv run pytest                                      # the skeleton includes a contract test
    ```
 

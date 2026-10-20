@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Annotated
 from urllib.parse import urlparse
 
-import httpx
+import httpx2
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
@@ -213,7 +213,7 @@ async def test_downloader(req: TestDownloaderRequest):
     _validate_scheme(host)
 
     try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
+        async with httpx2.AsyncClient(timeout=5.0) as client:
             if req.type == "aria2":
                 # aria2 走 JSON-RPC：getVersion 一次验证可达性与 RPC secret
                 params = [f"token:{req.password}"] if req.password else []
@@ -288,13 +288,13 @@ async def test_downloader(req: TestDownloaderRequest):
                     message_en="Authentication failed: incorrect username or password.",
                     message_zh="认证失败：用户名或密码错误。",
                 )
-    except httpx.TimeoutException:
+    except httpx2.TimeoutException:
         return TestResultResponse(
             success=False,
             message_en="Connection timed out.",
             message_zh="连接超时。",
         )
-    except httpx.ConnectError:
+    except httpx2.ConnectError:
         return TestResultResponse(
             success=False,
             message_en="Cannot connect to the host.",
@@ -438,7 +438,7 @@ async def complete_setup(
 
         # settings.save() does synchronous file I/O; keep it off the event loop.
         await asyncio.to_thread(settings.save, config_dict)
-        # Route through the AppContext reload path so the shared httpx client,
+        # Route through the AppContext reload path so the shared httpx2 client,
         # notifier, and scheduler are rebuilt against the new config too — not
         # just the in-memory settings dict.
         await ctx.reload_settings()

@@ -4,8 +4,7 @@ import math
 from collections.abc import Mapping
 from typing import Any
 
-import httpx
-from httpx_socks import AsyncProxyTransport
+import httpx2
 
 from ab_sdk import points
 from ab_sdk.ingest import HttpRequest
@@ -15,13 +14,13 @@ from module.plugin import host as plugin_host
 logger = logging.getLogger(__name__)
 
 # Module-level shared client for connection reuse
-_shared_client: httpx.AsyncClient | None = None
+_shared_client: httpx2.AsyncClient | None = None
 _shared_client_proxy_key: str | None = None
 
 # RSS 循环间隔 900s， 远超服务端 keep-alive 超时（60-120s）
 # keepalive_expiry=60 让空闲连接在过期前主动丢弃，避免复用过期连接
 # max_connections=20 足够覆盖典型订阅数量
-_CONNECTION_LIMITS = httpx.Limits(
+_CONNECTION_LIMITS = httpx2.Limits(
     max_keepalive_connections=5,
     max_connections=20,
     keepalive_expiry=60.0,
@@ -33,7 +32,7 @@ HTTP_429_FALLBACK_DELAY = 10.0
 HTTP_429_MAX_RETRY_AFTER = 60.0
 
 
-def _retry_after_delay(response: httpx.Response) -> float:
+def _retry_after_delay(response: httpx2.Response) -> float:
     """从 429 响应解析等待秒数；仅接受数字形式的 Retry-After，日期形式走默认值。"""
     retry_after = response.headers.get("Retry-After")
     if retry_after is not None:
@@ -54,14 +53,32 @@ def _proxy_config_key() -> str:
     return ""
 
 
-async def get_shared_client() -> httpx.AsyncClient:
+def proxy_url() -> str | None:
+    """settings.proxy 对应的代理 URL；未启用或类型未知时为 None。
+
+    socks5 由 httpx2 原生支持，目标主机名交给代理解析（等同旧的 rdns=True）。
+    """
+    proxy = settings.proxy
+    if not proxy.enable:
+        return None
+    if "http" in proxy.type:
+        scheme = "http"
+    elif proxy.type == "socks5":
+        scheme = "socks5"
+    else:
+        return None
+    auth = f"{proxy.username}:{proxy.password}@" if proxy.username else ""
+    return f"{scheme}://{auth}{proxy.host}:{proxy.port}"
+
+
+async def get_shared_client() -> httpx2.AsyncClient:
     global _shared_client, _shared_client_proxy_key
     current_key = _proxy_config_key()
     if _shared_client is not None and _shared_client_proxy_key == current_key:
         return _shared_client
     if _shared_client is not None:
         await _shared_client.aclose()
-    timeout = httpx.Timeout(connect=10.0, read=30.0, write=10.0, pool=10.0)
+    timeout = httpx2.Timeout(connect=10.0, read=30.0, write=10.0, pool=10.0)
     # follow_redirects=True: Mikan mirrors and some CDNs respond with 302 to the
     # canonical host; without this, raise_for_status treats the redirect as an
     # error and the RSS pull fails (#983).
@@ -70,34 +87,18 @@ async def get_shared_client() -> httpx.AsyncClient:
         "limits": _CONNECTION_LIMITS,
         "follow_redirects": True,
     }
-    if settings.proxy.enable:
-        if "http" in settings.proxy.type:
-            if settings.proxy.username:
-                proxy_url = f"http://{settings.proxy.username}:{settings.proxy.password}@{settings.proxy.host}:{settings.proxy.port}"
-            else:
-                proxy_url = f"http://{settings.proxy.host}:{settings.proxy.port}"
-            _shared_client = httpx.AsyncClient(proxy=proxy_url, **common_kwargs)
-        elif settings.proxy.type == "socks5":
-            if settings.proxy.username:
-                socks_url = f"socks5://{settings.proxy.username}:{settings.proxy.password}@{settings.proxy.host}:{settings.proxy.port}"
-            else:
-                socks_url = f"socks5://{settings.proxy.host}:{settings.proxy.port}"
-            transport = AsyncProxyTransport.from_url(socks_url, rdns=True)
-            _shared_client = httpx.AsyncClient(transport=transport, **common_kwargs)
-        else:
-            _shared_client = httpx.AsyncClient(**common_kwargs)
-    else:
-        _shared_client = httpx.AsyncClient(**common_kwargs)
+    _shared_client = httpx2.AsyncClient(proxy=proxy_url(), **common_kwargs)
     _shared_client_proxy_key = current_key
     return _shared_client
 
 
-async def _replace_stale_client(stale: httpx.AsyncClient) -> httpx.AsyncClient:
-    """#1104: httpcore 在 HTTP 代理 CONNECT 成功、TLS 握手失败时泄漏隧道连接，
+async def _replace_stale_client(stale: httpx2.AsyncClient) -> httpx2.AsyncClient:
+    """#1104: httpcore2 在 HTTP 代理 CONNECT 成功、TLS 握手失败时泄漏隧道连接，
     连接池被占满后永久 PoolTimeout。换一个新 client 给后续请求；旧的不 aclose
     （其他协程可能仍在使用，见 dc786a29），交给 GC 回收。"""
     global _shared_client
-    # ponytail: 旧连接要等 GC 才释放；httpcore 修复 encode/httpcore#1087 发布后升级依赖并删除此函数
+    # ponytail: 旧连接要等 GC 才释放；httpcore2 2.15.1 的 start_tls 失败路径仍未关闭隧道
+    # （同 encode/httpcore#1087），修复发布后升级依赖并删除此函数
     if _shared_client is stale:
         _shared_client = None
     return await get_shared_client()
@@ -138,7 +139,7 @@ class RequestURL:
 
     def __init__(self):
         self.header = {"User-Agent": self.DEFAULT_UA, "Accept": "application/xml"}
-        self._client: httpx.AsyncClient | None = None
+        self._client: httpx2.AsyncClient | None = None
 
     def _get_headers(self, url: str) -> dict:
         """Get appropriate headers based on URL type."""
@@ -173,7 +174,7 @@ class RequestURL:
                 )
                 req.raise_for_status()
                 return req
-            except httpx.HTTPStatusError as e:
+            except httpx2.HTTPStatusError as e:
                 logger.warning(f"HTTP {e.response.status_code} from {url}")
                 if e.response.status_code != 429:
                     break
@@ -187,11 +188,11 @@ class RequestURL:
                     f"({try_time}/{retry})"
                 )
                 await asyncio.sleep(delay)
-            except httpx.RequestError as e:
+            except httpx2.RequestError as e:
                 logger.warning(
                     f"Request error for {url}: {type(e).__name__}. Retry {try_time + 1}/{retry}"
                 )
-                if isinstance(e, httpx.PoolTimeout):
+                if isinstance(e, httpx2.PoolTimeout):
                     self._client = await _replace_stale_client(self._client)
                 try_time += 1
                 if try_time >= retry:
@@ -218,7 +219,7 @@ class RequestURL:
                 req = await self._client.post(url=url, headers=self.header, data=data)
                 req.raise_for_status()
                 return req
-            except httpx.HTTPStatusError as e:
+            except httpx2.HTTPStatusError as e:
                 # 服务端拒绝不是连接失败，重试无意义；把状态码和响应体
                 # （如 Telegram 的 JSON description）记下来便于排查（#1094）。
                 logger.warning(
@@ -228,9 +229,9 @@ class RequestURL:
                     e.response.text[:200],
                 )
                 break
-            except httpx.RequestError as e:
+            except httpx2.RequestError as e:
                 logger.warning(f"Cannot connect to {url}. Wait for 5 seconds.")
-                if isinstance(e, httpx.PoolTimeout):
+                if isinstance(e, httpx2.PoolTimeout):
                     self._client = await _replace_stale_client(self._client)
                 try_time += 1
                 if try_time >= retry:
@@ -254,7 +255,7 @@ class RequestURL:
             )
             req.raise_for_status()
             return req
-        except httpx.HTTPStatusError as e:
+        except httpx2.HTTPStatusError as e:
             # 别把服务端拒绝（4xx/5xx）误报成连接失败：响应体里通常带有明确的
             # 拒绝原因（如 Telegram 的 JSON description），排查 #1094 全靠它。
             logger.warning(
@@ -264,12 +265,12 @@ class RequestURL:
                 e.response.text[:200],
             )
             return None
-        except httpx.RequestError:
+        except httpx2.RequestError:
             logger.warning(f"Cannot connect to {url}.")
             return None
 
     async def post_json(self, url: str, json_data: dict, headers: dict | None = None):
-        """POST a JSON body (httpx ``json=``, not form-encoded ``data=``).
+        """POST a JSON body (httpx2 ``json=``, not form-encoded ``data=``).
 
         Used by JSON-body notification providers (Discord, Webhook, Gotify,
         Bark) that reject form-encoded requests.
@@ -283,7 +284,7 @@ class RequestURL:
             )
             req.raise_for_status()
             return req
-        except (httpx.RequestError, httpx.HTTPStatusError):
+        except (httpx2.RequestError, httpx2.HTTPStatusError):
             logger.warning(f"Cannot connect to {url}.")
             return None
 

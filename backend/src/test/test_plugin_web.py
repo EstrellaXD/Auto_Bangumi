@@ -136,7 +136,7 @@ class TestApi:
     @pytest.mark.parametrize(
         "url",
         [
-            # httpx 会把字面的 ../ 规范化掉，用百分号编码让它原样到达路由
+            # httpx2 会把字面的 ../ 规范化掉，用百分号编码让它原样到达路由
             "/api/v1/plugins/demo/web/%2e%2e%2fplugin.toml",
             # 绝对路径会让 root / path 直接变成该路径
             "/api/v1/plugins/demo/web//etc/hosts",

@@ -1,6 +1,6 @@
 import json
 
-import httpx
+import httpx2
 
 
 def load(filename):
@@ -14,6 +14,6 @@ def save(filename, obj):
 
 
 async def get(url):
-    async with httpx.AsyncClient() as client:
+    async with httpx2.AsyncClient() as client:
         req = await client.get(url)
         return req.json()

@@ -29,7 +29,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Callable, Optional
 
-import httpx
+import httpx2
 import semver
 from pydantic import BaseModel
 
@@ -174,7 +174,7 @@ class Updater:
         data_db: Optional[Path] = None,
         app_root: Optional[Path] = None,
         dependency_syncer: Optional[Callable[[Path], None]] = None,
-        client: Optional[httpx.AsyncClient] = None,
+        client: Optional[httpx2.AsyncClient] = None,
         owner: str = GITHUB_OWNER,
         repo: str = GITHUB_REPO,
         pubkey_path: Optional[Path] = None,
@@ -210,7 +210,7 @@ class Updater:
 
     # -------------------------------------------------------------- HTTP
 
-    async def _get_client(self) -> httpx.AsyncClient:
+    async def _get_client(self) -> httpx2.AsyncClient:
         if self._client is not None:
             return self._client
         return await get_shared_client()

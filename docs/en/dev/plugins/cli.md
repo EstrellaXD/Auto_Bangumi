@@ -3,8 +3,8 @@
 `ab-plugin` is installed with the `autobangumi-sdk` wheel. It depends only on `ab_sdk`. You do not need to install AutoBangumi.
 
 ```bash
-uv tool install ./autobangumi_sdk-0.5.0-py3-none-any.whl
-# or in a project: uv add ./autobangumi_sdk-0.5.0-py3-none-any.whl
+uv tool install ./autobangumi_sdk-0.6.0-py3-none-any.whl
+# or in a project: uv add ./autobangumi_sdk-0.6.0-py3-none-any.whl
 ```
 
 The wheel is an attachment of the 4.0 beta and stable GitHub releases. It is not on PyPI. Refer to [Get the SDK](/en/dev/plugins/sdk). The contract tests need pytest. The `pyproject.toml` that `new` creates already has pytest in its `dev` dependency group. For a project that you make yourself, use `uv add --dev pytest` (or install `autobangumi-sdk[test]`).
@@ -65,7 +65,7 @@ ab-plugin dev [path] [--config-dir config]
 ```bash
 ab-plugin new my-notify --kind notifier
 cd my-notify
-uv add ../autobangumi_sdk-0.5.0-py3-none-any.whl   # one time only
+uv add ../autobangumi_sdk-0.6.0-py3-none-any.whl   # one time only
 uv run pytest            # contract tests
 ab-plugin dev . --config-dir /path/to/autobangumi/config   # link and enable hot reload; restart AB one time
 # change code -> AB reloads -> check in the WebUI

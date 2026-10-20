@@ -21,7 +21,7 @@ from pathlib import Path
 from time import monotonic
 from typing import Any, TypeVar
 
-import httpx
+import httpx2
 
 REPO_ROOT = Path(__file__).resolve().parents[5]
 BACKEND_SRC = REPO_ROOT / "backend" / "src"
@@ -102,7 +102,7 @@ class HttpService:
         host, port = server.server_address[:2]
         connect_host = "127.0.0.1" if host in {"", "0.0.0.0", "::"} else host
         self.base_url = f"http://{connect_host}:{port}"
-        self.client = httpx.Client(
+        self.client = httpx2.Client(
             base_url=self.base_url,
             timeout=5.0,
             trust_env=False,
@@ -167,7 +167,7 @@ class BackendSandbox:
         self._log_handle: Any = None
         self.port = 0
         self.base_url = ""
-        self.client: httpx.Client
+        self.client: httpx2.Client
         self._assign_unused_port()
         self.env = self._build_env()
 
@@ -225,8 +225,8 @@ class BackendSandbox:
         self,
         *,
         headers: Mapping[str, str] | None = None,
-    ) -> httpx.Client:
-        return httpx.Client(
+    ) -> httpx2.Client:
+        return httpx2.Client(
             base_url=self.base_url,
             headers=headers,
             timeout=10.0,
@@ -363,7 +363,7 @@ class BackendSandbox:
         downloader_username: str = "",
         downloader_password: str = "",
         downloader_path: str = "/downloads/Bangumi",
-    ) -> httpx.Response:
+    ) -> httpx2.Response:
         return self.client.post(
             "/api/v1/setup/complete",
             json={
@@ -386,8 +386,8 @@ class BackendSandbox:
         *,
         username: str = E2E_USERNAME,
         password: str = E2E_PASSWORD,
-        client: httpx.Client | None = None,
-    ) -> httpx.Response:
+        client: httpx2.Client | None = None,
+    ) -> httpx2.Response:
         target = client or self.client
         return target.post(
             "/api/v1/auth/login",

@@ -5,7 +5,7 @@ import os
 import shutil
 from typing import ClassVar
 
-import httpx
+import httpx2
 
 from module.database import Database
 from module.database.aria2 import Aria2RenameIntent
@@ -77,7 +77,7 @@ class Aria2Downloader:
         # gid 只在 aria2 实例内唯一，本地映射按实例 id 区分
         self.instance_id = instance_id
         self.secret = password
-        self._client: httpx.AsyncClient | None = None
+        self._client: httpx2.AsyncClient | None = None
         self._authed = False
         self._rpc_url = f"{host}/jsonrpc"
         self._id = 0
@@ -99,9 +99,9 @@ class Aria2Downloader:
         }
         try:
             resp = await self._client.post(self._rpc_url, json=payload, timeout=timeout)
-        except httpx.TimeoutException as e:
+        except httpx2.TimeoutException as e:
             raise Aria2ConnectionError(f"aria2 RPC '{method}' timed out: {e}") from e
-        except httpx.RequestError as e:
+        except httpx2.RequestError as e:
             raise Aria2ConnectionError(
                 f"aria2 RPC '{method}' request failed: {e}"
             ) from e
@@ -120,8 +120,8 @@ class Aria2Downloader:
         if self._client is not None and self._authed:
             return True
         if self._client is None:
-            self._client = httpx.AsyncClient(
-                timeout=httpx.Timeout(connect=3.1, read=10.0, write=10.0, pool=10.0)
+            self._client = httpx2.AsyncClient(
+                timeout=httpx2.Timeout(connect=3.1, read=10.0, write=10.0, pool=10.0)
             )
         times = 0
         while times < retry:

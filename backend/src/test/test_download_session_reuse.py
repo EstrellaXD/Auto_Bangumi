@@ -23,7 +23,7 @@ def _patch_qb_settings(mock_settings, host="localhost:8080"):
 
 
 class _FakeHTTP:
-    """Minimal httpx.AsyncClient stand-in counting logins and data requests."""
+    """Minimal httpx2.AsyncClient stand-in counting logins and data requests."""
 
     def __init__(self, login_calls: list, request_calls: list):
         self._login_calls = login_calls
@@ -62,7 +62,7 @@ class TestSessionReuse:
         with patch("module.downloader.download_client.settings") as mock_settings:
             _patch_qb_settings(mock_settings)
             with patch(
-                "module.downloader.client.qb_downloader.httpx.AsyncClient",
+                "module.downloader.client.qb_downloader.httpx2.AsyncClient",
                 side_effect=make_http,
             ):
                 async with DownloadClient():
@@ -98,7 +98,7 @@ class TestSessionReuse:
                 pass
 
         with patch(
-            "module.downloader.client.qb_downloader.httpx.AsyncClient",
+            "module.downloader.client.qb_downloader.httpx2.AsyncClient",
             return_value=_Fake403Once(),
         ):
             await qb.auth()
@@ -140,7 +140,7 @@ class TestSessionReuse:
             return client
 
         with patch(
-            "module.downloader.client.qb_downloader.httpx.AsyncClient",
+            "module.downloader.client.qb_downloader.httpx2.AsyncClient",
             side_effect=make_http,
         ):
             assert await qb.auth() is True
@@ -168,7 +168,7 @@ class TestSessionReuse:
                 pass
 
         with patch(
-            "module.downloader.client.qb_downloader.httpx.AsyncClient",
+            "module.downloader.client.qb_downloader.httpx2.AsyncClient",
             return_value=_SlowLogin(),
         ):
             r1, r2 = await asyncio.gather(qb.auth(), qb.auth())
@@ -178,7 +178,7 @@ class TestSessionReuse:
 
 
 class _FakeRejectHTTP:
-    """登录永远被拒（错误密码）的 httpx 替身。"""
+    """登录永远被拒（错误密码）的 httpx2 替身。"""
 
     def __init__(self, login_calls: list):
         self._login_calls = login_calls
@@ -204,7 +204,7 @@ class TestCredentialFailureLatch:
         with patch("module.downloader.download_client.settings") as mock_settings:
             _patch_qb_settings(mock_settings)
             with patch(
-                "module.downloader.client.qb_downloader.httpx.AsyncClient",
+                "module.downloader.client.qb_downloader.httpx2.AsyncClient",
                 side_effect=lambda *a, **k: _FakeRejectHTTP(login_calls),
             ):
                 for _ in range(3):  # 三个先后到来的 loop tick
@@ -233,7 +233,7 @@ class TestCredentialFailureLatch:
 
         qb = QbDownloader("localhost:8080", "admin", "wrong", ssl=False)
         with patch(
-            "module.downloader.client.qb_downloader.httpx.AsyncClient",
+            "module.downloader.client.qb_downloader.httpx2.AsyncClient",
             return_value=_SlowReject(),
         ):
             r = await asyncio.gather(qb.auth(), qb.auth(), qb.auth())
@@ -250,7 +250,7 @@ class TestCredentialFailureLatch:
         with patch("module.downloader.download_client.settings") as mock_settings:
             _patch_qb_settings(mock_settings)
             with patch(
-                "module.downloader.client.qb_downloader.httpx.AsyncClient",
+                "module.downloader.client.qb_downloader.httpx2.AsyncClient",
                 side_effect=lambda *a, **k: _FakeRejectHTTP(login_calls),
             ):
                 with pytest.raises(ConnectionError):
@@ -286,7 +286,7 @@ class TestRetiredClientLifecycle:
 
         with patch("module.downloader.download_client.settings") as mock_settings:
             with patch(
-                "module.downloader.client.qb_downloader.httpx.AsyncClient",
+                "module.downloader.client.qb_downloader.httpx2.AsyncClient",
                 side_effect=lambda *a, **k: _TrackedHTTP(),
             ):
                 _patch_qb_settings(mock_settings, host="host-a:8080")
@@ -321,7 +321,7 @@ class TestRetiredClientLifecycle:
         with patch("module.downloader.download_client.settings") as mock_settings:
             _patch_qb_settings(mock_settings)
             with patch(
-                "module.downloader.client.qb_downloader.httpx.AsyncClient",
+                "module.downloader.client.qb_downloader.httpx2.AsyncClient",
                 return_value=_HangingLogin(),
             ):
 
@@ -369,7 +369,7 @@ class TestRetiredClientLifecycle:
 
         with patch("module.downloader.download_client.settings") as mock_settings:
             with patch(
-                "module.downloader.client.qb_downloader.httpx.AsyncClient",
+                "module.downloader.client.qb_downloader.httpx2.AsyncClient",
                 side_effect=[_SlowLoginHTTP(), _FastHTTP()],
             ):
                 _patch_qb_settings(mock_settings, host="host-a:8080")

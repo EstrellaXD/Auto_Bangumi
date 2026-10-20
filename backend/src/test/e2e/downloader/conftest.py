@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-import httpx
+import httpx2
 import pytest
 
 from test.e2e.support import REPO_ROOT, wait_until
@@ -107,7 +107,7 @@ class DownloaderStack:
     def image_version(self, container_id: str) -> str:
         return self.run("docker", "exec", container_id, "cat", "/app/IMAGE_VERSION")
 
-    def wait_for_health(self, client: httpx.Client) -> dict[str, Any]:
+    def wait_for_health(self, client: httpx2.Client) -> dict[str, Any]:
         def probe() -> dict[str, Any]:
             response = client.get("/health")
             return {

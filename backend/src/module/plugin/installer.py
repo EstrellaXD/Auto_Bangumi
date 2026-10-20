@@ -25,7 +25,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, ClassVar, Optional
 
-import httpx
+import httpx2
 import semver
 
 from ab_sdk.manifest import ID_RE, MANIFEST_NAME, RESERVED_IDS, check
@@ -89,7 +89,7 @@ class SignedCatalogInstaller:
         *,
         root: Optional[Path] = None,
         pubkey_path: Optional[Path] = None,
-        client: Optional[httpx.AsyncClient] = None,
+        client: Optional[httpx2.AsyncClient] = None,
         app_version: str = "0.0.0",
     ) -> None:
         self.root = root if root is not None else DEFAULT_PLUGINS_ROOT
@@ -123,7 +123,7 @@ class SignedCatalogInstaller:
 
     # ------------------------------------------------------------ 下载
 
-    async def _get_client(self) -> httpx.AsyncClient:
+    async def _get_client(self) -> httpx2.AsyncClient:
         if self._client is not None:
             return self._client
         from module.network.request_url import get_shared_client

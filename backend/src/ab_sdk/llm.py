@@ -13,7 +13,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any, Callable, ClassVar, Literal, Optional
 
-import httpx
+import httpx2
 from pydantic import BaseModel
 
 
@@ -66,9 +66,9 @@ class AdapterContext:
     api_key: str = ""
     base_url: str = ""
     timeout: float = 20.0
-    # llm._build_http_client——代理感知的 httpx 客户端工厂（保持其
+    # llm._build_http_client——代理感知的 httpx2 客户端工厂（保持其
     # patch 路径在 llm.py，因此以依赖注入方式传入）。
-    build_http_client: Callable[[float], httpx.AsyncClient] = None  # type: ignore[assignment]
+    build_http_client: Callable[[float], httpx2.AsyncClient] = None  # type: ignore[assignment]
     # M3 起为 CredentialStore；api_key 类适配器恒为 None。
     credentials: Any = None
 
@@ -78,7 +78,7 @@ class LLMProviderAdapter(ABC):
 
     info: ClassVar[ProviderInfo]
 
-    _http_client: Optional[httpx.AsyncClient] = None
+    _http_client: Optional[httpx2.AsyncClient] = None
 
     def __init__(self, ctx: AdapterContext) -> None:
         self.ctx = ctx

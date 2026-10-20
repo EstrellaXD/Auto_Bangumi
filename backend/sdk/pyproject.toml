@@ -13,7 +13,7 @@ requires-python = ">=3.14"
 license = "MIT"
 dependencies = [
     "pydantic>=2.0.0",
-    "httpx>=0.25.0",
+    "httpx2>=2.15",
     "packaging>=26.0",
 ]
 

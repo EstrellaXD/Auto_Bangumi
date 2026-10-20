@@ -9,7 +9,7 @@ import json
 import logging
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import httpx
+import httpx2
 import pytest
 
 from module.downloader import AddResult, RenameOutcome
@@ -120,7 +120,7 @@ def test_scheme_selection_matrix(host: str, ssl: bool, expected_prefix: str):
 
 
 class TestAuthClientCreation:
-    """auth() must create the httpx.AsyncClient with verify=False unconditionally."""
+    """auth() must create the httpx2.AsyncClient with verify=False unconditionally."""
 
     async def test_auth_creates_client_with_verify_false_when_ssl_true(self):
         """verify=False is used even when ssl=True (self-signed certs are common)."""
@@ -144,7 +144,7 @@ class TestAuthClientCreation:
                 pass
 
         with patch(
-            "module.downloader.client.qb_downloader.httpx.AsyncClient", _FakeClient
+            "module.downloader.client.qb_downloader.httpx2.AsyncClient", _FakeClient
         ):
             result = await qb.auth()
 
@@ -174,7 +174,7 @@ class TestAuthClientCreation:
                 pass
 
         with patch(
-            "module.downloader.client.qb_downloader.httpx.AsyncClient", _FakeClient
+            "module.downloader.client.qb_downloader.httpx2.AsyncClient", _FakeClient
         ):
             result = await qb.auth()
 
@@ -185,7 +185,7 @@ class TestAuthClientCreation:
         """auth() sets connect timeout to 5.0 seconds."""
         qb = QbDownloader(host="localhost:8080", username="u", password="p", ssl=False)
 
-        captured_timeouts: list[httpx.Timeout | None] = []
+        captured_timeouts: list[httpx2.Timeout | None] = []
 
         class _FakeClient:
             def __init__(self, **kwargs):
@@ -201,7 +201,7 @@ class TestAuthClientCreation:
                 pass
 
         with patch(
-            "module.downloader.client.qb_downloader.httpx.AsyncClient", _FakeClient
+            "module.downloader.client.qb_downloader.httpx2.AsyncClient", _FakeClient
         ):
             await qb.auth()
 
@@ -232,7 +232,7 @@ class TestAuthClientCreation:
                 pass
 
         with patch(
-            "module.downloader.client.qb_downloader.httpx.AsyncClient", _FakeClient
+            "module.downloader.client.qb_downloader.httpx2.AsyncClient", _FakeClient
         ):
             await qb.auth()
 
@@ -264,7 +264,7 @@ class TestAuthSuccessFailure:
         mock_client.post = AsyncMock(return_value=mock_resp)
 
         with patch(
-            "module.downloader.client.qb_downloader.httpx.AsyncClient",
+            "module.downloader.client.qb_downloader.httpx2.AsyncClient",
             return_value=mock_client,
         ):
             result = await qb.auth()
@@ -284,7 +284,7 @@ class TestAuthSuccessFailure:
         mock_client.post = AsyncMock(return_value=mock_resp)
 
         with patch(
-            "module.downloader.client.qb_downloader.httpx.AsyncClient",
+            "module.downloader.client.qb_downloader.httpx2.AsyncClient",
             return_value=mock_client,
         ):
             result = await qb.auth(retry=3)
@@ -306,7 +306,7 @@ class TestAuthSuccessFailure:
         mock_client.post = AsyncMock(return_value=mock_resp)
 
         with patch(
-            "module.downloader.client.qb_downloader.httpx.AsyncClient",
+            "module.downloader.client.qb_downloader.httpx2.AsyncClient",
             return_value=mock_client,
         ):
             with patch(
@@ -336,11 +336,11 @@ class TestAuthConnectErrorLogging:
 
         mock_client = AsyncMock()
         mock_client.post = AsyncMock(
-            side_effect=httpx.ConnectError("Connection refused")
+            side_effect=httpx2.ConnectError("Connection refused")
         )
 
         with patch(
-            "module.downloader.client.qb_downloader.httpx.AsyncClient",
+            "module.downloader.client.qb_downloader.httpx2.AsyncClient",
             return_value=mock_client,
         ):
             with patch(
@@ -370,10 +370,10 @@ class TestAuthConnectErrorLogging:
         assert qb.host.startswith("https://")
 
         mock_client = AsyncMock()
-        mock_client.post = AsyncMock(side_effect=httpx.ConnectError("refused"))
+        mock_client.post = AsyncMock(side_effect=httpx2.ConnectError("refused"))
 
         with patch(
-            "module.downloader.client.qb_downloader.httpx.AsyncClient",
+            "module.downloader.client.qb_downloader.httpx2.AsyncClient",
             return_value=mock_client,
         ):
             with patch(
@@ -398,11 +398,11 @@ class TestAuthConnectErrorLogging:
 
         mock_client = AsyncMock()
         mock_client.post = AsyncMock(
-            side_effect=httpx.ConnectError("Connection refused")
+            side_effect=httpx2.ConnectError("Connection refused")
         )
 
         with patch(
-            "module.downloader.client.qb_downloader.httpx.AsyncClient",
+            "module.downloader.client.qb_downloader.httpx2.AsyncClient",
             return_value=mock_client,
         ):
             with patch(
@@ -432,10 +432,10 @@ class TestAuthConnectErrorLogging:
         assert qb.host.startswith("http://")
 
         mock_client = AsyncMock()
-        mock_client.post = AsyncMock(side_effect=httpx.ConnectError("refused"))
+        mock_client.post = AsyncMock(side_effect=httpx2.ConnectError("refused"))
 
         with patch(
-            "module.downloader.client.qb_downloader.httpx.AsyncClient",
+            "module.downloader.client.qb_downloader.httpx2.AsyncClient",
             return_value=mock_client,
         ):
             with patch(
@@ -458,10 +458,10 @@ class TestAuthConnectErrorLogging:
         )
 
         mock_client = AsyncMock()
-        mock_client.post = AsyncMock(side_effect=httpx.ConnectError("refused"))
+        mock_client.post = AsyncMock(side_effect=httpx2.ConnectError("refused"))
 
         with patch(
-            "module.downloader.client.qb_downloader.httpx.AsyncClient",
+            "module.downloader.client.qb_downloader.httpx2.AsyncClient",
             return_value=mock_client,
         ):
             with patch(
@@ -485,10 +485,10 @@ class TestAuthConnectErrorLogging:
         assert qb.host.startswith("http://")
 
         mock_client = AsyncMock()
-        mock_client.post = AsyncMock(side_effect=httpx.ConnectError("refused"))
+        mock_client.post = AsyncMock(side_effect=httpx2.ConnectError("refused"))
 
         with patch(
-            "module.downloader.client.qb_downloader.httpx.AsyncClient",
+            "module.downloader.client.qb_downloader.httpx2.AsyncClient",
             return_value=mock_client,
         ):
             with patch(
@@ -554,7 +554,7 @@ class TestAuthQb52Compat:
         mock_client.post = AsyncMock(return_value=mock_resp)
 
         with patch(
-            "module.downloader.client.qb_downloader.httpx.AsyncClient",
+            "module.downloader.client.qb_downloader.httpx2.AsyncClient",
             return_value=mock_client,
         ):
             result = await qb.auth()
@@ -575,7 +575,7 @@ class TestAuthQb52Compat:
 
         with (
             patch(
-                "module.downloader.client.qb_downloader.httpx.AsyncClient",
+                "module.downloader.client.qb_downloader.httpx2.AsyncClient",
                 return_value=mock_client,
             ),
             patch(
@@ -600,7 +600,7 @@ class TestAuthQb52Compat:
         mock_client.post = AsyncMock(return_value=mock_resp)
 
         with patch(
-            "module.downloader.client.qb_downloader.httpx.AsyncClient",
+            "module.downloader.client.qb_downloader.httpx2.AsyncClient",
             return_value=mock_client,
         ):
             await qb.auth(retry=3)
@@ -619,7 +619,7 @@ class TestAuthQb52Compat:
         mock_client.post = AsyncMock(return_value=mock_resp)
 
         with patch(
-            "module.downloader.client.qb_downloader.httpx.AsyncClient",
+            "module.downloader.client.qb_downloader.httpx2.AsyncClient",
             return_value=mock_client,
         ):
             await qb.auth(retry=3)
@@ -632,11 +632,11 @@ class TestAuthQb52Compat:
         )
 
         mock_client = AsyncMock()
-        mock_client.post = AsyncMock(side_effect=httpx.ConnectError("boom"))
+        mock_client.post = AsyncMock(side_effect=httpx2.ConnectError("boom"))
 
         with (
             patch(
-                "module.downloader.client.qb_downloader.httpx.AsyncClient",
+                "module.downloader.client.qb_downloader.httpx2.AsyncClient",
                 return_value=mock_client,
             ),
             patch(
@@ -661,7 +661,7 @@ class TestAuthQb52Compat:
         mock_client.post = AsyncMock(return_value=mock_resp)
 
         with patch(
-            "module.downloader.client.qb_downloader.httpx.AsyncClient",
+            "module.downloader.client.qb_downloader.httpx2.AsyncClient",
             return_value=mock_client,
         ):
             result = await qb.auth()
@@ -684,7 +684,7 @@ class TestAuthQb52Compat:
         mock_client.post = AsyncMock(return_value=mock_resp)
 
         with patch(
-            "module.downloader.client.qb_downloader.httpx.AsyncClient",
+            "module.downloader.client.qb_downloader.httpx2.AsyncClient",
             return_value=mock_client,
         ):
             result = await qb.auth(retry=3)
@@ -706,7 +706,7 @@ class TestAuthQb52Compat:
         mock_client.post = AsyncMock(return_value=mock_resp)
 
         with patch(
-            "module.downloader.client.qb_downloader.httpx.AsyncClient",
+            "module.downloader.client.qb_downloader.httpx2.AsyncClient",
             return_value=mock_client,
         ):
             result = await qb.auth(retry=3)
@@ -729,7 +729,7 @@ class TestAuthQb52Compat:
 
         with (
             patch(
-                "module.downloader.client.qb_downloader.httpx.AsyncClient",
+                "module.downloader.client.qb_downloader.httpx2.AsyncClient",
                 return_value=mock_client,
             ),
             patch(
@@ -1314,6 +1314,6 @@ class TestRenameVerifyContract:
 
     async def test_network_error_is_retryable(self):
         qb = self._make_qb([])
-        qb._post = AsyncMock(side_effect=httpx.ConnectError("down"))
+        qb._post = AsyncMock(side_effect=httpx2.ConnectError("down"))
         result = await qb.torrents_rename_file("h", "old.mkv", "new.mkv")
         assert result.outcome is RenameOutcome.RETRYABLE_FAILURE

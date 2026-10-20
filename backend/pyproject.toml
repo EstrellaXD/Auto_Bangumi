@@ -6,8 +6,7 @@ requires-python = ">=3.14"
 dependencies = [
     "fastapi>=0.109.0",
     "uvicorn>=0.27.0",
-    "httpx[socks]>=0.25.0",
-    "httpx-socks>=0.9.0",
+    "httpx2[socks]>=2.15",
     "beautifulsoup4>=4.15.0",
     "sqlmodel>=0.0.48",
     "sqlalchemy[aiosqlite]>=2.1.5",
@@ -77,11 +76,6 @@ disallow_untyped_defs = false
 # module.__version__ 是构建期生成的文件，仓库中不存在（见 module/conf/config.py 的 try/except）
 [[tool.mypy.overrides]]
 module = "module.__version__"
-ignore_missing_imports = true
-
-# httpx_socks 已安装但未发布类型存根
-[[tool.mypy.overrides]]
-module = "httpx_socks.*"
 ignore_missing_imports = true
 
 # aiohttp 仅用于 e2e mock server（在独立 Docker 容器中安装，不在本项目依赖中）
