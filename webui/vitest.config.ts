@@ -1,9 +1,11 @@
 import { defineConfig } from 'vitest/config';
 import vue from '@vitejs/plugin-vue';
+import VueRouter from 'vue-router/vite';
 import AutoImport from 'unplugin-auto-import/vite';
 
 export default defineConfig({
   plugins: [
+    VueRouter({ dts: false }),
     vue(),
     AutoImport({
       imports: ['vue', 'vitest', 'pinia'],

@@ -4,8 +4,8 @@ import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import AutoImport from 'unplugin-auto-import/vite';
 import Components from 'unplugin-vue-components/vite';
-import VueRouter from 'unplugin-vue-router/vite';
-import { VueRouterAutoImports } from 'unplugin-vue-router';
+import VueRouter from 'vue-router/vite';
+import { VueRouterAutoImports } from 'vue-router/unplugin';
 import VueI18nPlugin from '@intlify/unplugin-vue-i18n/vite';
 
 // 与后端给 SPA 文档加的响应头一致（backend/src/main.py）。只加在 preview：
@@ -48,9 +48,6 @@ export default defineConfig({
       include: resolve(import.meta.dirname, './src/i18n/**'),
     }),
   ],
-  // unplugin-vue-i18n 11 只产出 AST 形式的文案，vue-i18n 9 要打开 JIT 才认 AST；
-  // vue-i18n 升到 10+ 后默认开启，届时删掉这一项
-  define: { __INTLIFY_JIT_COMPILATION__: true },
   css: {
     preprocessorOptions: {
       scss: {

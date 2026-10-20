@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import { watchOnce } from '@vueuse/core';
 import { useConfirm } from '@/hooks/useConfirm';
 import { countLogLevels, parseLogLines } from '@/utils/log-parse';
 import type { LogLevel } from '@/utils/log-parse';
@@ -113,13 +112,14 @@ onActivated(() => {
   } else {
     // SSE 只在日志变化时推送：新会话首次进入时主动拉一次全量日志
     getLog(true);
-    watchOnce(
+    watch(
       () => log.value,
       () => {
         nextTick(() => {
           backToBottom();
         });
-      }
+      },
+      { once: true }
     );
   }
 });

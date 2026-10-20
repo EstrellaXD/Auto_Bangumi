@@ -44,7 +44,7 @@ declare global {
   const defineAsyncComponent: typeof import('vue').defineAsyncComponent
   const defineComponent: typeof import('vue').defineComponent
   const defineLoader: typeof import('vue-router/auto').defineLoader
-  const definePage: typeof import('unplugin-vue-router/runtime')._definePage
+  const definePage: typeof import('vue-router/experimental').definePage
   const defineStore: typeof import('pinia').defineStore
   const dirtyConfigGroups: typeof import('../../src/utils/config-diff').dirtyConfigGroups
   const effectScope: typeof import('vue').effectScope
@@ -77,8 +77,8 @@ declare global {
   const nextTick: typeof import('vue').nextTick
   const onActivated: typeof import('vue').onActivated
   const onBeforeMount: typeof import('vue').onBeforeMount
-  const onBeforeRouteLeave: typeof import('vue-router/auto').onBeforeRouteLeave
-  const onBeforeRouteUpdate: typeof import('vue-router/auto').onBeforeRouteUpdate
+  const onBeforeRouteLeave: typeof import('vue-router').onBeforeRouteLeave
+  const onBeforeRouteUpdate: typeof import('vue-router').onBeforeRouteUpdate
   const onBeforeUnmount: typeof import('vue').onBeforeUnmount
   const onBeforeUpdate: typeof import('vue').onBeforeUpdate
   const onDeactivated: typeof import('vue').onDeactivated
@@ -165,8 +165,8 @@ declare global {
   const usePreferredDark: typeof import('@vueuse/core').usePreferredDark
   const useProgramStore: typeof import('../../src/store/program').useProgramStore
   const useRSSStore: typeof import('../../src/store/rss').useRSSStore
-  const useRoute: typeof import('vue-router/auto').useRoute
-  const useRouter: typeof import('vue-router/auto').useRouter
+  const useRoute: typeof import('vue-router').useRoute
+  const useRouter: typeof import('vue-router').useRouter
   const useSafeArea: typeof import('../../src/hooks/useSafeArea').useSafeArea
   const useSearchStore: typeof import('../../src/store/search').useSearchStore
   const useSetupStore: typeof import('../../src/store/setup').useSetupStore

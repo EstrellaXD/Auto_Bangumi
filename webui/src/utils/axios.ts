@@ -88,7 +88,8 @@ export function onResponseError(err: AxiosError<ApiErrorResponse>) {
 
   // Handle network errors (no response from server)
   if (!err.response) {
-    if (!silent) {
+    // 页面跳转中断的请求（ECONNABORTED）不是网络故障，不弹提示
+    if (!silent && err.code !== 'ECONNABORTED') {
       showErrorThrottled(
         returnUserLangText({
           en: 'Network error. Please check your connection.',
