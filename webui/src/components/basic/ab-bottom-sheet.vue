@@ -40,6 +40,7 @@ const show = defineModel<boolean>('show', { required: true });
 
 const titleId = useId();
 const dragHandleRef = useTemplateRef<HTMLElement>('dragHandle');
+const panelRef = useTemplateRef<HTMLElement>('panel');
 const translateY = ref(0);
 const isDragging = ref(false);
 const keyboardHeight = ref(0);
@@ -127,9 +128,15 @@ function close() {
     :mask-closable="closeable"
     :close-on-esc="closeable"
     :aria-labelledby="title ? titleId : undefined"
+    :auto-focus="false"
+    @after-enter="panelRef?.focus({ preventScroll: true })"
     @update:show="(value: boolean) => value || close()"
   >
+    <!-- 焦点给面板本身（与 headlessui 一致不聚焦输入框）：NDrawer 默认聚焦
+         第一个输入框，手机上一打开就会弹出键盘 -->
     <div
+      ref="panel"
+      tabindex="-1"
       data-testid="bottom-sheet-panel"
       class="ab-bottom-sheet__panel"
       :class="{ 'ab-bottom-sheet__panel--fullscreen': fullscreen }"
@@ -187,6 +194,7 @@ function close() {
     display: flex;
     flex-direction: column;
     pointer-events: auto;
+    outline: none;
     @include safeAreaBottom(padding-bottom);
 
     // Fallback for browsers that don't support dvh
