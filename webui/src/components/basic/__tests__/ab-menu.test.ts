@@ -60,6 +60,28 @@ describe('ab-menu', () => {
     expect(trigger.attributes('aria-expanded')).toBe('true');
   });
 
+  it('should move focus into the menu and announce the highlighted item when opened', async () => {
+    const wrapper = mount(AbMenu, {
+      props: { items: items() },
+      slots: { trigger: '<button type="button">Actions</button>' },
+      attachTo: document.body,
+    });
+    const trigger = wrapper.find('button');
+    (trigger.element as HTMLElement).focus();
+    await trigger.trigger('click');
+    await flushPromises();
+    const menu = document.querySelector<HTMLElement>('[role="menu"]')!;
+    expect(document.activeElement).toBe(menu);
+
+    menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    await flushPromises();
+    expect(menu.getAttribute('aria-activedescendant')).toBe(menuItems()[0].id);
+
+    menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await flushPromises();
+    expect(document.activeElement).toBe(trigger.element);
+  });
+
   it('should mark danger items with the danger class', async () => {
     const wrapper = mount(AbMenu, {
       props: { items: items() },

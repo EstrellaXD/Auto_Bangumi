@@ -152,6 +152,18 @@ class TestUpdateBangumi:
 
         assert response.status_code == 200
 
+    def test_update_partial_body_rejected(self, authed_client):
+        """只传部分字段时返回 422，不能用占位值改写规则与保存路径。"""
+        with patch("module.api.bangumi.TorrentManager") as MockManager:
+            mock_mgr = MockManager.return_value
+            mock_mgr.update_rule = AsyncMock()
+            response = authed_client.patch(
+                "/api/v1/bangumi/update/1", json={"year": "2025"}
+            )
+
+        assert response.status_code == 422
+        mock_mgr.update_rule.assert_not_called()
+
 
 # ---------------------------------------------------------------------------
 # DELETE endpoints

@@ -10,32 +10,30 @@ class Bangumi(SQLModel, table=True):
     official_title: str = Field(
         default="official_title", alias="official_title", title="番剧中文名"
     )
-    year: Optional[str] = Field(default=None, alias="year", title="番剧年份")
+    year: Optional[str] = Field(default=..., alias="year", title="番剧年份")
     title_raw: str = Field(
         default="title_raw", alias="title_raw", title="番剧原名", index=True
     )
     season: int = Field(default=1, alias="season", title="番剧季度")
     season_raw: Optional[str] = Field(
-        default=None, alias="season_raw", title="番剧季度原名"
+        default=..., alias="season_raw", title="番剧季度原名"
     )
-    group_name: Optional[str] = Field(default=None, alias="group_name", title="字幕组")
-    dpi: Optional[str] = Field(default=None, alias="dpi", title="分辨率")
-    source: Optional[str] = Field(default=None, alias="source", title="来源")
-    subtitle: Optional[str] = Field(default=None, alias="subtitle", title="字幕")
+    group_name: Optional[str] = Field(default=..., alias="group_name", title="字幕组")
+    dpi: Optional[str] = Field(default=..., alias="dpi", title="分辨率")
+    source: Optional[str] = Field(default=..., alias="source", title="来源")
+    subtitle: Optional[str] = Field(default=..., alias="subtitle", title="字幕")
     eps_collect: bool = Field(default=False, alias="eps_collect", title="是否已收集")
     episode_offset: int = Field(default=0, alias="episode_offset", title="集数偏移量")
     season_offset: int = Field(default=0, alias="season_offset", title="季度偏移量")
     filter: str = Field(default="720,\\d+-\\d+", alias="filter", title="番剧过滤器")
     rss_link: str = Field(default="", alias="rss_link", title="番剧RSS链接")
     poster_link: Optional[str] = Field(
-        default=None, alias="poster_link", title="番剧海报链接"
+        default=..., alias="poster_link", title="番剧海报链接"
     )
     added: bool = Field(default=False, alias="added", title="是否已添加")
-    rule_name: Optional[str] = Field(
-        default=None, alias="rule_name", title="番剧规则名"
-    )
+    rule_name: Optional[str] = Field(default=..., alias="rule_name", title="番剧规则名")
     save_path: Optional[str] = Field(
-        default=None, alias="save_path", title="番剧保存路径"
+        default=..., alias="save_path", title="番剧保存路径"
     )
     deleted: bool = Field(
         default=False, alias="deleted", title="是否已删除", index=True
@@ -81,30 +79,28 @@ class BangumiUpdate(SQLModel):
     official_title: str = Field(
         default="official_title", alias="official_title", title="番剧中文名"
     )
-    year: Optional[str] = Field(default=None, alias="year", title="番剧年份")
+    year: Optional[str] = Field(default=..., alias="year", title="番剧年份")
     title_raw: str = Field(default="title_raw", alias="title_raw", title="番剧原名")
     season: int = Field(default=1, alias="season", title="番剧季度")
     season_raw: Optional[str] = Field(
-        default=None, alias="season_raw", title="番剧季度原名"
+        default=..., alias="season_raw", title="番剧季度原名"
     )
-    group_name: Optional[str] = Field(default=None, alias="group_name", title="字幕组")
-    dpi: Optional[str] = Field(default=None, alias="dpi", title="分辨率")
-    source: Optional[str] = Field(default=None, alias="source", title="来源")
-    subtitle: Optional[str] = Field(default=None, alias="subtitle", title="字幕")
+    group_name: Optional[str] = Field(default=..., alias="group_name", title="字幕组")
+    dpi: Optional[str] = Field(default=..., alias="dpi", title="分辨率")
+    source: Optional[str] = Field(default=..., alias="source", title="来源")
+    subtitle: Optional[str] = Field(default=..., alias="subtitle", title="字幕")
     eps_collect: bool = Field(default=False, alias="eps_collect", title="是否已收集")
     episode_offset: int = Field(default=0, alias="episode_offset", title="集数偏移量")
     season_offset: int = Field(default=0, alias="season_offset", title="季度偏移量")
     filter: str = Field(default="720,\\d+-\\d+", alias="filter", title="番剧过滤器")
     rss_link: str = Field(default="", alias="rss_link", title="番剧RSS链接")
     poster_link: Optional[str] = Field(
-        default=None, alias="poster_link", title="番剧海报链接"
+        default=..., alias="poster_link", title="番剧海报链接"
     )
     added: bool = Field(default=False, alias="added", title="是否已添加")
-    rule_name: Optional[str] = Field(
-        default=None, alias="rule_name", title="番剧规则名"
-    )
+    rule_name: Optional[str] = Field(default=..., alias="rule_name", title="番剧规则名")
     save_path: Optional[str] = Field(
-        default=None, alias="save_path", title="番剧保存路径"
+        default=..., alias="save_path", title="番剧保存路径"
     )
     downloader_id: Optional[str] = Field(
         default=None, alias="downloader_id", title="下载器实例"
