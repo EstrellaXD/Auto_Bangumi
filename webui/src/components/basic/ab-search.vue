@@ -1,17 +1,11 @@
 <script lang="ts" setup>
-import { Search } from '@icon-park/vue-next';
+import { Search } from '@lucide/vue';
 import { NSpin } from 'naive-ui';
 
-withDefaults(
-  defineProps<{
-    provider: string;
-    loading: boolean;
-  }>(),
-  {
-    provider: '',
-    loading: false,
-  }
-);
+const { provider = '', loading = false } = defineProps<{
+  provider: string;
+  loading: boolean;
+}>();
 
 defineEmits<{ click: [] }>();
 </script>
@@ -24,7 +18,7 @@ defineEmits<{ click: [] }>();
     @click="$emit('click')"
   >
     <NSpin v-if="loading" :size="16" class="search-spinner" />
-    <Search v-else theme="outline" size="18" class="search-icon" />
+    <Search v-else :size="18" class="search-icon" />
 
     <span class="search-placeholder">{{ $t('topbar.search.placeholder') }}</span>
 

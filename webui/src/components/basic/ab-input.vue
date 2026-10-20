@@ -4,35 +4,26 @@ import { abFieldInjectionKey } from './ab-field.vue';
 
 // 文本输入组件（取代 UnoCSS 的 ab-input 快捷类）：
 // Soft Ink 填充式，左对齐；支持前后缀、清空、密码可见切换、错误态。
-const props = withDefaults(
-  defineProps<{
-    type?: 'text' | 'password' | 'number' | 'url' | 'search';
-    placeholder?: string;
-    disabled?: boolean;
-    clearable?: boolean;
-    /** 错误态样式；错误文案由外层 ab-field 显示 */
-    error?: boolean;
-    ariaLabel?: string;
-    min?: number;
-    max?: number;
-    step?: number;
-    maxlength?: number;
-    autocomplete?: string;
-  }>(),
-  {
-    type: 'text',
-    placeholder: '',
-    disabled: false,
-    clearable: false,
-    error: false,
-    ariaLabel: undefined,
-    min: undefined,
-    max: undefined,
-    step: undefined,
-    maxlength: undefined,
-    autocomplete: undefined,
-  }
-);
+const {
+  type = 'text',
+  placeholder = '',
+  disabled = false,
+  clearable = false,
+  error = false,
+} = defineProps<{
+  type?: 'text' | 'password' | 'number' | 'url' | 'search';
+  placeholder?: string;
+  disabled?: boolean;
+  clearable?: boolean;
+  /** 错误态样式；错误文案由外层 ab-field 显示 */
+  error?: boolean;
+  ariaLabel?: string;
+  min?: number;
+  max?: number;
+  step?: number;
+  maxlength?: number;
+  autocomplete?: string;
+}>();
 
 const model = defineModel<string | number>({ default: '' });
 
@@ -42,15 +33,15 @@ if (field) field.adopted.value = true;
 const revealed = ref(false);
 
 const effectiveType = computed(() => {
-  if (props.type === 'password') return revealed.value ? 'text' : 'password';
-  return props.type;
+  if (type === 'password') return revealed.value ? 'text' : 'password';
+  return type;
 });
 
-const invalid = computed(() => props.error || field?.invalid.value === true);
+const invalid = computed(() => error || field?.invalid.value === true);
 
 function onInput(event: Event) {
   const value = (event.target as HTMLInputElement).value;
-  model.value = props.type === 'number' && value !== '' ? Number(value) : value;
+  model.value = type === 'number' && value !== '' ? Number(value) : value;
 }
 
 function clear() {

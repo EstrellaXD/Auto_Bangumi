@@ -262,7 +262,7 @@ const dirtySectionTitles = computed(() =>
 );
 
 // --- 分区定位 ---
-const scrollEl = ref<HTMLElement | null>(null);
+const scrollEl = useTemplateRef<HTMLElement>('scrollEl');
 const activeSection = ref(baseSections[0].id);
 const sectionEls = new Map<string, HTMLElement>();
 

@@ -1,6 +1,8 @@
 <script lang="ts" setup>
-import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/vue';
-import type { Component } from 'vue';
+import { cloneVNode, h } from 'vue';
+import type { Component, VNode } from 'vue';
+import { NDropdown } from 'naive-ui';
+import type { DropdownOption } from 'naive-ui';
 
 export interface AbMenuItem {
   key?: string | number;
@@ -11,133 +13,80 @@ export interface AbMenuItem {
   handler?: () => void | Promise<void>;
 }
 
-// 下拉菜单：headlessui Menu 负责键盘导航与 aria；
-// 触发器放在 #trigger 插槽（渲染为 MenuButton）。
-withDefaults(
-  defineProps<{
-    items: AbMenuItem[];
-    /** 菜单相对触发器的对齐边 */
-    align?: 'left' | 'right';
-  }>(),
-  {
-    align: 'left',
-  }
-);
+// 下拉菜单：naive-ui NDropdown 负责定位与键盘导航（方向键/回车/Esc）；
+// 触发器放在 #trigger 插槽。NDropdown 不输出 aria，menuitem 角色与
+// 触发器的 aria-haspopup/aria-expanded 在这里补上。
+const { items, align = 'left' } = defineProps<{
+  items: AbMenuItem[];
+  /** 菜单相对触发器的对齐边 */
+  align?: 'left' | 'right';
+}>();
 
 const emit = defineEmits<{ select: [item: AbMenuItem] }>();
 
-function itemLabel(item: AbMenuItem): string {
-  return typeof item.label === 'function' ? item.label() : item.label;
+const slots = defineSlots<{ trigger: () => VNode[] }>();
+
+const open = ref(false);
+
+const options = computed<DropdownOption[]>(() =>
+  items.map((item, index) => ({
+    key: item.key ?? index,
+    label: item.label,
+    disabled: item.disabled,
+    icon: item.icon && (() => h(item.icon!, { size: 15 })),
+    props: {
+      role: 'menuitem',
+      class: item.danger ? 'ab-menu-item--danger' : undefined,
+    },
+  }))
+);
+
+function Trigger() {
+  return cloneVNode(slots.trigger()[0], {
+    'aria-haspopup': 'menu',
+    'aria-expanded': open.value,
+  });
 }
 
-function onSelect(item: AbMenuItem) {
-  if (item.disabled) return;
+function onSelect(key: string | number) {
+  const item = items.find((entry, index) => (entry.key ?? index) === key);
+  if (!item || item.disabled) return;
   item.handler?.();
   emit('select', item);
 }
 </script>
 
 <template>
-  <Menu as="div" class="ab-menu">
-    <MenuButton as="template">
-      <slot name="trigger" />
-    </MenuButton>
-
-    <MenuItems class="ab-menu-list" :class="`ab-menu-list--${align}`">
-      <MenuItem
-        v-for="(item, index) in items"
-        :key="item.key ?? index"
-        v-slot="{ active }"
-        :disabled="item.disabled"
-      >
-        <button
-          type="button"
-          class="ab-menu-item"
-          :class="[
-            active && 'ab-menu-item--active',
-            item.danger && 'ab-menu-item--danger',
-            item.disabled && 'ab-menu-item--disabled',
-          ]"
-          @click="onSelect(item)"
-        >
-          <Component :is="item.icon" v-if="item.icon" :size="15" />
-          <span class="ab-menu-item-label">{{ itemLabel(item) }}</span>
-        </button>
-      </MenuItem>
-    </MenuItems>
-  </Menu>
+  <NDropdown
+    trigger="click"
+    :show="open"
+    :options="options"
+    :placement="align === 'right' ? 'bottom-end' : 'bottom-start'"
+    :menu-props="() => ({ class: 'ab-menu-list' })"
+    @update:show="open = $event"
+    @select="onSelect"
+  >
+    <Trigger />
+  </NDropdown>
 </template>
 
-<style lang="scss" scoped>
-.ab-menu {
-  position: relative;
-  display: inline-flex;
+<!-- 不加 scoped：菜单项由 NDropdown 渲染并传送到 body，scoped 选择器命中不了。
+     改写 naive-ui 的颜色变量，悬停态也保持危险色。 -->
+<style lang="scss">
+.ab-menu-item--danger {
+  --n-option-text-color: var(--color-danger);
+  --n-option-text-color-hover: var(--color-danger);
+  --n-prefix-color: var(--color-danger);
 }
 
 .ab-menu-list {
-  position: absolute;
-  top: 100%;
-  margin-top: 4px;
-  z-index: var(--z-popover);
   min-width: 180px;
-  padding: 4px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
 
-  &--left {
-    left: 0;
-  }
-
-  &--right {
-    right: 0;
-  }
-
-  &:focus-visible {
-    outline: none;
-  }
-}
-
-.ab-menu-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 7px 10px;
-  border: none;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--color-text);
-  font-family: inherit;
-  font-size: 13px;
-  text-align: left;
-  cursor: pointer;
-  transition: background-color var(--transition-fast);
-
+  // 触屏放大命中区域，与旧菜单一致
   @include forTouch {
-    padding: 11px 10px;
+    .n-dropdown-option-body {
+      --n-option-height: var(--touch-target);
+    }
   }
-
-  // active 由 headlessui 的键盘/悬停导航驱动
-  &--active {
-    background: var(--color-surface-2);
-  }
-
-  &--danger {
-    color: var(--color-danger);
-  }
-
-  &--disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
-  }
-}
-
-.ab-menu-item-label {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 </style>

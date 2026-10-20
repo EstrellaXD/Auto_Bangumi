@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { Delete, Plus } from '@icon-park/vue-next';
+import { Plus, Trash } from '@lucide/vue';
 import type { DownloaderOptions, DownloaderType } from '#/config';
 import type { SettingItem } from '#/components';
 import { useConfirm } from '@/hooks/useConfirm';
@@ -198,7 +198,7 @@ const items = computed(() =>
             :label="$t('config.downloader_set.delete')"
             @click="removeInstance(i.id)"
           >
-            <Delete size="16" />
+            <Trash :size="16" />
           </ab-icon-button>
         </template>
       </div>
@@ -212,7 +212,7 @@ const items = computed(() =>
           <ab-input v-model="newId" @keyup.enter="addInstance" />
         </ab-field>
         <ab-button data-action="add" :disabled="!canAdd" @click="addInstance">
-          <Plus size="16" />
+          <Plus :size="16" />
           {{ $t('config.downloader_set.add') }}
         </ab-button>
       </div>

@@ -22,19 +22,12 @@ export const abFieldInjectionKey: InjectionKey<AbFieldContext> =
 <script lang="ts" setup>
 // 表单字段容器（取代 ab-label）：label + description + error + aria 接线。
 // 控件放默认插槽；ab-input 等会自动消费注入的 id/aria 上下文。
-const props = withDefaults(
-  defineProps<{
-    label: string | (() => string);
-    description?: string;
-    error?: string;
-    required?: boolean;
-  }>(),
-  {
-    description: '',
-    error: '',
-    required: false,
-  }
-);
+const { description = '', error = '', required = false, label } = defineProps<{
+  label: string | (() => string);
+  description?: string;
+  error?: string;
+  required?: boolean;
+}>();
 
 // Vue 类型将 useId 标为可空（组件实例外）；setup 内恒为 string
 const controlId = useId() as string;
@@ -43,17 +36,17 @@ const descriptionId = useId() as string;
 const errorId = useId() as string;
 
 const labelText = computed(() =>
-  typeof props.label === 'function' ? props.label() : props.label
+  typeof label === 'function' ? label() : label
 );
 
 const describedBy = computed(() => {
   const ids: string[] = [];
-  if (props.description) ids.push(descriptionId);
-  if (props.error) ids.push(errorId);
+  if (description) ids.push(descriptionId);
+  if (error) ids.push(errorId);
   return ids.length > 0 ? ids.join(' ') : undefined;
 });
 
-const invalid = computed(() => Boolean(props.error));
+const invalid = computed(() => Boolean(error));
 
 // ab-input 等原生控件在挂载时认领 controlId；naive 组件无法接收 id，
 // 走 aria-labelledby（此时渲染 span 而非悬空的 label[for]）

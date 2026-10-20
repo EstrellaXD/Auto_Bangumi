@@ -1,6 +1,6 @@
 <script lang="ts" setup>
-import { Popover, PopoverButton, PopoverPanel } from '@headlessui/vue';
-import { Attention, CloseOne, Delete, Info, Remind } from '@icon-park/vue-next';
+import { NPopover } from 'naive-ui';
+import { Bell, CircleAlert, CircleX, Info, Trash } from '@lucide/vue';
 import type { InboxMessage } from '@/api/notification';
 import { relativeTime } from '@/utils/relative-time';
 
@@ -23,34 +23,39 @@ const KIND_ROUTES: Record<string, string> = {
 };
 
 const SEVERITY_ICONS = {
-  error: CloseOne,
-  warning: Attention,
+  error: CircleX,
+  warning: CircleAlert,
   info: Info,
 } as const;
 
 const confirmClear = ref(false);
+const bell = useTemplateRef<HTMLButtonElement>('bell');
 
-// PopoverPanel 挂载/卸载即打开/关闭：打开时拉取列表，关闭时复位确认态。
-function onPanelRef(el: unknown) {
-  const isOpen = !!el;
-  if (isOpen && !panelOpen.value) {
+// 打开时拉取列表，关闭时复位确认态。
+function onShowChange(open: boolean) {
+  if (open) {
     store.fetchMessages();
-  }
-  if (!isOpen) {
+  } else {
     confirmClear.value = false;
   }
-  panelOpen.value = isOpen;
+  panelOpen.value = open;
+}
+
+// NPopover 不处理 Esc：关闭后把焦点还给铃铛
+function closeByEsc() {
+  onShowChange(false);
+  bell.value?.focus();
 }
 
 function severityIcon(msg: InboxMessage) {
   return SEVERITY_ICONS[msg.severity] ?? Info;
 }
 
-function onItemClick(msg: InboxMessage, close: () => void) {
+function onItemClick(msg: InboxMessage) {
   store.markRead(msg.id);
   const route = KIND_ROUTES[msg.kind];
   if (route) {
-    close();
+    onShowChange(false);
     router.push(route);
   }
 }
@@ -66,17 +71,31 @@ function onClearClick() {
 </script>
 
 <template>
-  <Popover class="notification-center">
-    <PopoverButton
-      class="notification-bell"
-      :aria-label="$t('notifications.title')"
+  <div class="notification-center">
+    <NPopover
+      trigger="click"
+      placement="bottom-end"
+      raw
+      :show-arrow="false"
+      :show="panelOpen"
+      @update:show="onShowChange"
     >
-      <Remind theme="outline" size="1em" />
-      <ab-badge class="notification-badge" :count="unreadCount" />
-    </PopoverButton>
+      <template #trigger>
+        <button
+          ref="bell"
+          type="button"
+          class="notification-bell"
+          :aria-label="$t('notifications.title')"
+          aria-haspopup="dialog"
+          :aria-expanded="panelOpen"
+          @keydown.esc="closeByEsc"
+        >
+          <Bell :size="18" />
+          <ab-badge class="notification-badge" :count="unreadCount" />
+        </button>
+      </template>
 
-    <PopoverPanel v-slot="{ close }" class="notification-panel">
-      <div :ref="onPanelRef" class="notification-panel-inner">
+      <div class="notification-panel" @keydown.esc="closeByEsc">
         <div class="notification-head">
           <span class="notification-head-title">
             {{ $t('notifications.title') }}
@@ -120,11 +139,11 @@ function onClearClick() {
             :class="{ 'notification-item--unread': !msg.read }"
             role="button"
             tabindex="0"
-            @click="onItemClick(msg, close)"
-            @keydown.enter="onItemClick(msg, close)"
+            @click="onItemClick(msg)"
+            @keydown.enter="onItemClick(msg)"
           >
             <div class="notification-sev" :class="`is-${msg.severity}`">
-              <Component :is="severityIcon(msg)" theme="outline" size="14" />
+              <Component :is="severityIcon(msg)" :size="14" />
             </div>
             <div class="notification-content">
               <div class="notification-title">
@@ -144,18 +163,17 @@ function onClearClick() {
               :label="$t('notifications.delete')"
               @click.stop="store.remove(msg.id)"
             >
-              <Delete theme="outline" size="13" />
+              <Trash :size="13" />
             </ab-icon-button>
           </div>
         </div>
       </div>
-    </PopoverPanel>
-  </Popover>
+    </NPopover>
+  </div>
 </template>
 
-<!-- 不加 scoped：@headlessui/vue 的 Popover/PopoverButton/PopoverPanel 渲染的
-     根元素不继承父组件的 scope 属性，scoped 选择器无法命中（position 等样式
-     会静默失效）。所有类名以 notification- 前缀隔离，避免全局冲突。 -->
+<!-- 不加 scoped：面板由 NPopover 传送到 body，trigger 插槽也经 naive-ui 克隆渲染，
+     scoped 选择器不可靠。所有类名以 notification- 前缀隔离，避免全局冲突。 -->
 <style lang="scss">
 .notification-center {
   position: relative;
@@ -210,15 +228,11 @@ function onClearClick() {
 }
 
 .notification-panel {
-  position: absolute;
-  top: 44px;
-  right: 0;
   width: min(340px, calc(100vw - 24px));
   border-radius: var(--radius-md);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   box-shadow: var(--shadow-lg);
-  z-index: 50;
   overflow: hidden;
   animation: notification-dropdown-in 150ms ease-out;
   transform-origin: top right;

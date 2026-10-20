@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { Left } from '@icon-park/vue-next';
+import { ChevronLeft } from '@lucide/vue';
 import MarketConfirm from '@/components/market/market-confirm.vue';
 import type { ApiError } from '#/api';
 import type { CatalogEntry, PluginInfo } from '#/plugins';
@@ -236,7 +236,7 @@ function permissionLabel(id: string) {
     <!-- 手机：详情是单独一屏，顶部返回 -->
     <header v-if="showDetail" class="market__bar">
       <ab-icon-button :label="$t('market.back')" @click="back">
-        <Left :size="20" />
+        <ChevronLeft :size="20" />
       </ab-icon-button>
       <h1 class="market__bar-title">
         {{ selected ? selected.name || selected.id : $t('market.title') }}

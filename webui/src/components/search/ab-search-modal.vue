@@ -1,13 +1,13 @@
 <script lang="ts" setup>
 import {
   Calendar,
-  Close,
-  Down,
+  ChevronDown,
+  Languages,
   Monitor,
-  PeoplesTwo,
   Search,
-  Translate,
-} from '@icon-park/vue-next';
+  Users,
+  X,
+} from '@lucide/vue';
 import { NSpin } from 'naive-ui';
 import { onKeyStroke } from '@vueuse/core';
 import AbSearchConfirm from './ab-search-confirm.vue';
@@ -45,7 +45,7 @@ const {
 const subscribing = ref(false);
 
 const showProvider = ref(false);
-const searchInputRef = ref<HTMLInputElement | null>(null);
+const searchInputRef = useTemplateRef<HTMLInputElement>('searchInputRef');
 
 // Multi-select filter state
 const activeFilters = ref<{
@@ -638,7 +638,7 @@ function handleFilterClick(
                 aria-label="Search"
                 @click="onSearch"
               >
-                <Search theme="outline" size="20" />
+                <Search :size="20" />
               </button>
               <NSpin v-else :size="18" />
 
@@ -661,7 +661,7 @@ function handleFilterClick(
                   @click="showProvider = !showProvider"
                 >
                   <span class="provider-label">{{ provider }}</span>
-                  <Down :size="14" />
+                  <ChevronDown :size="14" />
                 </button>
 
                 <transition name="dropdown">
@@ -685,7 +685,7 @@ function handleFilterClick(
               :label="$t('common.close')"
               @click="handleClose"
             >
-              <Close theme="outline" size="20" />
+              <X :size="20" />
             </ab-icon-button>
           </header>
 
@@ -694,7 +694,7 @@ function handleFilterClick(
             <!-- Group Filters -->
             <div v-if="filterOptions.group.length > 0" class="filter-category">
               <span class="category-icon">
-                <PeoplesTwo theme="outline" :size="16" />
+                <Users :size="16" />
               </span>
               <div class="filter-chips">
                 <button
@@ -733,7 +733,7 @@ function handleFilterClick(
               class="filter-category"
             >
               <span class="category-icon">
-                <Monitor theme="outline" :size="16" />
+                <Monitor :size="16" />
               </span>
               <div class="filter-chips">
                 <button
@@ -772,7 +772,7 @@ function handleFilterClick(
               class="filter-category"
             >
               <span class="category-icon">
-                <Translate theme="outline" :size="16" />
+                <Languages :size="16" />
               </span>
               <div class="filter-chips">
                 <button
@@ -808,7 +808,7 @@ function handleFilterClick(
             <!-- Season Filters -->
             <div v-if="filterOptions.season.length > 0" class="filter-category">
               <span class="category-icon">
-                <Calendar theme="outline" :size="16" />
+                <Calendar :size="16" />
               </span>
               <div class="filter-chips">
                 <button

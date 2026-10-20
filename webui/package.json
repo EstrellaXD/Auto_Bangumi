@@ -21,7 +21,7 @@
     "build-storybook": "storybook build"
   },
   "dependencies": {
-    "@headlessui/vue": "^1.7.23",
+    "@lucide/vue": "^1.59.0",
     "@vue/devtools-api": "^8.2.1",
     "@vueuse/core": "^15.0.0",
     "axios": "^1.20.0",
@@ -29,14 +29,12 @@
     "pinia": "^4.1.0",
     "vue": "^3.5.44",
     "vue-i18n": "^11.4.16",
-    "vue-inline-svg": "^3.1.4",
     "vue-router": "^5.4.0",
     "vuedraggable": "^4.1.0"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^9.5.0",
     "@autobangumi/plugin-ui": "workspace:*",
-    "@icon-park/vue-next": "^1.4.2",
     "@iconify-json/simple-icons": "1.2.89",
     "@intlify/unplugin-vue-i18n": "^11.2.7",
     "@playwright/test": "1.64.1",

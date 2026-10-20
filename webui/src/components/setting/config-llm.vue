@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { Info } from '@icon-park/vue-next';
+import { Info } from '@lucide/vue';
 import { NSelect } from 'naive-ui';
 import type { SelectGroupOption, SelectOption } from 'naive-ui';
 import type { LLMProviderView } from '@/api/llm';
@@ -263,7 +263,7 @@ const tuningItems = computed(() => [
   <ab-fold-panel :title="$t('config.llm_set.title')">
     <div class="llm-section">
       <div class="llm-hint">
-        <Info size="16" />
+        <Info :size="16" />
         <span>{{ $t('config.llm_set.hint') }}</span>
       </div>
 

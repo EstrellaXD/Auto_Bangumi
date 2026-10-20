@@ -1,15 +1,9 @@
 <script lang="ts" setup>
-withDefaults(
-  defineProps<{
-    title: string;
-    /** 去掉 body 内边距（内容自带布局时，如列表/表格贴边） */
-    flush?: boolean;
-  }>(),
-  {
-    title: 'title',
-    flush: false,
-  }
-);
+const { title = 'title', flush = false } = defineProps<{
+  title: string;
+  /** 去掉 body 内边距（内容自带布局时，如列表/表格贴边） */
+  flush?: boolean;
+}>();
 </script>
 
 <template>

@@ -1,12 +1,7 @@
 <script lang="ts" setup>
-withDefaults(
-  defineProps<{
-    title: string;
-  }>(),
-  {
-    title: 'title',
-  }
-);
+const { title = 'title' } = defineProps<{
+  title: string;
+}>();
 </script>
 
 <template>

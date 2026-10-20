@@ -1,25 +1,20 @@
 <script lang="ts" setup>
-import { ErrorPicture, Write } from '@icon-park/vue-next';
+import { ImageOff, PenLine } from '@lucide/vue';
 import PluginSlot from './plugin-slot.vue';
 import type { BangumiRule } from '#/bangumi';
 import { useUiSlots } from '@/hooks/usePluginUi';
 
-const props = withDefaults(
-  defineProps<{
-    type?: 'primary' | 'search' | 'mobile';
-    bangumi: BangumiRule;
-  }>(),
-  {
-    type: 'primary',
-  }
-);
+const { type = 'primary', bangumi } = defineProps<{
+  type?: 'primary' | 'search' | 'mobile';
+  bangumi: BangumiRule;
+}>();
 
 defineEmits(['click']);
 
 // 插件经 bangumi.card.action 挂载点追加的操作
 const actionSlots = useUiSlots('bangumi.card.action');
 
-const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
+const posterSrc = computed(() => resolvePosterUrl(bangumi.poster_link));
 </script>
 
 <template>
@@ -48,7 +43,7 @@ const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
         </template>
         <template v-else>
           <div class="card-placeholder">
-            <ErrorPicture theme="outline" size="24" />
+            <ImageOff :size="24" />
           </div>
         </template>
 
@@ -66,7 +61,7 @@ const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
             role="img"
             :aria-label="$t('homepage.rule.edit')"
           >
-            <Write size="18" />
+            <PenLine :size="18" />
           </div>
         </div>
       </div>
@@ -102,7 +97,7 @@ const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
           </template>
           <template v-else>
             <div class="card-placeholder card-placeholder--small">
-              <ErrorPicture theme="outline" size="20" />
+              <ImageOff :size="20" />
             </div>
           </template>
         </div>

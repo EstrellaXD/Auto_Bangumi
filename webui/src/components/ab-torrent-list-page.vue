@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { Close, Delete, FullSelection } from '@icon-park/vue-next';
+import { ListChecks, Trash, X } from '@lucide/vue';
 import { useConfirm } from '@/hooks/useConfirm';
 import type { Torrent } from '#/torrent';
 import { useTorrentList } from '@/hooks/useTorrentList';
@@ -65,7 +65,7 @@ onActivated(load);
       <div class="toolbar-actions">
         <ab-button v-if="torrents.length > 0" size="sm" @click="toggleAll">
           <template #icon>
-            <FullSelection :size="14" />
+            <ListChecks :size="14" />
           </template>
           {{
             allSelected
@@ -80,7 +80,7 @@ onActivated(load);
           @click="handleDeleteSelected"
         >
           <template #icon>
-            <Delete :size="14" />
+            <Trash :size="14" />
           </template>
           {{
             $t('homepage.torrents.delete_selected', { count: selectedIds.size })
@@ -93,7 +93,7 @@ onActivated(load);
           @click="handleClearAll"
         >
           <template #icon>
-            <Delete :size="14" />
+            <Trash :size="14" />
           </template>
           {{ $t('homepage.torrents.deleteAll') }}
         </ab-button>
@@ -155,7 +155,7 @@ onActivated(load);
           :label="$t('homepage.torrents.delete')"
           @click.stop="handleDeleteOne(torrent.id)"
         >
-          <Close :size="14" />
+          <X :size="14" />
         </ab-icon-button>
       </div>
     </div>

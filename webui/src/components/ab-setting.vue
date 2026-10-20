@@ -7,18 +7,19 @@ import AbSwitch from './basic/ab-switch.vue';
 import type { AbSettingProps, SelectItem } from '#/components';
 
 // 设置行：ab-field（标签/说明/错误/aria）+ 对应控件的组合。
-const props = withDefaults(defineProps<AbSettingProps>(), {
-  css: '',
-  bottomLine: false,
-  description: '',
-  error: '',
-  required: false,
-});
+const {
+  css = '',
+  bottomLine = false,
+  description = '',
+  error = '',
+  required = false,
+  label,
+} = defineProps<AbSettingProps>();
 
 const data = defineModel<any>('data');
 
 const labelText = computed(() =>
-  typeof props.label === 'function' ? props.label() : props.label
+  typeof label === 'function' ? label() : label
 );
 
 // 旧组件允许 v-model 绑定对象（SelectItem）；读取时取 .value，

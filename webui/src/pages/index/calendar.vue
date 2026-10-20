@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { Refresh } from '@icon-park/vue-next';
+import { RefreshCw } from '@lucide/vue';
 import type { BangumiRule } from '#/bangumi';
 import type { BangumiGroup } from '@/components/calendar/types';
 
@@ -140,7 +140,7 @@ function onRuleSelect(rule: BangumiRule) {
         :label="$t('calendar.refresh')"
         @click="refreshCalendar"
       >
-        <Refresh :size="18" />
+        <RefreshCw :size="18" />
       </ab-icon-button>
     </div>
 

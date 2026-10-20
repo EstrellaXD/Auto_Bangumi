@@ -1,16 +1,10 @@
 <script lang="ts" setup>
 // 骨架屏（加载态用骨架，不在内容中放 spinner）。
 // preset 对应真实布局：lines（文本）/ row（列表行）/ card（卡片）。
-withDefaults(
-  defineProps<{
-    preset?: 'lines' | 'row' | 'card';
-    count?: number;
-  }>(),
-  {
-    preset: 'lines',
-    count: 3,
-  }
-);
+const { preset = 'lines', count = 3 } = defineProps<{
+  preset?: 'lines' | 'row' | 'card';
+  count?: number;
+}>();
 
 // 行宽做点参差，避免整齐得像占位框
 const widths = ['62%', '88%', '40%', '75%', '55%'];

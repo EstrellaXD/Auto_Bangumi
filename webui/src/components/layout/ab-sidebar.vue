@@ -1,19 +1,19 @@
 <script lang="ts" setup>
 import {
-  AppStore,
   Calendar,
+  CirclePlay,
   Download,
-  Home,
-  Log,
-  Logout,
-  MenuUnfold,
+  House,
+  LayoutGrid,
+  LogOut,
   Moon,
-  Play,
+  PanelLeftOpen,
   Puzzle,
-  SettingTwo,
+  Rss,
+  ScrollText,
+  Settings,
   Sun,
-} from '@icon-park/vue-next';
-import InlineSvg from 'vue-inline-svg';
+} from '@lucide/vue';
 import { slotTitle, usePluginPages } from '@/hooks/usePluginUi';
 
 const props = withDefaults(
@@ -34,24 +34,10 @@ const { isDark, toggle: toggleDark } = useDarkMode();
 const show = ref(props.open);
 const toggle = () => (show.value = !show.value);
 
-const RSS = h(
-  'span',
-  {
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      width: '20px',
-      height: '20px',
-    },
-  },
-  h(InlineSvg, { src: './images/RSS.svg', width: '16', height: '16' })
-);
-
 const items = [
   {
     id: 1,
-    icon: Home,
+    icon: House,
     label: () => t('sidebar.homepage'),
     path: '/bangumi',
   },
@@ -63,13 +49,13 @@ const items = [
   },
   {
     id: 3,
-    icon: RSS,
+    icon: Rss,
     label: () => t('sidebar.rss'),
     path: '/rss',
   },
   {
     id: 4,
-    icon: Play,
+    icon: CirclePlay,
     label: () => t('sidebar.player'),
     path: '/player',
   },
@@ -82,19 +68,19 @@ const items = [
   },
   {
     id: 6,
-    icon: Log,
+    icon: ScrollText,
     label: () => t('sidebar.log'),
     path: '/log',
   },
   {
     id: 8,
-    icon: AppStore,
+    icon: LayoutGrid,
     label: () => t('sidebar.market'),
     path: '/market',
   },
   {
     id: 7,
-    icon: SettingTwo,
+    icon: Settings,
     label: () => t('sidebar.config'),
     path: '/config',
   },
@@ -131,7 +117,7 @@ function Exit() {
       onClick: logout,
     },
     [
-      h(Logout, { size: 20 }),
+      h(LogOut, { size: 20 }),
       !isMobileOrTablet.value &&
       show.value &&
       h('div', { class: 'sidebar-item-label' }, t('sidebar.logout')),
@@ -157,9 +143,8 @@ function Exit() {
           <div v-show="show" class="sidebar-title">
             {{ $t('sidebar.title') }}
           </div>
-          <MenuUnfold
-            theme="outline"
-            size="20"
+          <PanelLeftOpen
+            :size="20"
             class="sidebar-toggle-icon"
             :class="[show && 'sidebar-toggle-icon--open']"
           />

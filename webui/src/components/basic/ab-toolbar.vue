@@ -1,14 +1,9 @@
 <script lang="ts" setup>
 // 列表上方的操作行：搜索 / 筛选 / 动作三个插槽，一处定义响应式换行。
-withDefaults(
-  defineProps<{
-    /** 吸顶（长列表页） */
-    sticky?: boolean;
-  }>(),
-  {
-    sticky: false,
-  }
-);
+const { sticky = false } = defineProps<{
+  /** 吸顶（长列表页） */
+  sticky?: boolean;
+}>();
 </script>
 
 <template>

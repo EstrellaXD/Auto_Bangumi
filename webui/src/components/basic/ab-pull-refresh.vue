@@ -1,24 +1,17 @@
 <script lang="ts" setup>
-import { computed, ref } from 'vue';
+import { computed, ref, useTemplateRef } from 'vue';
 
-const props = withDefaults(
-  defineProps<{
-    loading?: boolean;
-    threshold?: number;
-    disabled?: boolean;
-  }>(),
-  {
-    loading: false,
-    threshold: 60,
-    disabled: false,
-  }
-);
+const { loading = false, threshold = 60, disabled = false } = defineProps<{
+  loading?: boolean;
+  threshold?: number;
+  disabled?: boolean;
+}>();
 
 const emit = defineEmits<{
   (e: 'refresh'): void;
 }>();
 
-const containerRef = ref<HTMLElement | null>(null);
+const containerRef = useTemplateRef<HTMLElement>('containerRef');
 const pullDistance = ref(0);
 const isPulling = ref(false);
 const startY = ref(0);
@@ -28,7 +21,7 @@ const pullStyle = computed(() => {
     return {
       transform: `translateY(${Math.min(
         pullDistance.value,
-        props.threshold * 1.5
+        threshold * 1.5
       )}px)`,
       transition: isPulling.value
         ? 'none'
@@ -41,17 +34,17 @@ const pullStyle = computed(() => {
 });
 
 const indicatorOpacity = computed(() => {
-  return Math.min(pullDistance.value / props.threshold, 1);
+  return Math.min(pullDistance.value / threshold, 1);
 });
 
 const indicatorRotation = computed(() => {
-  return Math.min(pullDistance.value / props.threshold, 1) * 180;
+  return Math.min(pullDistance.value / threshold, 1) * 180;
 });
 
-const isTriggered = computed(() => pullDistance.value >= props.threshold);
+const isTriggered = computed(() => pullDistance.value >= threshold);
 
 function onTouchStart(e: TouchEvent) {
-  if (props.disabled || props.loading) return;
+  if (disabled || loading) return;
   const container = containerRef.value;
   if (!container || container.scrollTop > 0) return;
 
@@ -60,7 +53,7 @@ function onTouchStart(e: TouchEvent) {
 }
 
 function onTouchMove(e: TouchEvent) {
-  if (!isPulling.value || props.disabled || props.loading) return;
+  if (!isPulling.value || disabled || loading) return;
   const container = containerRef.value;
   if (!container || container.scrollTop > 0) {
     isPulling.value = false;
@@ -82,7 +75,7 @@ function onTouchEnd() {
   if (!isPulling.value) return;
   isPulling.value = false;
 
-  if (isTriggered.value && !props.loading) {
+  if (isTriggered.value && !loading) {
     emit('refresh');
   }
   pullDistance.value = 0;

@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { Down } from '@icon-park/vue-next';
+import { ChevronDown } from '@lucide/vue';
 
 /** v-model open state */
 const open = defineModel<boolean>('open', { default: false });
@@ -13,11 +13,10 @@ const open = defineModel<boolean>('open', { default: false });
       :aria-expanded="open"
       @click="open = !open"
     >
-      <Down
+      <ChevronDown
         class="advanced-chevron"
         :class="{ 'advanced-chevron--open': open }"
-        theme="outline"
-        size="14"
+        :size="14"
       />
       {{ $t('search.confirm.advanced') }}
     </button>

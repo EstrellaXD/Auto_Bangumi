@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { Link } from '@icon-park/vue-next';
+import { Link } from '@lucide/vue';
 import { NSpin } from 'naive-ui';
 import AbField from './basic/ab-field.vue';
 import AbSelect from './basic/ab-select.vue';
@@ -174,7 +174,7 @@ function subscribe() {
       <div class="form-group">
         <label class="form-label">{{ $t('topbar.add.rss_link') }}</label>
         <div class="input-wrapper">
-          <Link theme="outline" size="16" class="input-icon" />
+          <Link :size="16" class="input-icon" />
           <input
             v-model="rss.url"
             type="text"

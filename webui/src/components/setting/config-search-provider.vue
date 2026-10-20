@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { Delete, EditTwo, Plus } from '@icon-park/vue-next';
+import { Plus, SquarePen, Trash } from '@lucide/vue';
 import { useConfirm } from '@/hooks/useConfirm';
 import {
   buildNexusPhpSearchUrl,
@@ -246,7 +246,7 @@ function validateUrl(url: string): boolean {
               variant="secondary"
               @click="openEditDialog(provider, index)"
             >
-              <EditTwo size="16" />
+              <SquarePen :size="16" />
             </ab-button>
             <ab-icon-button
               v-if="!isDefaultProvider(provider.name)"
@@ -255,7 +255,7 @@ function validateUrl(url: string): boolean {
               :label="$t('config.search_provider_set.remove')"
               @click="onDeleteClick(index)"
             >
-              <Delete size="16" />
+              <Trash :size="16" />
             </ab-icon-button>
           </div>
         </div>
@@ -271,7 +271,7 @@ function validateUrl(url: string): boolean {
       <!-- Add button -->
       <div class="flex justify-end">
         <ab-button size="sm" variant="primary" @click="openAddDialog">
-          <Plus size="16" />
+          <Plus :size="16" />
           {{ $t('config.search_provider_set.add_new') }}
         </ab-button>
       </div>

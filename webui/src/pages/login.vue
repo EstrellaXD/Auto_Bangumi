@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { Fingerprint, Lock, User } from '@icon-park/vue-next';
+import { FingerprintPattern, Lock, User } from '@lucide/vue';
 
 definePage({
   name: 'Login',
@@ -82,7 +82,7 @@ async function handleLogin() {
             {{ $t('login.username') }}
           </label>
           <div class="input-wrapper">
-            <User class="input-icon" size="18" />
+            <User class="input-icon" :size="18" />
             <input
               id="login-username"
               v-model="user.username"
@@ -99,7 +99,7 @@ async function handleLogin() {
             {{ $t('login.password') }}
           </label>
           <div class="input-wrapper">
-            <Lock class="input-icon" size="18" />
+            <Lock class="input-icon" :size="18" />
             <input
               id="login-password"
               v-model="user.password"
@@ -132,7 +132,7 @@ async function handleLogin() {
             :disabled="isPasskeyLoading"
             @click="handlePasskeyLogin()"
           >
-            <Fingerprint size="20" />
+            <FingerprintPattern :size="20" />
             <span>{{ $t('login.passkey_btn') }}</span>
           </button>
         </div>

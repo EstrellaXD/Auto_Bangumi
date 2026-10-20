@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { Delete } from '@icon-park/vue-next';
+import { Trash } from '@lucide/vue';
 import { useConfirm } from '@/hooks/useConfirm';
 import type { PasskeyItem } from '#/passkey';
 
@@ -126,7 +126,7 @@ function formatDate(dateString: string | null): string {
             :label="$t('passkey.delete')"
             @click="onDeleteClick(passkey)"
           >
-            <Delete size="16" />
+            <Trash :size="16" />
           </ab-icon-button>
         </div>
       </div>

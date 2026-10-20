@@ -1,20 +1,13 @@
 <script lang="ts" setup>
 // 细进度条（下载页）：轨道用 surface-2，进行中为主色，错误为 danger。
-const props = withDefaults(
-  defineProps<{
-    /** 0–100 */
-    value: number;
-    label?: string;
-    state?: 'active' | 'error';
-  }>(),
-  {
-    value: 0,
-    label: '',
-    state: 'active',
-  }
-);
+const { value = 0, label = '', state = 'active' } = defineProps<{
+  /** 0–100 */
+  value: number;
+  label?: string;
+  state?: 'active' | 'error';
+}>();
 
-const clamped = computed(() => Math.min(100, Math.max(0, props.value)));
+const clamped = computed(() => Math.min(100, Math.max(0, value)));
 </script>
 
 <template>

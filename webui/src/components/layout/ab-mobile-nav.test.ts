@@ -12,7 +12,6 @@ vi.mock('@/hooks/useDarkMode', async () => {
   const { ref } = await vi.importActual<typeof import('vue')>('vue');
   return { useDarkMode: () => ({ isDark: ref(false), toggle: vi.fn() }) };
 });
-vi.mock('vue-inline-svg', () => ({ default: { template: '<i />' } }));
 vi.mock('@/hooks/usePluginUi', () => ({
   slotTitle: (ui: { title: Record<string, string> }) => ui.title['en-US'],
   usePluginPages: () =>

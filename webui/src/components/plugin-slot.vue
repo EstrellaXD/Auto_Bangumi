@@ -12,7 +12,7 @@ const props = defineProps<{
   context?: Record<string, unknown>;
 }>();
 
-const container = ref<HTMLElement>();
+const container = useTemplateRef<HTMLElement>('container');
 const failed = ref(false);
 const loading = ref(true);
 const reason = ref('');

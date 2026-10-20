@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { Caution, Close } from '@icon-park/vue-next';
+import { TriangleAlert, X } from '@lucide/vue';
 import type { OffsetSuggestionDetail, TMDBSummary } from '#/bangumi';
 
 const props = withDefaults(
@@ -93,13 +93,13 @@ function handleCancel() {
           <!-- Header -->
           <header class="dialog-header">
             <div class="header-icon">
-              <Caution theme="filled" size="20" />
+              <TriangleAlert :size="20" />
             </div>
             <h2 class="dialog-title">
               {{ t('offset.dialog_title') }}
             </h2>
             <button class="close-btn" aria-label="Close" @click="handleCancel">
-              <Close theme="outline" size="18" />
+              <X :size="18" />
             </button>
           </header>
 

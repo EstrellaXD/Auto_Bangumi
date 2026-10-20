@@ -88,16 +88,30 @@ describe('useBangumiRuleForm', () => {
     expect(result.showAdvanced.value).toBe(true);
   });
 
+  // happy-dom 不授予 clipboard-write 权限，useClipboard 走 execCommand('copy') 兜底；
+  // 记下兜底时临时 textarea 里的文本，即写入剪贴板的内容
+  function stubExecCommand() {
+    const copiedTexts: string[] = [];
+    const execCommand = vi.fn(() => {
+      copiedTexts.push(document.querySelector('textarea')?.value ?? '');
+      return true;
+    });
+    Object.defineProperty(document, 'execCommand', {
+      configurable: true,
+      value: execCommand,
+    });
+    return { execCommand, copiedTexts };
+  }
+
   it('should set copied to true after copyRssLink and clear it after the timeout', async () => {
     vi.useFakeTimers();
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    vi.stubGlobal('navigator', { clipboard: { writeText } });
+    const { copiedTexts } = stubExecCommand();
 
     const rule = ref<BangumiRule>({ ...ruleTemplate });
     const { result } = withSetup(rule);
 
     await result.copyRssLink('https://example.com/rss');
-    expect(writeText).toHaveBeenCalledWith('https://example.com/rss');
+    expect(copiedTexts).toEqual(['https://example.com/rss']);
     expect(result.copied.value).toBe(true);
 
     vi.advanceTimersByTime(2000);
@@ -107,14 +121,13 @@ describe('useBangumiRuleForm', () => {
   });
 
   it('should not touch the clipboard when copyRssLink is called with an empty link', async () => {
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    vi.stubGlobal('navigator', { clipboard: { writeText } });
+    const { execCommand } = stubExecCommand();
 
     const rule = ref<BangumiRule>({ ...ruleTemplate });
     const { result } = withSetup(rule);
 
     await result.copyRssLink('');
-    expect(writeText).not.toHaveBeenCalled();
+    expect(execCommand).not.toHaveBeenCalled();
     expect(result.copied.value).toBe(false);
   });
 });

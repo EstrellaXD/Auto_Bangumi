@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ErrorPicture } from '@icon-park/vue-next';
+import { ImageOff } from '@lucide/vue';
 import type { GroupedBangumi } from '@/store/search';
 
 const props = defineProps<{
@@ -32,7 +32,7 @@ const variantCount = computed(() => props.group.variants.length);
       </template>
       <template v-else>
         <div class="card-placeholder">
-          <ErrorPicture theme="outline" size="32" />
+          <ImageOff :size="32" />
         </div>
       </template>
       <!-- Variant count badge -->

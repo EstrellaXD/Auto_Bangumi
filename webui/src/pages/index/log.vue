@@ -83,7 +83,7 @@ function clearFilters() {
   searchQuery.value = '';
 }
 
-const logContainer = ref<HTMLElement | null>(null);
+const logContainer = useTemplateRef<HTMLElement>('logContainer');
 
 function scrollBehavior(): ScrollBehavior {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches

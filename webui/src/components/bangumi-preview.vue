@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ErrorPicture } from '@icon-park/vue-next';
+import { ImageOff } from '@lucide/vue';
 import type { BangumiRule } from '#/bangumi';
 
 /**
@@ -21,7 +21,7 @@ const rule = defineModel<BangumiRule>('rule', { required: true });
       </template>
       <template v-else>
         <div class="poster-placeholder">
-          <ErrorPicture theme="outline" size="32" />
+          <ImageOff :size="32" />
         </div>
       </template>
     </div>

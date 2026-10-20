@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ErrorPicture, Pin } from '@icon-park/vue-next';
+import { ImageOff, Pin } from '@lucide/vue';
 import type { BangumiGroup } from './types';
 
 const props = defineProps<{
@@ -41,7 +41,7 @@ const posterSrc = computed(() =>
           loading="lazy"
         >
         <div v-else class="calendar-card-placeholder">
-          <ErrorPicture theme="outline" size="20" />
+          <ImageOff :size="20" />
           <span class="calendar-card-placeholder-title">
             {{ group.primary.official_title }}
           </span>
@@ -64,7 +64,7 @@ const posterSrc = computed(() =>
           v-if="showUnpin && group.primary.weekday_locked"
           class="calendar-card-pin"
         >
-          <Pin theme="filled" size="12" />
+          <Pin fill="currentColor" :size="12" />
         </div>
       </div>
     </div>

@@ -3,15 +3,15 @@ import { NInput, NModal } from 'naive-ui';
 import type { LLMAuthChallenge } from '@/api/llm';
 
 const props = defineProps<{
-  show: boolean;
   providerId: string;
   displayName: string;
 }>();
 
 const emit = defineEmits<{
-  (e: 'update:show', value: boolean): void;
   (e: 'connected'): void;
 }>();
+
+const show = defineModel<boolean>('show', { required: true });
 
 const { t } = useMyI18n();
 const message = useMessage();
@@ -32,7 +32,7 @@ function close() {
   stopPolling();
   challenge.value = null;
   pastedCode.value = '';
-  emit('update:show', false);
+  show.value = false;
 }
 
 async function begin() {
@@ -88,13 +88,10 @@ async function submitCode() {
   }
 }
 
-watch(
-  () => props.show,
-  (show) => {
-    if (show) begin();
-    else stopPolling();
-  }
-);
+watch(show, (visible) => {
+  if (visible) begin();
+  else stopPolling();
+});
 
 onUnmounted(stopPolling);
 </script>
