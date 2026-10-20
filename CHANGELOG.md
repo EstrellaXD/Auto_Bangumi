@@ -1,3 +1,13 @@
+# [4.0.0-beta.3] - 2026-10-20
+
+- **破坏性变更（MCP）**：MCP 升级到 mcp 2.3，只提供 Streamable HTTP，端点为 `/mcp`（`/mcp/` 重定向到 `/mcp`）；旧的 SSE 端点 `/mcp/sse` 已删除，请更新 MCP 客户端的地址。令牌与 IP 白名单不变。插件 MCP 工具的参数按 `input_schema` 校验，`input_schema` 本身无效时计入熔断
+- **破坏性变更（API）**：带 JSON 请求体的调用必须发送 `Content-Type: application/json`，否则返回 422；未知的 `/api/…` 路径返回 404，不再返回 WebUI 页面；无关键词的 `/api/v1/search/bangumi` 返回空的事件流
+- **破坏性变更（插件 SDK）**：`ab_sdk` 升至 0.6.0：`AdapterContext.build_http_client` 返回 `httpx2.AsyncClient`，只调用 `get` / `post` 的插件不需要改动，捕获网络错误请改用 `httpx2.HTTPError`；插件项目与 SDK 轮子需要 Python 3.14，`ab-plugin new` 生成的项目与示例插件已同步
+- **变更（运行环境）**：Docker 镜像改用 Python 3.14；后端依赖升级到 FastAPI 0.150 / Starlette 1.9 / uvicorn 0.54、sqlmodel 0.0.48 / SQLAlchemy 2.1.5 / pydantic 2.14、openai 3 / anthropic 1 / google-genai 2.31；HTTP 客户端换成 httpx2，SOCKS5 代理改用原生支持（仍在代理端解析域名）
+- **变更（WebUI）**：图标换成 Lucide，弹窗、菜单与折叠面板改用 naive-ui；下拉菜单打开时焦点移入菜单并读出当前项，折叠面板正文以标题命名；HTTP（非 HTTPS）部署下复制 RSS 链接回退到兼容方式，不再无反应。不再注册 Service Worker，旧的 `sw.js` 会注销自己并清除缓存
+- **优化（关闭）**：关闭或重启时最多等待 5 秒打开中的事件流，不再因 WebUI 标签页未关而卡住
+- **开发**：Node 24、pnpm 12、uv 0.13；前端升级到 Vite 8 / TypeScript 6 / Vitest 5 / vue-router 5 / pinia 4 / VueUse 15 / vue-i18n 11 / UnoCSS 66 / Storybook 10；ESLint 10 + `@antfu/eslint-config` 取代 Prettier；后端改用 `ruff format`（CI 检查格式，格式化提交登记在 `.git-blame-ignore-revs`）
+
 # [4.0.0-beta.2] - 2026-10-09
 
 - **新增（插件市场）**：第三方插件经 PR 上架：在 `plugins/registry/<id>.toml` 写入作者仓库、固定的完整 commit、子目录与审查过的 zip `sha256`。`plugin-registry` 工作流在 PR 上用 base 分支的检查脚本运行作者的测试（至少 1 个且全部通过）和前端构建（`web-src/`，pnpm `--frozen-lockfile --ignore-scripts`），结果写入 Job Summary；合并后每个插件单独构建，签名 job 只接受与条目 `sha256` 一致的 zip，用独立的插件签名密钥签名后增量发布到 GitHub release `plugins`。更换 `repo` 会被拒绝（先下架再上架）。宿主改用随在线更新包分发的插件公钥 `module/plugin/ab_plugin_pubkey.pem` 验签。目录条目新增作者、权限、前端、源码位置与 README（16 KB 以内）。`ab-plugin pack` 不再打包 `web-src/`。新增上架文档与 PR 模板
