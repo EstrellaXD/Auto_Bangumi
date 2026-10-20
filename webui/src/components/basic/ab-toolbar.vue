@@ -14,13 +14,13 @@ withDefaults(
 <template>
   <div class="ab-toolbar" :class="{ 'ab-toolbar--sticky': sticky }">
     <div v-if="$slots.search" class="ab-toolbar-search">
-      <slot name="search"></slot>
+      <slot name="search" />
     </div>
     <div v-if="$slots.filters" class="ab-toolbar-filters">
-      <slot name="filters"></slot>
+      <slot name="filters" />
     </div>
     <div v-if="$slots.actions" class="ab-toolbar-actions">
-      <slot name="actions"></slot>
+      <slot name="actions" />
     </div>
   </div>
 </template>

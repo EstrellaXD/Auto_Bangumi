@@ -137,8 +137,8 @@ function groupNeedsReview(group: BangumiGroup): boolean {
           :key="`skeleton-${i}`"
           class="skeleton-card"
         >
-          <div class="skeleton-poster"></div>
-          <div class="skeleton-title"></div>
+          <div class="skeleton-poster" />
+          <div class="skeleton-title" />
         </div>
       </div>
 
@@ -160,7 +160,9 @@ function groupNeedsReview(group: BangumiGroup): boolean {
       <!-- Empty state guide -->
       <div v-else-if="!bangumi || bangumi.length === 0" class="empty-guide">
         <div class="empty-guide-header anim-fade-in">
-          <div class="empty-guide-title">{{ $t('homepage.empty.title') }}</div>
+          <div class="empty-guide-title">
+            {{ $t('homepage.empty.title') }}
+          </div>
           <div class="empty-guide-subtitle">
             {{ $t('homepage.empty.subtitle') }}
           </div>
@@ -168,7 +170,9 @@ function groupNeedsReview(group: BangumiGroup): boolean {
 
         <div class="empty-guide-steps">
           <div class="empty-guide-step anim-slide-up" style="--delay: 0.15s">
-            <div class="empty-guide-step-number">1</div>
+            <div class="empty-guide-step-number">
+              1
+            </div>
             <div class="empty-guide-step-content">
               <div class="empty-guide-step-title">
                 {{ $t('homepage.empty.step1_title') }}
@@ -180,7 +184,9 @@ function groupNeedsReview(group: BangumiGroup): boolean {
           </div>
 
           <div class="empty-guide-step anim-slide-up" style="--delay: 0.3s">
-            <div class="empty-guide-step-number">2</div>
+            <div class="empty-guide-step-number">
+              2
+            </div>
             <div class="empty-guide-step-content">
               <div class="empty-guide-step-title">
                 {{ $t('homepage.empty.step2_title') }}
@@ -192,7 +198,9 @@ function groupNeedsReview(group: BangumiGroup): boolean {
           </div>
 
           <div class="empty-guide-step anim-slide-up" style="--delay: 0.45s">
-            <div class="empty-guide-step-number">3</div>
+            <div class="empty-guide-step-number">
+              3
+            </div>
             <div class="empty-guide-step-content">
               <div class="empty-guide-step-title">
                 {{ $t('homepage.empty.step3_title') }}
@@ -234,7 +242,7 @@ function groupNeedsReview(group: BangumiGroup): boolean {
               <template v-if="groupNeedsReview(group)">
                 <span class="badge-icon">!</span>
                 <template v-if="group.rules.length > 1">
-                  <span class="badge-divider"></span>
+                  <span class="badge-divider" />
                   <span class="badge-count">{{ group.rules.length }}</span>
                 </template>
               </template>
@@ -259,7 +267,9 @@ function groupNeedsReview(group: BangumiGroup): boolean {
               <ab-badge :count="orphanCount" class="others-count" />
             </div>
             <div class="others-info">
-              <div class="others-title">{{ $t('homepage.others.title') }}</div>
+              <div class="others-title">
+                {{ $t('homepage.others.title') }}
+              </div>
             </div>
           </div>
         </transition-group>
@@ -309,7 +319,7 @@ function groupNeedsReview(group: BangumiGroup): boolean {
                 <template v-if="groupNeedsReview(group)">
                   <span class="badge-icon">!</span>
                   <template v-if="group.rules.length > 1">
-                    <span class="badge-divider"></span>
+                    <span class="badge-divider" />
                     <span class="badge-count">{{ group.rules.length }}</span>
                   </template>
                 </template>
@@ -346,11 +356,10 @@ function groupNeedsReview(group: BangumiGroup): boolean {
           >
             <div class="rule-list-item-info">
               <div class="rule-list-item-title">
-                <span v-if="rule.needs_review" class="warning-text">! </span
-                >{{
-                  rule.group_name ||
-                  rule.rule_name ||
-                  $t('homepage.rule.unnamed')
+                <span v-if="rule.needs_review" class="warning-text">! </span>{{
+                  rule.group_name
+                    || rule.rule_name
+                    || $t('homepage.rule.unnamed')
                 }}
               </div>
               <div class="rule-list-item-tags">
@@ -366,9 +375,7 @@ function groupNeedsReview(group: BangumiGroup): boolean {
                 v-if="rule.filter && rule.filter.length > 0"
                 class="rule-list-item-filter"
               >
-                <span class="rule-list-item-filter-label"
-                  >{{ $t('homepage.rule.filter') }}:</span
-                >
+                <span class="rule-list-item-filter-label">{{ $t('homepage.rule.filter') }}:</span>
                 <span class="rule-list-item-filter-value">{{
                   rule.filter.join(', ')
                 }}</span>
@@ -377,7 +384,9 @@ function groupNeedsReview(group: BangumiGroup): boolean {
                 {{ rule.title_raw }}
               </div>
             </div>
-            <div class="rule-list-item-arrow">›</div>
+            <div class="rule-list-item-arrow">
+              ›
+            </div>
           </div>
         </div>
       </ab-modal>

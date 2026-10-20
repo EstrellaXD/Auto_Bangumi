@@ -16,7 +16,9 @@ const show = defineModel<boolean>('show', { default: false });
 <template>
   <ab-modal v-model:show="show" :title="group?.primary.official_title || ''">
     <div v-if="group" class="rule-list">
-      <div class="rule-list-hint">{{ $t('homepage.rule.select_hint') }}</div>
+      <div class="rule-list-hint">
+        {{ $t('homepage.rule.select_hint') }}
+      </div>
       <div
         v-for="rule in group.rules"
         :key="rule.id"
@@ -43,9 +45,7 @@ const show = defineModel<boolean>('show', { default: false });
             v-if="rule.filter && rule.filter.length > 0"
             class="rule-list-item-filter"
           >
-            <span class="rule-list-item-filter-label"
-              >{{ $t('homepage.rule.filter') }}:</span
-            >
+            <span class="rule-list-item-filter-label">{{ $t('homepage.rule.filter') }}:</span>
             <span class="rule-list-item-filter-value">{{
               rule.filter.join(', ')
             }}</span>
@@ -54,7 +54,9 @@ const show = defineModel<boolean>('show', { default: false });
             {{ rule.title_raw }}
           </div>
         </div>
-        <div class="rule-list-item-arrow">&rsaquo;</div>
+        <div class="rule-list-item-arrow">
+          &rsaquo;
+        </div>
       </div>
     </div>
   </ab-modal>

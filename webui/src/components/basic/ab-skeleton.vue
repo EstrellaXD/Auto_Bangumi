@@ -24,21 +24,21 @@ const widths = ['62%', '88%', '40%', '75%', '55%'];
         :key="i"
         class="ab-skeleton-line"
         :style="{ width: widths[(i - 1) % widths.length] }"
-      ></span>
+      />
     </template>
 
     <template v-else-if="preset === 'row'">
       <span v-for="i in count" :key="i" class="ab-skeleton-row">
-        <span class="ab-skeleton-line" style="width: 46%"></span>
+        <span class="ab-skeleton-line" style="width: 46%" />
         <span
           class="ab-skeleton-line ab-skeleton-line--dim"
           style="width: 68%"
-        ></span>
+        />
       </span>
     </template>
 
     <template v-else>
-      <span v-for="i in count" :key="i" class="ab-skeleton-card"></span>
+      <span v-for="i in count" :key="i" class="ab-skeleton-card" />
     </template>
   </div>
 </template>

@@ -650,7 +650,7 @@ function handleFilterClick(
                 class="search-input"
                 aria-label="Search anime"
                 @keyup.enter="onSearch"
-              />
+              >
 
               <div class="provider-select">
                 <button
@@ -700,7 +700,7 @@ function handleFilterClick(
                 <button
                   v-for="option in getVisibleOptions(
                     'group',
-                    filterOptions.group
+                    filterOptions.group,
                   )"
                   :key="option"
                   class="filter-chip chip-group"
@@ -739,7 +739,7 @@ function handleFilterClick(
                 <button
                   v-for="option in getVisibleOptions(
                     'resolution',
-                    filterOptions.resolution
+                    filterOptions.resolution,
                   )"
                   :key="option"
                   class="filter-chip chip-resolution"
@@ -778,7 +778,7 @@ function handleFilterClick(
                 <button
                   v-for="option in getVisibleOptions(
                     'subtitle',
-                    filterOptions.subtitle
+                    filterOptions.subtitle,
                   )"
                   :key="option"
                   class="filter-chip chip-subtitle"
@@ -814,7 +814,7 @@ function handleFilterClick(
                 <button
                   v-for="option in getVisibleOptions(
                     'season',
-                    filterOptions.season
+                    filterOptions.season,
                   )"
                   :key="option"
                   class="filter-chip chip-season"
@@ -844,9 +844,7 @@ function handleFilterClick(
             <!-- Selected Filters Summary -->
             <div class="filter-summary">
               <div v-if="hasActiveFilters" class="selected-filters">
-                <span class="selected-label"
-                  >{{ $t('search.filter.active') }}:</span
-                >
+                <span class="selected-label">{{ $t('search.filter.active') }}:</span>
                 <div class="selected-chips">
                   <button
                     v-for="tag in selectedFilterTags"
@@ -911,7 +909,7 @@ function handleFilterClick(
                       v-if="group.poster_link"
                       :src="getPosterUrl(group.poster_link)"
                       :alt="group.official_title"
-                    />
+                    >
                     <div v-else class="bangumi-poster-placeholder">
                       <span class="placeholder-title">{{
                         group.official_title

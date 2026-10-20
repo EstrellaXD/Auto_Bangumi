@@ -19,9 +19,7 @@ defineEmits<{ close: [] }>();
 
 <template>
   <span class="ab-tag" :class="`ab-tag--${type}`">
-    <span class="ab-tag-text"
-      ><slot>{{ title }}</slot></span
-    >
+    <span class="ab-tag-text"><slot>{{ title }}</slot></span>
     <button
       v-if="closable"
       type="button"

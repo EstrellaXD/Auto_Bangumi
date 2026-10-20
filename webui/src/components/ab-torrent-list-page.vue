@@ -59,7 +59,9 @@ onActivated(load);
 <template>
   <div class="page-torrents">
     <div class="toolbar">
-      <h2 class="toolbar-title">{{ title }}</h2>
+      <h2 class="toolbar-title">
+        {{ title }}
+      </h2>
       <div class="toolbar-actions">
         <ab-button v-if="torrents.length > 0" size="sm" @click="toggleAll">
           <template #icon>

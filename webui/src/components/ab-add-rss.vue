@@ -180,7 +180,7 @@ function subscribe() {
             type="text"
             class="form-input form-input--with-icon"
             :placeholder="$t('topbar.add.placeholder_link')"
-          />
+          >
         </div>
       </div>
 
@@ -192,7 +192,7 @@ function subscribe() {
           type="text"
           class="form-input"
           :placeholder="$t('topbar.add.placeholder_name')"
-        />
+        >
       </div>
 
       <!-- Options row -->

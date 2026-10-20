@@ -235,7 +235,9 @@ function groupCheckedKeys(group: TorrentGroup): string[] {
   <div class="page-downloader">
     <div v-if="isNull" class="empty-guide">
       <div class="empty-guide-header anim-fade-in">
-        <div class="empty-guide-title">{{ $t('downloader.empty.title') }}</div>
+        <div class="empty-guide-title">
+          {{ $t('downloader.empty.title') }}
+        </div>
         <div class="empty-guide-subtitle">
           {{ $t('downloader.empty.subtitle') }}
         </div>
@@ -243,7 +245,9 @@ function groupCheckedKeys(group: TorrentGroup): string[] {
 
       <div class="empty-guide-steps">
         <div class="empty-guide-step anim-slide-up" style="--delay: 0.15s">
-          <div class="empty-guide-step-number">1</div>
+          <div class="empty-guide-step-number">
+            1
+          </div>
           <div class="empty-guide-step-content">
             <div class="empty-guide-step-title">
               {{ $t('downloader.empty.step1_title') }}
@@ -255,7 +259,9 @@ function groupCheckedKeys(group: TorrentGroup): string[] {
         </div>
 
         <div class="empty-guide-step anim-slide-up" style="--delay: 0.3s">
-          <div class="empty-guide-step-number">2</div>
+          <div class="empty-guide-step-number">
+            2
+          </div>
           <div class="empty-guide-step-content">
             <div class="empty-guide-step-title">
               {{ $t('downloader.empty.step2_title') }}
@@ -267,7 +273,9 @@ function groupCheckedKeys(group: TorrentGroup): string[] {
         </div>
 
         <div class="empty-guide-step anim-slide-up" style="--delay: 0.45s">
-          <div class="empty-guide-step-number">3</div>
+          <div class="empty-guide-step-number">
+            3
+          </div>
           <div class="empty-guide-step-content">
             <div class="empty-guide-step-title">
               {{ $t('downloader.empty.step3_title') }}
@@ -319,15 +327,21 @@ function groupCheckedKeys(group: TorrentGroup): string[] {
             {{ selectedKeys.length }} {{ $t('downloader.selected') }}
           </span>
           <div class="action-bar-buttons">
-            <ab-button variant="primary" size="sm" @click="resumeSelected">{{
-              $t('downloader.action.resume')
-            }}</ab-button>
-            <ab-button variant="secondary" size="sm" @click="pauseSelected">{{
-              $t('downloader.action.pause')
-            }}</ab-button>
-            <ab-button variant="danger" size="sm" @click="onDeleteSelected">{{
-              $t('downloader.action.delete')
-            }}</ab-button>
+            <ab-button variant="primary" size="sm" @click="resumeSelected">
+              {{
+                $t('downloader.action.resume')
+              }}
+            </ab-button>
+            <ab-button variant="secondary" size="sm" @click="pauseSelected">
+              {{
+                $t('downloader.action.pause')
+              }}
+            </ab-button>
+            <ab-button variant="danger" size="sm" @click="onDeleteSelected">
+              {{
+                $t('downloader.action.delete')
+              }}
+            </ab-button>
           </div>
         </div>
       </Transition>

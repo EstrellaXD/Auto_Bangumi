@@ -129,11 +129,11 @@ function onClearClick() {
             <div class="notification-content">
               <div class="notification-title">
                 {{ store.titleOf(msg) }}
-                <span v-if="msg.count > 1" class="notification-count"
-                  >×{{ msg.count }}</span
-                >
+                <span v-if="msg.count > 1" class="notification-count">×{{ msg.count }}</span>
               </div>
-              <div class="notification-body">{{ store.bodyOf(msg) }}</div>
+              <div class="notification-body">
+                {{ store.bodyOf(msg) }}
+              </div>
               <div class="notification-meta">
                 {{ relativeTime(t, msg.updated_at) }}
               </div>

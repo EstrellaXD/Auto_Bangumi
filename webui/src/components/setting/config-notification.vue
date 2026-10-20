@@ -353,7 +353,7 @@ function getFieldsForType(type: string) {
           {{ listResult.message }}
         </div>
 
-        <div class="line"></div>
+        <div class="line" />
 
         <!-- Add provider button -->
         <div class="flex justify-end">

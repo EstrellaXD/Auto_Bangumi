@@ -26,11 +26,11 @@ defineEmits<{ close: [] }>();
   >
     <p class="ab-alert-text">
       <b v-if="title" class="ab-alert-title">{{ title }}</b>
-      <slot></slot>
+      <slot />
     </p>
 
     <span v-if="$slots.action" class="ab-alert-action">
-      <slot name="action"></slot>
+      <slot name="action" />
     </span>
 
     <button

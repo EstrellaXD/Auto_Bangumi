@@ -96,7 +96,7 @@ onUnmounted(() => {
         :src="isDark ? '/images/logo-light.svg' : '/images/logo.svg'"
         alt="favicon"
         class="topbar-logo"
-      />
+      >
       <img
         v-if="!isMobile"
         v-show="onSearchFocus === false"
@@ -105,7 +105,7 @@ onUnmounted(() => {
         "
         alt="AutoBangumi"
         class="topbar-wordmark"
-      />
+      >
     </div>
 
     <!-- Desktop search bar -->
@@ -137,8 +137,8 @@ onUnmounted(() => {
       />
     </div>
 
-    <ab-change-account v-model:show="showAccount"></ab-change-account>
-    <ab-add-rss v-model:show="showAddRSS" v-model:rule="rssRule"></ab-add-rss>
+    <ab-change-account v-model:show="showAccount" />
+    <ab-add-rss v-model:show="showAddRSS" v-model:rule="rssRule" />
   </div>
 </template>
 

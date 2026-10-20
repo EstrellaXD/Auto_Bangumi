@@ -46,7 +46,7 @@ const items: SettingItem<Network>[] = [
         :key="i.configKey"
         v-bind="i"
         v-model:data="network[i.configKey]"
-      ></ab-setting>
+      />
     </div>
   </ab-fold-panel>
 </template>

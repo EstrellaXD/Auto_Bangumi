@@ -105,7 +105,9 @@ function formatDate(dateString: string | null): string {
           class="flex justify-between items-center p-12 bg-gray-50 rounded-8"
         >
           <div>
-            <div class="font-medium">{{ passkey.name }}</div>
+            <div class="font-medium">
+              {{ passkey.name }}
+            </div>
             <div class="text-12 text-gray-500">
               {{ $t('passkey.created_at') }}:
               {{ formatDate(passkey.created_at) }}
@@ -129,7 +131,7 @@ function formatDate(dateString: string | null): string {
         </div>
       </div>
 
-      <div class="line"></div>
+      <div class="line" />
 
       <!-- 添加按钮 -->
       <div class="flex justify-end">

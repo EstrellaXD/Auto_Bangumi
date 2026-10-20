@@ -52,7 +52,9 @@ function handleNext() {
 <template>
   <ab-container :title="t('setup.rss.title')" class="wizard-step">
     <div class="step-content">
-      <p class="step-subtitle">{{ t('setup.rss.subtitle') }}</p>
+      <p class="step-subtitle">
+        {{ t('setup.rss.subtitle') }}
+      </p>
 
       <div class="form-fields">
         <ab-field :label="t('setup.rss.url')">
@@ -62,7 +64,7 @@ function handleNext() {
             :aria-label="t('setup.rss.url')"
             placeholder="https://mikanani.me/RSS/..."
             class="setup-input setup-input-wide"
-          />
+          >
         </ab-field>
 
         <ab-field v-if="rssData.name" :label="t('setup.rss.feed_name')">
@@ -71,7 +73,7 @@ function handleNext() {
             type="text"
             :aria-label="t('setup.rss.feed_name')"
             class="setup-input"
-          />
+          >
         </ab-field>
       </div>
 

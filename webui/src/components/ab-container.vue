@@ -15,16 +15,18 @@ withDefaults(
 <template>
   <div class="container-card">
     <div class="container-header">
-      <div class="container-title">{{ title }}</div>
-      <slot name="title-right"></slot>
+      <div class="container-title">
+        {{ title }}
+      </div>
+      <slot name="title-right" />
     </div>
 
     <div class="container-body" :class="{ 'container-body--flush': flush }">
-      <slot></slot>
+      <slot />
     </div>
 
     <div v-if="$slots.footer" class="container-footer">
-      <slot name="footer"></slot>
+      <slot name="footer" />
     </div>
   </div>
 </template>

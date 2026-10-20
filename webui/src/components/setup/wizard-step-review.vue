@@ -44,7 +44,9 @@ function maskPassword(pwd: string): string {
 <template>
   <ab-container :title="t('setup.review.title')" class="wizard-step">
     <div class="step-content">
-      <p class="step-subtitle">{{ t('setup.review.subtitle') }}</p>
+      <p class="step-subtitle">
+        {{ t('setup.review.subtitle') }}
+      </p>
 
       <div class="review-sections">
         <div class="review-section">

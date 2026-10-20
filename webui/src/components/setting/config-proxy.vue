@@ -70,7 +70,7 @@ const items: SettingItem<Proxy>[] = [
         :key="i.configKey"
         v-bind="i"
         v-model:data="proxy[i.configKey]"
-      ></ab-setting>
+      />
     </div>
   </ab-fold-panel>
 </template>

@@ -40,7 +40,7 @@ function onSelect(item: AbMenuItem) {
 <template>
   <Menu as="div" class="ab-menu">
     <MenuButton as="template">
-      <slot name="trigger"></slot>
+      <slot name="trigger" />
     </MenuButton>
 
     <MenuItems class="ab-menu-list" :class="`ab-menu-list--${align}`">
@@ -60,7 +60,7 @@ function onSelect(item: AbMenuItem) {
           ]"
           @click="onSelect(item)"
         >
-          <Component :is="item.icon" v-if="item.icon" :size="15"></Component>
+          <Component :is="item.icon" v-if="item.icon" :size="15" />
           <span class="ab-menu-item-label">{{ itemLabel(item) }}</span>
         </button>
       </MenuItem>

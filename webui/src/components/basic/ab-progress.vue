@@ -31,7 +31,7 @@ const clamped = computed(() => Math.min(100, Math.max(0, props.value)));
         class="ab-progress-fill"
         :class="`ab-progress-fill--${state}`"
         :style="{ transform: `scaleX(${clamped / 100})` }"
-      ></div>
+      />
     </div>
     <span v-if="label" class="ab-progress-label">{{ label }}</span>
   </div>

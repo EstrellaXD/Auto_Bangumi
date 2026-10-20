@@ -47,9 +47,9 @@ export interface SetupCompleteRequest {
 }
 
 export type WizardStep =
-  | 'welcome'
-  | 'account'
-  | 'downloader'
-  | 'rss'
-  | 'notification'
-  | 'review';
+  | 'welcome' |
+  'account' |
+  'downloader' |
+  'rss' |
+  'notification' |
+  'review';

@@ -70,12 +70,10 @@ function toggleAll() {
           :checked="allSelected"
           :indeterminate="someSelected"
           @change="toggleAll"
-        />
+        >
         <span>{{ $t('common.selectAll') }}</span>
       </label>
-      <span class="ab-list-count"
-        >{{ items.length }} {{ $t('common.items') }}</span
-      >
+      <span class="ab-list-count">{{ items.length }} {{ $t('common.items') }}</span>
     </div>
 
     <!-- 加载骨架 -->
@@ -102,7 +100,7 @@ function toggleAll() {
             :checked="selectedSet.has(item[keyField])"
             :aria-label="$t('common.select')"
             @change="toggle(item[keyField])"
-          />
+          >
         </label>
 
         <div class="ab-list-row-content">
@@ -115,7 +113,7 @@ function toggleAll() {
       <!-- 空状态 -->
       <div v-if="items.length === 0" class="ab-list-empty">
         <slot name="empty">
-          <AbEmpty :title="$t('common.empty')"></AbEmpty>
+          <AbEmpty :title="$t('common.empty')" />
         </slot>
       </div>
     </template>

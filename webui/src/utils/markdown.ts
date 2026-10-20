@@ -35,8 +35,7 @@ function inline(raw: string): string {
               text
             )}</a>`
           )
-        : text
-    );
+        : text);
   html = emphasis(html);
   // 链接文字里可能还有行内代码的占位符，逐层还原
   const held = /\uE000(\d+)\uE000/g;

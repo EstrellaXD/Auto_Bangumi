@@ -30,9 +30,11 @@ const { user, update } = useAuth();
     </div>
 
     <template #footer>
-      <ab-button variant="primary" size="sm" @click="update">{{
-        $t('topbar.profile.update_btn')
-      }}</ab-button>
+      <ab-button variant="primary" size="sm" @click="update">
+        {{
+          $t('topbar.profile.update_btn')
+        }}
+      </ab-button>
     </template>
   </ab-modal>
 </template>

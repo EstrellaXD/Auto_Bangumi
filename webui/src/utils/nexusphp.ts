@@ -19,8 +19,10 @@
 export interface NexusPhpProviderOptions {
   baseUrl: string;
   passkey: string;
-  /** NexusPHP 分类 ID（如 Audiences.me 的剧集/动漫为 402），可用逗号
-   *  分隔多个；留空则不过滤 */
+  /**
+   * NexusPHP 分类 ID（如 Audiences.me 的剧集/动漫为 402），可用逗号
+   *  分隔多个；留空则不过滤
+   */
   categoryId?: string;
 }
 

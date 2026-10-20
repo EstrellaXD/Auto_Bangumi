@@ -230,13 +230,13 @@ const items = computed(() =>
         css="w-115"
         :prop="{ items: downloaderType }"
         @update:data="setProvider"
-      ></ab-setting>
+      />
       <ab-setting
         v-for="i in items"
         :key="i.configKey"
         v-bind="i"
         v-model:data="downloader.options[i.configKey]"
-      ></ab-setting>
+      />
     </div>
   </ab-fold-panel>
 </template>

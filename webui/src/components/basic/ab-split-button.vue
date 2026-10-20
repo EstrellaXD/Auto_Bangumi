@@ -59,7 +59,7 @@ function onMainClick() {
       :aria-busy="loading || undefined"
       @click="onMainClick"
     >
-      <span v-if="loading" class="ab-split-spin" aria-hidden="true"></span>
+      <span v-if="loading" class="ab-split-spin" aria-hidden="true" />
       {{ selected?.label }}
     </button>
 

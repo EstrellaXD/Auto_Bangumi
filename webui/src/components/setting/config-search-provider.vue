@@ -261,7 +261,7 @@ function validateUrl(url: string): boolean {
         </div>
       </div>
 
-      <div class="line"></div>
+      <div class="line" />
 
       <!-- Hint text -->
       <div class="hint-text">
@@ -398,8 +398,8 @@ function validateUrl(url: string): boolean {
             :placeholder="$t('config.search_provider_set.name_placeholder')"
             :maxlength="32"
             :disabled="
-              editingProvider !== null &&
-              isDefaultProvider(editingProvider.name)
+              editingProvider !== null
+                && isDefaultProvider(editingProvider.name)
             "
           />
         </ab-field>

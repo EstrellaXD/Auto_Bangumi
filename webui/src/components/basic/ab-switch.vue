@@ -32,5 +32,5 @@ const field = inject(abFieldInjectionKey, null);
     :loading="loading"
     :aria-label="ariaLabel"
     :aria-labelledby="field?.labelId"
-  ></NSwitch>
+  />
 </template>

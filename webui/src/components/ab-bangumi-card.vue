@@ -44,7 +44,7 @@ const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
             :alt="bangumi.official_title"
             class="card-img"
             loading="lazy"
-          />
+          >
         </template>
         <template v-else>
           <div class="card-placeholder">
@@ -98,7 +98,7 @@ const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
               :src="posterSrc"
               :alt="bangumi.official_title"
               class="search-card-img"
-            />
+            >
           </template>
           <template v-else>
             <div class="card-placeholder card-placeholder--small">
@@ -107,7 +107,9 @@ const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
           </template>
         </div>
         <div class="search-card-meta">
-          <div class="search-card-title">{{ bangumi.official_title }}</div>
+          <div class="search-card-title">
+            {{ bangumi.official_title }}
+          </div>
           <div class="card-tags">
             <ab-tag
               v-if="bangumi.season"

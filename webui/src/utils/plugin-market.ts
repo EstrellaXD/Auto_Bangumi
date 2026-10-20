@@ -2,11 +2,11 @@ import type { CatalogEntry } from '#/plugins';
 
 /** 插件市场的分类：按扩展点归成几个用户能理解的大类 */
 export type MarketCategory =
-  | 'source'
-  | 'notify'
-  | 'organize'
-  | 'interface'
-  | 'other';
+  | 'source' |
+  'notify' |
+  'organize' |
+  'interface' |
+  'other';
 export type MarketState = 'installed' | 'update' | 'available';
 
 export const MARKET_CATEGORIES: MarketCategory[] = [

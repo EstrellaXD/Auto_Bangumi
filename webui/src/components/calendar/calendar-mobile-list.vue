@@ -68,7 +68,7 @@ function posterSrc(link: string | null | undefined): string {
                 :alt="group.primary.official_title"
                 class="calendar-row-img"
                 loading="lazy"
-              />
+              >
               <div v-else class="calendar-row-placeholder">
                 <ErrorPicture theme="outline" size="16" />
               </div>

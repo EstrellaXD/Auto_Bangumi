@@ -6,14 +6,14 @@ withDefaults(
   defineProps<{
     content?: string;
     placement?:
-      | 'top'
-      | 'bottom'
-      | 'left'
-      | 'right'
-      | 'top-start'
-      | 'top-end'
-      | 'bottom-start'
-      | 'bottom-end';
+      | 'top' |
+      'bottom' |
+      'left' |
+      'right' |
+      'top-start' |
+      'top-end' |
+      'bottom-start' |
+      'bottom-end';
     delay?: number;
   }>(),
   {
@@ -29,6 +29,8 @@ withDefaults(
     <template #trigger>
       <slot />
     </template>
-    <slot name="content">{{ content }}</slot>
+    <slot name="content">
+      {{ content }}
+    </slot>
   </NTooltip>
 </template>

@@ -40,7 +40,7 @@ function onClick(event: MouseEvent) {
     :disabled="disabled"
     @click="onClick"
   >
-    <slot></slot>
+    <slot />
   </button>
 </template>
 

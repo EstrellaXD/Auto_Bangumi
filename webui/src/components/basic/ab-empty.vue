@@ -14,10 +14,14 @@ withDefaults(
 
 <template>
   <div class="ab-empty">
-    <p class="ab-empty-title">{{ title }}</p>
-    <p v-if="description" class="ab-empty-description">{{ description }}</p>
+    <p class="ab-empty-title">
+      {{ title }}
+    </p>
+    <p v-if="description" class="ab-empty-description">
+      {{ description }}
+    </p>
     <div v-if="$slots.action" class="ab-empty-action">
-      <slot name="action"></slot>
+      <slot name="action" />
     </div>
   </div>
 </template>

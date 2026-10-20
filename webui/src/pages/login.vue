@@ -50,8 +50,8 @@ async function handleLogin() {
   <div class="page-login">
     <!-- Animated background -->
     <div class="login-bg">
-      <div class="login-bg-gradient"></div>
-      <div class="login-bg-pattern"></div>
+      <div class="login-bg-gradient" />
+      <div class="login-bg-pattern" />
     </div>
 
     <!-- Login card -->
@@ -60,15 +60,19 @@ async function handleLogin() {
       <div class="login-header">
         <div class="login-logo">
           <!-- Light mode: colored logo, Dark mode: light logo -->
-          <img src="/images/logo.svg" alt="AutoBangumi" class="logo-dark" />
+          <img src="/images/logo.svg" alt="AutoBangumi" class="logo-dark">
           <img
             src="/images/logo-light.svg"
             alt="AutoBangumi"
             class="logo-light"
-          />
+          >
         </div>
-        <h1 class="login-title">AutoBangumi</h1>
-        <p class="login-subtitle">{{ $t('login.title') }}</p>
+        <h1 class="login-title">
+          AutoBangumi
+        </h1>
+        <p class="login-subtitle">
+          {{ $t('login.title') }}
+        </p>
       </div>
 
       <!-- Form -->
@@ -86,7 +90,7 @@ async function handleLogin() {
               autocomplete="username"
               :placeholder="$t('login.username')"
               class="login-input"
-            />
+            >
           </div>
         </div>
 
@@ -103,7 +107,7 @@ async function handleLogin() {
               autocomplete="current-password"
               :placeholder="$t('login.password')"
               class="login-input"
-            />
+            >
           </div>
         </div>
 

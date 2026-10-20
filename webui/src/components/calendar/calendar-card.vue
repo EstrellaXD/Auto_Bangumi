@@ -39,7 +39,7 @@ const posterSrc = computed(() =>
           :alt="group.primary.official_title"
           class="calendar-card-img"
           loading="lazy"
-        />
+        >
         <div v-else class="calendar-card-placeholder">
           <ErrorPicture theme="outline" size="20" />
           <span class="calendar-card-placeholder-title">

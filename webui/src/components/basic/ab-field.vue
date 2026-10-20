@@ -79,9 +79,7 @@ provide(abFieldInjectionKey, {
           :for="adopted ? controlId : undefined"
         >
           {{ labelText }}
-          <span v-if="required" class="ab-field-required" aria-hidden="true"
-            >*</span
-          >
+          <span v-if="required" class="ab-field-required" aria-hidden="true">*</span>
         </Component>
         <p v-if="description" :id="descriptionId" class="ab-field-description">
           {{ description }}
@@ -89,7 +87,7 @@ provide(abFieldInjectionKey, {
       </div>
 
       <div class="ab-field-control">
-        <slot></slot>
+        <slot />
       </div>
     </div>
 

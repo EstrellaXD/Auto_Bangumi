@@ -11,8 +11,10 @@ withDefaults(
 
 <template>
   <div class="page-title">
-    <h1 class="page-title-text">{{ title }}</h1>
-    <div class="page-title-accent"></div>
+    <h1 class="page-title-text">
+      {{ title }}
+    </h1>
+    <div class="page-title-accent" />
   </div>
 </template>
 

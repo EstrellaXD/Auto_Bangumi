@@ -1,4 +1,1 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
-
-cd ./webui && pnpm run lint:fix && pnpm run format
+cd ./webui && pnpm run lint:fix

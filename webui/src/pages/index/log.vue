@@ -204,7 +204,9 @@ onDeactivated(() => {
                   {{ $t('log.clear_filters') }}
                 </ab-button>
               </template>
-              <p v-else>{{ $t('log.empty') }}</p>
+              <p v-else>
+                {{ $t('log.empty') }}
+              </p>
             </div>
             <div v-else class="log-content">
               <div
@@ -241,35 +243,28 @@ onDeactivated(() => {
                 href="https://github.com/EstrellaXD/Auto_Bangumi"
                 target="_blank"
                 rel="noopener"
-                >GitHub <span aria-hidden="true">↗</span></a
-              >
+              >GitHub <span aria-hidden="true">↗</span></a>
             </li>
             <li>
-              <a href="https://autobangumi.org" target="_blank" rel="noopener"
-                >{{ $t('log.website') }} <span aria-hidden="true">↗</span></a
-              >
+              <a href="https://autobangumi.org" target="_blank" rel="noopener">{{ $t('log.website') }} <span aria-hidden="true">↗</span></a>
             </li>
             <li>
-              <a href="https://t.me/autobangumi" target="_blank" rel="noopener"
-                >{{ $t('log.telegram_group') }}
-                <span aria-hidden="true">↗</span></a
-              >
+              <a href="https://t.me/autobangumi" target="_blank" rel="noopener">{{ $t('log.telegram_group') }}
+                <span aria-hidden="true">↗</span></a>
             </li>
             <li>
               <a
                 href="https://twitter.com/Estrella_Pan"
                 target="_blank"
                 rel="noopener"
-                >X <span aria-hidden="true">↗</span></a
-              >
+              >X <span aria-hidden="true">↗</span></a>
             </li>
             <li>
               <a
                 href="https://github.com/EstrellaXD/Auto_Bangumi/issues"
                 target="_blank"
                 rel="noopener"
-                >{{ $t('log.report_bug') }} <span aria-hidden="true">↗</span></a
-              >
+              >{{ $t('log.report_bug') }} <span aria-hidden="true">↗</span></a>
             </li>
           </ul>
         </ab-container>

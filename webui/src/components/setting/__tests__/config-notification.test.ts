@@ -79,9 +79,8 @@ describe('config-notification', () => {
     'should test saved row %i by index when testing from the list',
     async (index, text) => {
       const w = mountPage();
-      await w
-        .findAll('[aria-label="config.notification_set.test"]')
-        [index].trigger('click');
+      const buttons = w.findAll('[aria-label="config.notification_set.test"]');
+      await buttons[index].trigger('click');
       await flushPromises();
       expect(api.testProviderConfig).not.toHaveBeenCalled();
       expect(api.testProvider).toHaveBeenCalledWith({ provider_index: index });

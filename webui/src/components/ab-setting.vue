@@ -48,7 +48,7 @@ const selectValue = computed<string | number | null>({
         v-model="data"
         :class="css"
         :aria-label="labelText"
-      ></AbSwitch>
+      />
 
       <AbSelect
         v-else-if="type === 'select'"
@@ -57,7 +57,7 @@ const selectValue = computed<string | number | null>({
         :class="css"
         class="setting-select"
         :aria-label="labelText"
-      ></AbSelect>
+      />
 
       <AbInput
         v-else-if="type === 'input'"
@@ -68,18 +68,18 @@ const selectValue = computed<string | number | null>({
         :min="prop?.min"
         :max="prop?.max"
         :autocomplete="prop?.autocomplete"
-      ></AbInput>
+      />
 
       <div v-else-if="type === 'dynamic-tags'" class="dynamic-tags-wrapper">
         <NDynamicTags
           v-model:value="data"
           size="small"
           :aria-label="labelText"
-        ></NDynamicTags>
+        />
       </div>
     </AbField>
 
-    <div v-if="bottomLine" class="setting-divider"></div>
+    <div v-if="bottomLine" class="setting-divider" />
   </div>
 </template>
 

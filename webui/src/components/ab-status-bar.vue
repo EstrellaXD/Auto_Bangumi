@@ -66,9 +66,11 @@ function abLabel(label: string | (() => string)) {
             @click="() => i.handle && i.handle()"
           >
             <div class="status-menu-item-icon">
-              <Component :is="i.icon" size="16"></Component>
+              <Component :is="i.icon" size="16" />
             </div>
-            <div class="status-menu-item-label">{{ abLabel(i.label) }}</div>
+            <div class="status-menu-item-label">
+              {{ abLabel(i.label) }}
+            </div>
           </div>
         </MenuItem>
       </MenuItems>

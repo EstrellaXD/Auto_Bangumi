@@ -29,7 +29,7 @@ const ariaText = computed(() => props.label || props.state);
   >
     <!-- 状态灯：外圈细线，内里是灯 -->
     <span class="ab-status-ring" aria-hidden="true">
-      <span class="ab-status-mark"></span>
+      <span class="ab-status-mark" />
     </span>
     <span v-if="label" class="ab-status-label">{{ label }}</span>
     <span v-if="detail" class="ab-status-detail">{{ detail }}</span>

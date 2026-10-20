@@ -60,7 +60,7 @@ function onApplyRule(rule: BangumiRule) {
       <ab-sidebar />
 
       <div id="main-content" class="layout-content">
-        <ab-page-title :title="pageTitle"></ab-page-title>
+        <ab-page-title :title="pageTitle" />
 
         <RouterView v-slot="{ Component }">
           <transition name="page" mode="out-in">

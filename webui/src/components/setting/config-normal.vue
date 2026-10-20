@@ -57,12 +57,12 @@ const logItems: SettingItem<Log> = {
         :key="i.configKey"
         v-bind="i"
         v-model:data="program[i.configKey]"
-      ></ab-setting>
+      />
 
       <ab-setting
         v-bind="logItems"
         v-model:data="log[logItems.configKey]"
-      ></ab-setting>
+      />
     </div>
   </ab-fold-panel>
 </template>

@@ -14,7 +14,7 @@ test('player settings stay browser-local and load the hermetic iframe', async ({
     if (
       (request.url().endsWith('/api/v1/config/update') &&
         request.method() === 'PATCH') ||
-      (request.url().endsWith('/api/v1/restart') && request.method() === 'POST')
+        (request.url().endsWith('/api/v1/restart') && request.method() === 'POST')
     )
       backendMutations.push(request.url());
   });

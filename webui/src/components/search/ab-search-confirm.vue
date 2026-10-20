@@ -170,7 +170,9 @@ function handleConfirm() {
     <div class="confirm-modal" role="dialog" aria-modal="true">
       <!-- Header -->
       <header class="confirm-header">
-        <h2 class="confirm-title">{{ $t('search.confirm.title') }}</h2>
+        <h2 class="confirm-title">
+          {{ $t('search.confirm.title') }}
+        </h2>
         <ab-icon-button
           class="close-btn"
           :label="$t('common.close')"
@@ -186,7 +188,7 @@ function handleConfirm() {
         <div class="bangumi-info">
           <div class="bangumi-poster">
             <template v-if="localBangumi.poster_link">
-              <img :src="posterSrc" :alt="localBangumi.official_title" />
+              <img :src="posterSrc" :alt="localBangumi.official_title">
             </template>
             <template v-else>
               <div class="poster-placeholder">
@@ -195,7 +197,9 @@ function handleConfirm() {
             </template>
           </div>
           <div class="bangumi-meta">
-            <h3 class="bangumi-title">{{ localBangumi.official_title }}</h3>
+            <h3 class="bangumi-title">
+              {{ localBangumi.official_title }}
+            </h3>
             <p v-if="localBangumi.title_raw" class="bangumi-subtitle">
               {{ localBangumi.title_raw }}
             </p>

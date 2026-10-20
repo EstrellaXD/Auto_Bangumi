@@ -4,18 +4,18 @@ type Method = 'get' | 'post' | 'put' | 'delete';
 
 /** AbHost 依赖的宿主能力；测试里换成替身，运行时由 usePluginHostDeps 提供。 */
 export interface HostDeps {
-  request(
+  request: (
     method: Method,
     url: string,
     options: { params?: Record<string, unknown>; data?: unknown }
-  ): Promise<unknown>;
-  locale(): string;
-  t(key: string, params?: Record<string, unknown>): string;
-  isDark(): boolean;
-  tokens(): Record<string, string>;
-  toast(message: string, kind: 'info' | 'error'): void;
+  ) => Promise<unknown>;
+  locale: () => string;
+  t: (key: string, params?: Record<string, unknown>) => string;
+  isDark: () => boolean;
+  tokens: () => Record<string, string>;
+  toast: (message: string, kind: 'info' | 'error') => void;
   /** 订阅事件总线（SSE `bus` 帧）上的 `kind`，回调收到事件负载 */
-  onBusEvent(kind: string, callback: (payload: unknown) => void): () => void;
+  onBusEvent: (kind: string, callback: (payload: unknown) => void) => () => void;
 }
 
 // 只用来借 URL 解析 ``..``、``%2e%2e``、``//host`` 等写法，不会发出请求

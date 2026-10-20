@@ -23,8 +23,10 @@ withDefaults(
         class="fold-panel-header"
         :class="{ 'fold-panel-header--open': open }"
       >
-        <div class="fold-panel-title">{{ title }}</div>
-        <slot name="extra"></slot>
+        <div class="fold-panel-title">
+          {{ title }}
+        </div>
+        <slot name="extra" />
         <Down
           class="fold-panel-chevron"
           :class="{ 'fold-panel-chevron--open': open }"
@@ -36,7 +38,7 @@ withDefaults(
         <div class="fold-panel-clip">
           <DisclosurePanel static>
             <div class="fold-panel-body">
-              <slot></slot>
+              <slot />
             </div>
           </DisclosurePanel>
         </div>

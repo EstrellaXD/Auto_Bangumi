@@ -10,7 +10,7 @@ import VueI18nPlugin from '@intlify/unplugin-vue-i18n/vite';
 
 // 与后端给 SPA 文档加的响应头一致（backend/src/main.py）。只加在 preview：
 // dev 服务器会注入内联脚本，会被这个策略拦下
-const headers = { 'Content-Security-Policy': "script-src 'self'" };
+const headers = { 'Content-Security-Policy': 'script-src \'self\'' };
 
 // https://vitejs.dev/config/
 export default defineConfig({

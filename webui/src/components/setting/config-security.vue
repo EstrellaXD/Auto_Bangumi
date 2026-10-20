@@ -31,14 +31,16 @@ const items: SettingItem<Security>[] = [
 
 <template>
   <ab-fold-panel :title="$t('config.security_set.title')">
-    <p class="hint-text">{{ $t('config.security_set.hint') }}</p>
+    <p class="hint-text">
+      {{ $t('config.security_set.hint') }}
+    </p>
     <div class="space-y-8">
       <ab-setting
         v-for="i in items"
         :key="i.configKey"
         v-bind="i"
         v-model:data="security[i.configKey]"
-      ></ab-setting>
+      />
     </div>
   </ab-fold-panel>
 </template>

@@ -133,8 +133,8 @@ function Exit() {
     [
       h(Logout, { size: 20 }),
       !isMobileOrTablet.value &&
-        show.value &&
-        h('div', { class: 'sidebar-item-label' }, t('sidebar.logout')),
+      show.value &&
+      h('div', { class: 'sidebar-item-label' }, t('sidebar.logout')),
     ]
   );
 }
@@ -180,7 +180,9 @@ function Exit() {
             ]"
           >
             <Component :is="i.icon" :size="20" />
-            <div v-show="show" class="sidebar-item-label">{{ i.label() }}</div>
+            <div v-show="show" class="sidebar-item-label">
+              {{ i.label() }}
+            </div>
           </RouterLink>
         </nav>
 

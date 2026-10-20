@@ -67,7 +67,7 @@ function clear() {
     }"
   >
     <span v-if="$slots.prefix" class="ab-input-affix">
-      <slot name="prefix"></slot>
+      <slot name="prefix" />
     </span>
 
     <input
@@ -85,7 +85,7 @@ function clear() {
       :aria-describedby="field?.describedBy.value"
       :aria-invalid="invalid || undefined"
       @input="onInput"
-    />
+    >
 
     <button
       v-if="clearable && String(model).length > 0 && !disabled"
@@ -151,7 +151,7 @@ function clear() {
     </button>
 
     <span v-if="$slots.suffix" class="ab-input-affix">
-      <slot name="suffix"></slot>
+      <slot name="suffix" />
     </span>
   </span>
 </template>

@@ -89,12 +89,12 @@ const rssColumns = computed<DataTableColumns<RSS>>(() => [
     render(rss: RSS) {
       return h('div', { class: 'flex justify-end gap-x-8' }, [
         rss.connection_status === 'healthy' &&
-          h(AbTag, { type: 'success', title: t('rss.connected') }),
+        h(AbTag, { type: 'success', title: t('rss.connected') }),
         rss.connection_status === 'error' &&
-          h(NTooltip, null, {
-            trigger: () => h(AbTag, { type: 'danger', title: t('rss.error') }),
-            default: () => rss.last_error || 'Unknown error',
-          }),
+        h(NTooltip, null, {
+          trigger: () => h(AbTag, { type: 'danger', title: t('rss.error') }),
+          default: () => rss.last_error || 'Unknown error',
+        }),
         rss.enabled
           ? h(AbTag, { type: 'success', title: t('rss.active') })
           : h(AbTag, { type: 'neutral', title: t('rss.inactive') }),
@@ -153,7 +153,7 @@ function onSelectedRSSUpdate(keys: unknown[]) {
                   ? 'i-carbon-renew animate-spin'
                   : 'i-carbon-renew'
               "
-            ></div>
+            />
           </template>
           {{ $t('rss.refresh_all') }}
         </AbButton>
@@ -171,8 +171,12 @@ function onSelectedRSSUpdate(keys: unknown[]) {
       >
         <template #row="{ item }">
           <div class="rss-card-content">
-            <div class="rss-card-name">{{ item.name }}</div>
-            <div class="rss-card-url">{{ item.url }}</div>
+            <div class="rss-card-name">
+              {{ item.name }}
+            </div>
+            <div class="rss-card-url">
+              {{ item.url }}
+            </div>
             <div class="rss-card-tags">
               <AbTag v-if="item.parser" type="info" :title="item.parser" />
               <AbTag v-if="item.aggregate" type="info" title="aggregate" />
@@ -216,7 +220,7 @@ function onSelectedRSSUpdate(keys: unknown[]) {
                       ? 'i-carbon-renew animate-spin'
                       : 'i-carbon-renew'
                   "
-                ></div>
+                />
                 {{ $t('rss.refresh') }}
               </AbButton>
             </div>
@@ -235,20 +239,26 @@ function onSelectedRSSUpdate(keys: unknown[]) {
         :bordered="false"
         :max-height="500"
         @update:checked-row-keys="onSelectedRSSUpdate"
-      ></NDataTable>
+      />
 
       <div v-if="selectedRSS.length > 0">
-        <div class="divider"></div>
+        <div class="divider" />
         <div class="rss-actions">
-          <AbButton variant="primary" @click="enableSelected">{{
-            $t('rss.enable')
-          }}</AbButton>
-          <AbButton variant="secondary" @click="disableSelected">{{
-            $t('rss.disable')
-          }}</AbButton>
-          <AbButton variant="danger" @click="onDeleteSelected">{{
-            $t('rss.delete')
-          }}</AbButton>
+          <AbButton variant="primary" @click="enableSelected">
+            {{
+              $t('rss.enable')
+            }}
+          </AbButton>
+          <AbButton variant="secondary" @click="disableSelected">
+            {{
+              $t('rss.disable')
+            }}
+          </AbButton>
+          <AbButton variant="danger" @click="onDeleteSelected">
+            {{
+              $t('rss.delete')
+            }}
+          </AbButton>
         </div>
       </div>
     </ab-container>

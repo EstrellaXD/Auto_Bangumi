@@ -64,7 +64,7 @@ function optionNodeProps() {
     :aria-describedby="field?.describedBy.value"
     :menu-props="menuProps"
     :node-props="optionNodeProps"
-  ></NSelect>
+  />
 </template>
 
 <style lang="scss" scoped>

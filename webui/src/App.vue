@@ -146,7 +146,7 @@ const naiveTheme = computed(() => (isDark.value ? darkTheme : null));
     <NConfigProvider :theme="naiveTheme" :theme-overrides="themeOverrides">
       <NMessageProvider>
         <NDialogProvider>
-          <RouterView></RouterView>
+          <RouterView />
           <ab-confirm-host />
         </NDialogProvider>
       </NMessageProvider>

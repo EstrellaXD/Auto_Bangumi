@@ -55,7 +55,6 @@ pnpm test:build
 # Linting and formatting
 pnpm lint
 pnpm lint:fix
-pnpm format
 ```
 
 ### Docker
@@ -127,7 +126,7 @@ webui/src/
 ## Code Style
 
 - Python: Black (88 char lines), Ruff linter (E, F, I rules), target Python 3.10+
-- TypeScript: ESLint + Prettier
+- TypeScript: ESLint (@antfu/eslint-config)
 - Run formatters before committing
 
 ## Git Branching

@@ -37,9 +37,9 @@ function onClick(event: MouseEvent) {
     :aria-busy="loading || undefined"
     @click="onClick"
   >
-    <span v-if="loading" class="ab-btn-spin" aria-hidden="true"></span>
-    <slot v-else name="icon"></slot>
-    <slot></slot>
+    <span v-if="loading" class="ab-btn-spin" aria-hidden="true" />
+    <slot v-else name="icon" />
+    <slot />
   </button>
 </template>
 

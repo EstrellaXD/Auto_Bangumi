@@ -1,4 +1,3 @@
-/* eslint-disable vue/one-component-per-file -- inline stubs keep this component test self-contained */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   type ComponentPublicInstance,

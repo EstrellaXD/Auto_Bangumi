@@ -1,29 +1,29 @@
 {
   "compilerOptions": {
     "target": "ESNext",
+    "lib": ["ESNext", "DOM"],
     "useDefineForClassFields": true,
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "strict": true,
-    "sourceMap": true,
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "lib": ["ESNext", "DOM"],
-    "skipLibCheck": true,
-    "noImplicitAny": true,
-    "types": ["vitest/globals"],
     "paths": {
       "~/*": ["./*"],
       "@/*": ["./src/*"],
       "#/*": ["./types/*"]
-    }
+    },
+    "resolveJsonModule": true,
+    "types": ["vitest/globals"],
+    "strict": true,
+    "noImplicitAny": true,
+    "sourceMap": true,
+    "isolatedModules": true,
+    "skipLibCheck": true
   },
+  "references": [{ "path": "./tsconfig.node.json" }],
   "include": [
     "src/**/*.ts",
     "src/**/*.d.ts",
     "src/**/*.vue",
     "types/*.ts",
     "types/dts/*.d.ts"
-  ],
-  "references": [{ "path": "./tsconfig.node.json" }]
+  ]
 }

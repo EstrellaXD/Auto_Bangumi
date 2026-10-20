@@ -98,8 +98,7 @@ describe('element ownership', () => {
   it('should accept an element that the plugin defined itself', async () => {
     const slot = makeSlot();
     await loadPluginElement(slot, async () =>
-      defineFrom(slot.plugin_id, slot.element)
-    );
+      defineFrom(slot.plugin_id, slot.element));
   });
 });
 

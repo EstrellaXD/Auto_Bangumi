@@ -25,7 +25,7 @@ export function redactArtifact(
 
   return redacted
     .replace(/(Bearer\s+)[^\s"',]+/gi, '$1[REDACTED]')
-    .replace(/ab_(?:api|mcp|session)_[A-Za-z0-9._~-]+/g, '[REDACTED]')
+    .replace(/ab_(?:api|mcp|session)_[\w.~-]+/g, '[REDACTED]')
     .replace(
       /("?(?:password|token|authorization|cookie)"?\s*[:=]\s*)"?[^\s,"'}]+/gi,
       '$1[REDACTED]'
@@ -97,7 +97,7 @@ export class NetworkGuard {
     this.page.on('requestfailed', (request) => {
       this.failedRequests.push(
         `${request.method()} ${request.url()}: ` +
-          `${request.failure()?.errorText ?? 'unknown failure'}`
+        `${request.failure()?.errorText ?? 'unknown failure'}`
       );
     });
     this.page.on('response', (response) => {
