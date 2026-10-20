@@ -3,7 +3,12 @@
 
 单个连接按 tick 节拍分别推送 status/downloader/log/update，节拍与原轮询间隔
 保持一致，前端订阅失败时回退到原有轮询逻辑。这几类是「状态快照」而非事件，
-仍按节拍采样。
+仍按节拍采样，但只推变化：
+
+- downloader：所有连接共用一份 5s 缓存查询下载器；连接建立时推一帧，之后
+  仅在负载与本连接上次推送的不同时才推。
+- log：连接建立时、以及日志被轮转/截断后推整段尾部（``log``）；其余只推
+  上次之后新增的完整行（``log_append``，总以换行结尾），没有新增不推。
 
 notification（通知中心未读数）由事件驱动：每个连接在插件事件总线上订阅
 ``inbox.changed``（通知中心写入/已读/删除时发布），收到后立即查库推送，
@@ -17,6 +22,8 @@ import asyncio
 import dataclasses
 import json
 import logging
+import os
+import time
 from collections import deque
 from collections.abc import AsyncIterator
 
@@ -55,6 +62,9 @@ _LOG_EVERY = 10
 # 取值需明显小于 downloader 的 5s 推送间隔。
 _DOWNLOADER_TIMEOUT_SECONDS = 3.0
 
+# 下载器种子列表的共享缓存有效期（秒）：所有 SSE 连接合计每 5s 最多查询一次
+_DOWNLOADER_CACHE_SECONDS = 5.0
+
 # 单个连接最多积压的待转发总线事件数
 _FORWARD_BACKLOG = 200
 
@@ -87,12 +97,85 @@ async def _notification_payload() -> dict:
         }
 
 
-async def _log_payload() -> str | None:
-    """读取日志尾部；日志文件不存在时返回 None（跳过本次推送）。"""
-    if not LOG_PATH.exists():
-        return None
-    data = await asyncio.to_thread(_read_log_tail)
-    return data.decode("utf-8", errors="replace")
+class _TorrentCache:
+    """所有 SSE 连接共用的种子列表缓存（已编码为 JSON）。
+
+    锁保证并发连接同一时刻只查一次下载器；时间戳记在查询开始时，
+    连接按约 5s 的节拍来取时不会拿到隔一轮的旧数据。
+    """
+
+    def __init__(self) -> None:
+        self._lock = asyncio.Lock()
+        self._fetched_at = -_DOWNLOADER_CACHE_SECONDS
+        self._data: str | None = None
+
+    async def get(self) -> str:
+        async with self._lock:
+            now = time.monotonic()
+            if (
+                self._data is None
+                or now - self._fetched_at >= _DOWNLOADER_CACHE_SECONDS
+            ):
+                # 查询被取消（持锁的连接断开）时不更新时间戳，下一个连接重新查询
+                self._data = json.dumps(await _downloader_payload())
+                self._fetched_at = now
+            return self._data
+
+
+_torrents = _TorrentCache()
+
+
+class _LogCursor:
+    """一个 SSE 连接的日志读取位置。
+
+    首帧及日志被轮转（inode 变化）、截断（大小小于已读偏移）或 mtime 回退时
+    推整段尾部 ``log``；否则只推偏移之后新增的完整行 ``log_append``。增量
+    截到最后一个换行：不切断多字节字符，且每帧都是完整行，前端可直接追加。
+    """
+
+    def __init__(self) -> None:
+        self._ino: int | None = None
+        self._mtime_ns = 0
+        self._offset = 0
+
+    def _read(self) -> dict | None:
+        try:
+            st = os.stat(LOG_PATH)
+            if (
+                st.st_ino == self._ino
+                and st.st_size >= self._offset
+                and st.st_mtime_ns >= self._mtime_ns
+            ):
+                self._mtime_ns = st.st_mtime_ns
+                if st.st_size == self._offset:
+                    return None
+                with open(LOG_PATH, "rb") as f:
+                    f.seek(self._offset)
+                    data = f.read(st.st_size - self._offset)
+                data = data[: data.rfind(b"\n") + 1]
+                if not data:
+                    return None
+                self._offset += len(data)
+                event = "log_append"
+            else:
+                data, offset = _read_log_tail()
+                if not data:
+                    # EventSource 不派发 data 为空的事件：保持「待全量」状态，
+                    # 等有内容时再推整段，别的标签页清空后才不会残留旧日志
+                    return None
+                self._ino, self._mtime_ns, self._offset = (
+                    st.st_ino,
+                    st.st_mtime_ns,
+                    offset,
+                )
+                event = "log"
+        except FileNotFoundError:
+            # 尚未创建，或正处于轮转改名的间隙：本轮跳过
+            return None
+        return {"event": event, "data": data.decode("utf-8", errors="replace")}
+
+    async def frame(self) -> dict | None:
+        return await asyncio.to_thread(self._read)
 
 
 class _InboxWatch:
@@ -175,8 +258,10 @@ async def _event_generator(request: Request, ctx: AppContext):
     """按各自节拍推送 status/downloader/log 事件、按需推送 notification 的核心循环。"""
     loop = asyncio.get_running_loop()
     inbox = _InboxWatch()
+    log = _LogCursor()
     tick = 0
     last_update: str | None = None
+    last_downloader: str | None = None
     try:
         while True:
             if await request.is_disconnected():
@@ -197,13 +282,15 @@ async def _event_generator(request: Request, ctx: AppContext):
             if tick % _DOWNLOADER_EVERY == 0:
                 # 不可用时推送 null 而非跳过，前端据此感知下载器降级状态
                 # （store/downloader.ts 对 null 保留旧数据，不会崩溃）。
-                torrents = await _downloader_payload()
-                yield {"event": "downloader", "data": json.dumps(torrents)}
+                torrents = await _torrents.get()
+                if torrents != last_downloader:
+                    last_downloader = torrents
+                    yield {"event": "downloader", "data": torrents}
 
             if tick % _LOG_EVERY == 0:
-                log_text = await _log_payload()
-                if log_text is not None:
-                    yield {"event": "log", "data": log_text}
+                log_frame = await log.frame()
+                if log_frame is not None:
+                    yield log_frame
 
             # 通知中心：连接建立时的初始帧，以及此前查库失败后的重试
             frame = await inbox.frame()
