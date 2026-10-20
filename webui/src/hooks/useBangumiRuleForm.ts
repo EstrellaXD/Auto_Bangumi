@@ -52,7 +52,7 @@ export function useBangumiRuleForm(rule: Ref<BangumiRule>) {
   });
 
   const showAdvanced = ref(true);
-  const { copy, copied } = useClipboard({ copiedDuring: 2000 });
+  const { copy, copied } = useClipboard({ copiedDuring: 2000, legacy: true });
 
   async function copyRssLink(link: string) {
     if (!link) return;

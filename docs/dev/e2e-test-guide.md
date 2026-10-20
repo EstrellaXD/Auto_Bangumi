@@ -7,7 +7,7 @@
 ## 准备
 
 - Docker Engine 与 Compose v2
-- Python 3.13 与 `uv`
+- Python 3.14 与 `uv`
 - Node.js 20 与 pnpm 9.11
 
 ```bash

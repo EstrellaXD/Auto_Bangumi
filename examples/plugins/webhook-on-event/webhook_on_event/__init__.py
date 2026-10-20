@@ -13,7 +13,7 @@ import json
 from collections.abc import Callable
 from dataclasses import asdict
 
-import httpx
+import httpx2
 from pydantic import BaseModel, Field
 
 from ab_sdk import Event, Plugin, secret_field, subscribe
@@ -41,8 +41,8 @@ class WebhookOnEvent(Plugin[Options]):
     config_model = Options
 
     # 测试可替换为带 MockTransport 的客户端
-    client_factory: Callable[[], httpx.AsyncClient] = staticmethod(
-        lambda: httpx.AsyncClient(timeout=10)
+    client_factory: Callable[[], httpx2.AsyncClient] = staticmethod(
+        lambda: httpx2.AsyncClient(timeout=10)
     )
 
     def wants(self, event: Event) -> bool:
@@ -61,7 +61,7 @@ class WebhookOnEvent(Plugin[Options]):
         try:
             async with self.client_factory() as client:
                 resp = await client.post(self.config.url, content=body, headers=headers)
-        except httpx.HTTPError as e:
+        except httpx2.HTTPError as e:
             self.ctx.log.warning("Webhook 请求失败：%s", e)
             return
         if not resp.is_success:

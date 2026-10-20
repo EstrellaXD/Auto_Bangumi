@@ -468,6 +468,24 @@ class TestMcp:
         handler.assert_not_called()
         assert "demo" not in breaker._failures
 
+    async def test_invalid_schema_counts_against_plugin(self, registry, breaker):
+        from module.mcp import mcp
+
+        handler = AsyncMock()
+        add(
+            registry,
+            points.MCP_TOOL,
+            "s",
+            McpTool("S", handler, {"type": "obj"}),
+            "demo",
+        )
+        ctx = SimpleNamespace(plugins=SimpleNamespace(breaker=breaker))
+        with patch("module.mcp.plugins.get_context", return_value=ctx):
+            result = await mcp.call_tool("demo__s", {})
+        assert result.is_error
+        handler.assert_not_called()
+        assert breaker._failures["demo"] == 1
+
     def test_invalid_names_and_bad_factories_skipped(self, registry):
         from module.mcp.plugins import list_plugin_tools
 

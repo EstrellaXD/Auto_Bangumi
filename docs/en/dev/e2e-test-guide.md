@@ -7,7 +7,7 @@ The full guide (all test lanes, diagnostic artifacts, how to add a mock scenario
 ## Prerequisites
 
 - Docker Engine with Compose v2
-- Python 3.13 and `uv`
+- Python 3.14 and `uv`
 - Node.js 20 and pnpm 9.11
 
 ```bash

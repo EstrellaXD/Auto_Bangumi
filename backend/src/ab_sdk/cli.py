@@ -48,7 +48,7 @@ _PYPROJECT = Template("""\
 [project]
 name = "ab-plugin-$id"
 version = "0.1.0"
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 dependencies = ["autobangumi-sdk"]
 
 [dependency-groups]

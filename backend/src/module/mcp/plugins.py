@@ -120,6 +120,10 @@ async def call_plugin_tool(name: str, arguments: dict) -> tuple[bool, Any]:
         jsonschema.validate(arguments, tool.input_schema)
     except jsonschema.ValidationError as e:
         raise ValueError(f"Input validation error: {e.message}") from None
+    except jsonschema.SchemaError as e:
+        # input_schema 本身不合法是插件的错，计入熔断
+        _record(entry.plugin_id, f"MCP 工具 {entry.id}: input_schema 无效: {e.message}")
+        raise
     try:
         result = await asyncio.wait_for(tool.handler(arguments), tool.timeout)
     except Exception as e:
