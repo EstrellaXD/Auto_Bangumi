@@ -38,9 +38,33 @@ test('mobile rule editor saves advanced keyboard-accessible fields @mobile', asy
     const dialog = page.getByRole('dialog', { name: 'Edit Rule' });
     const panel = dialog.getByTestId('bottom-sheet-panel');
     // 抽屉从底部滑入：等入场动画结束再量位置
-    await expect
-      .poll(async () => (await panel.boundingBox())?.y)
-      .toBeCloseTo(0, 0);
+    // TEMP-DIAG：定位 -6px 后删除
+    try {
+      await expect
+        .poll(async () => (await panel.boundingBox())?.y)
+        .toBeCloseTo(0, 0);
+    }
+    catch (error) {
+      console.log('TEMP-DIAG', JSON.stringify(await page.evaluate(() => {
+        const q = (s: string) => document.querySelector<HTMLElement>(s);
+        const box = (el: Element | null) => el && JSON.stringify(el.getBoundingClientRect());
+        const p = q('[data-testid="bottom-sheet-panel"]');
+        const chain = [];
+        for (let el: HTMLElement | null = p; el; el = el.parentElement) {
+          const cs = getComputedStyle(el);
+          chain.push(`${el.tagName}.${String(el.className).slice(0, 50)} r=${box(el)} tf=${cs.transform} pos=${cs.position} top=${cs.top} bottom=${cs.bottom} h=${cs.height} st=${el.scrollTop} sh=${el.scrollHeight} ch=${el.clientHeight}`);
+        }
+        return {
+          inner: [innerWidth, innerHeight],
+          vv: visualViewport && [visualViewport.width, visualViewport.height, visualViewport.offsetTop, visualViewport.pageTop, visualViewport.scale],
+          scroll: [scrollX, scrollY, document.documentElement.scrollWidth, document.documentElement.clientWidth, document.documentElement.clientHeight],
+          inlineStyle: p?.getAttribute('style'),
+          active: `${document.activeElement?.tagName} ${document.activeElement?.className}`,
+          chain,
+        };
+      })));
+      throw error;
+    }
     const initialBox = await panel.boundingBox();
     expect(initialBox).not.toBeNull();
     expect(initialBox!.x).toBeCloseTo(0, 0);
