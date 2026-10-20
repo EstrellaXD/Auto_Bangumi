@@ -28,7 +28,6 @@ from .plugins import (
     read_plugin_resource,
 )
 from .runtime import set_context
-from .security import McpAccessMiddleware
 
 logger = logging.getLogger(__name__)
 
@@ -98,8 +97,8 @@ def create_mcp_starlette_app(ctx=None) -> Starlette:
     新建会话管理器，调用方须在应用 lifespan 中运行 ``mcp.session_manager.run()``。
 
     ``ctx`` is the application :class:`AppContext`; it is stored so status
-    tools/resources can report live program state. ``McpAccessMiddleware`` is
-    applied to enforce configurable IP whitelist and bearer token access control.
+    tools/resources can report live program state. 访问控制
+    （``McpAccessMiddleware``）由 ``main.py`` 套在 /mcp 路由外层，先于本函数生效。
     """
     set_context(ctx)
     app = mcp.streamable_http_app(
@@ -111,5 +110,4 @@ def create_mcp_starlette_app(ctx=None) -> Starlette:
             enable_dns_rebinding_protection=False
         ),
     )
-    app.add_middleware(McpAccessMiddleware)
     return app

@@ -1,20 +1,25 @@
+import asyncio
 import logging
 import os
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+import anyio
 import uvicorn
+from anyio.abc import TaskGroup, TaskStatus
 from fastapi import APIRouter, Depends, FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from starlette.routing import Route
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from module.api import v1
 from module.api.health import router as health_router
 from module.conf import VERSION, settings, setup_logger
 from module.core import AppContext
-from module.mcp import create_mcp_app, mcp
+from module.mcp.security import McpAccessMiddleware
 
 setup_logger(reset=True)
 logger = logging.getLogger(__name__)
@@ -47,12 +52,62 @@ async def lifespan(app: FastAPI):
         # supervised background task and returns immediately (CONTRACT #5),
         # so this does not block server startup.
         await ctx.start_tasks()
-    # 子应用不会运行自己的 lifespan，MCP 会话管理器在这里启动
-    async with app.state.mcp_sessions.run():
+    # 子应用不会运行自己的 lifespan，MCP 会话管理器在这里提供的任务组里运行
+    async with app.state.mcp.running():
         yield
     # Shutdown
     await ctx.stop()
     await ctx.plugins.stop()
+
+
+class _LazyMcpApp:
+    """首个通过访问控制的 /mcp 请求才导入 mcp 库、构建子应用并启动会话管理器。
+
+    多数用户不用 MCP，启动时不加载可省约 20 MB 内存。会话管理器的 run() 内含
+    anyio 任务组，必须在同一个任务里进出，所以它跑在 lifespan 持有的任务组里，
+    关停时随任务组取消。
+    """
+
+    def __init__(self, ctx: AppContext) -> None:
+        self._ctx = ctx
+        self._tasks: TaskGroup | None = None
+        self._app: ASGIApp | None = None
+        # 并发的首批请求只构建一次
+        self._lock = asyncio.Lock()
+
+    @asynccontextmanager
+    async def running(self) -> AsyncIterator[None]:
+        async with anyio.create_task_group() as tasks:
+            self._tasks = tasks
+            yield
+            tasks.cancel_scope.cancel()
+        # 每次 create_mcp_app 都新建会话管理器，再次启动时重新构建
+        self._tasks = self._app = None
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if self._app is None:
+            async with self._lock:
+                if self._app is None:
+                    self._app = await self._build()
+        await self._app(scope, receive, send)
+
+    async def _build(self) -> ASGIApp:
+        if self._tasks is None:
+            raise RuntimeError("MCP 只能在应用 lifespan 运行期间使用")
+        from module.mcp import create_mcp_app, mcp
+
+        app = create_mcp_app(self._ctx)
+        manager = mcp.session_manager
+
+        async def serve(
+            *, task_status: TaskStatus[None] = anyio.TASK_STATUS_IGNORED
+        ) -> None:
+            async with manager.run():
+                task_status.started()
+                await anyio.sleep_forever()
+
+        await self._tasks.start(serve)
+        return app
 
 
 def create_app() -> FastAPI:
@@ -79,10 +134,10 @@ def create_app() -> FastAPI:
     app.include_router(health_router)
 
     # MCP 服务（Streamable HTTP）：用路由而不是 mount，端点才是 /mcp 本身
-    # （mount 只匹配 /mcp/...，/mcp 会被 307 重定向到 /mcp/）
-    app.router.routes.append(Route("/mcp", endpoint=create_mcp_app(ctx)))
-    # 每次 create_mcp_app 都新建会话管理器，记下本应用的这一个供 lifespan 运行
-    app.state.mcp_sessions = mcp.session_manager
+    # （mount 只匹配 /mcp/...，/mcp 会被 307 重定向到 /mcp/）。访问控制在
+    # 延迟构建之前，被拒的请求不会加载 mcp 库
+    app.state.mcp = _LazyMcpApp(ctx)
+    app.router.routes.append(Route("/mcp", endpoint=McpAccessMiddleware(app.state.mcp)))
 
     return app
 
