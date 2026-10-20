@@ -615,12 +615,12 @@ function handleFilterClick(
 <template>
   <Teleport to="body">
     <!-- Backdrop -->
-    <transition name="overlay">
+    <transition name="overlay" appear>
       <div v-if="showModal" class="modal-backdrop" />
     </transition>
 
     <!-- Modal -->
-    <transition name="modal">
+    <transition name="modal" appear>
       <div
         v-if="showModal"
         class="modal-container"

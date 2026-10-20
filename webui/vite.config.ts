@@ -46,6 +46,7 @@ export default defineConfig({
     }),
     VueI18nPlugin({
       include: resolve(import.meta.dirname, './src/i18n/**'),
+      dropMessageCompiler: true,
     }),
   ],
   css: {
@@ -61,7 +62,13 @@ export default defineConfig({
       output: { minify: { compress: { dropConsole: true } } },
     },
   },
-  resolve: { tsconfigPaths: true },
+  resolve: {
+    tsconfigPaths: true,
+    // 只用运行时：模板都在构建期编译，不需要打包 @vue/compiler-*
+    alias: [
+      { find: /^vue$/, replacement: 'vue/dist/vue.runtime.esm-bundler.js' },
+    ],
+  },
   preview: { headers },
   server: {
     proxy: {

@@ -59,7 +59,7 @@ describe('downloader store', () => {
       torrent('a2', 'default'),
       torrent('a3', 'default'),
     ];
-    store.selectedKeys = store.torrents.slice(0, 3).map(torrentKey);
+    store.selectedKeys = new Set(store.torrents.slice(0, 3).map(torrentKey));
 
     await store.pauseSelected();
     await store.deleteSelected(true);
@@ -77,7 +77,7 @@ describe('downloader store', () => {
   it('should act only on the selected instance when the same hash is in two instances', async () => {
     const store = useDownloaderStore();
     store.torrents = [torrent('h', 'home'), torrent('h', 'seedbox')];
-    store.selectedKeys = [torrentKey(store.torrents[1])];
+    store.selectedKeys = new Set([torrentKey(store.torrents[1])]);
 
     await store.pauseSelected();
 
@@ -98,7 +98,7 @@ describe('downloader store', () => {
     async (_, failure) => {
       const store = useDownloaderStore();
       store.torrents = [torrent('a', 'home'), torrent('b', 'seedbox')];
-      store.selectedKeys = store.torrents.map(torrentKey);
+      store.selectedKeys = new Set(store.torrents.map(torrentKey));
       vi.mocked(apiDownloader.deleteTorrents).mockImplementationOnce(failure);
 
       await expect(store.deleteSelected(false)).rejects.toBeTruthy();
@@ -113,7 +113,7 @@ describe('downloader store', () => {
   it('should show the failure message when an instance returns status false', async () => {
     const store = useDownloaderStore();
     store.torrents = [torrent('a', 'home')];
-    store.selectedKeys = store.torrents.map(torrentKey);
+    store.selectedKeys = new Set(store.torrents.map(torrentKey));
     vi.mocked(apiDownloader.deleteTorrents).mockResolvedValueOnce({
       status: false,
       msg_en: 'Failed to delete torrents',

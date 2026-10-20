@@ -1,5 +1,10 @@
 <script lang="ts" setup>
-import { type DataTableColumns, NDataTable } from 'naive-ui';
+import type { VNodeChild } from 'vue';
+import {
+  type DataTableColumns,
+  type DataTableRowKey,
+  NDataTable,
+} from 'naive-ui';
 import AbProgress from '@/components/basic/ab-progress.vue';
 import AbTag from '@/components/basic/ab-tag.vue';
 import { useConfirm } from '@/hooks/useConfirm';
@@ -20,8 +25,6 @@ const {
   pauseSelected,
   resumeSelected,
   deleteSelected,
-  toggleKey,
-  toggleGroup,
   clearSelection,
 } = useDownloaderStore();
 const { confirm } = useConfirm();
@@ -120,30 +123,89 @@ function stateType(state: string): 'neutral' | 'success' | 'info' | 'danger' {
   return 'info';
 }
 
-function isGroupAllSelected(group: TorrentGroup): boolean {
-  return group.torrents.every((t) =>
-    selectedKeys.value.includes(torrentKey(t))
+/** 分组头行：同一个虚拟表里以树形父行显示，children 为该组的种子 */
+interface GroupRow {
+  key: string;
+  group: TorrentGroup;
+  children: QbTorrentInfo[];
+}
+type Row = QbTorrentInfo | GroupRow;
+
+function isGroupRow(row: Row): row is GroupRow {
+  return 'group' in row;
+}
+
+function rowKey(row: Row): string {
+  return isGroupRow(row) ? row.key : torrentKey(row);
+}
+
+function rowClassName(row: Row): string {
+  return isGroupRow(row) ? 'group-row' : '';
+}
+
+/** 分组头行的名称格跨满其余列，种子列的渲染只处理种子行 */
+function torrentCell(render: (row: QbTorrentInfo) => VNodeChild) {
+  return (row: Row) => (isGroupRow(row) ? null : render(row));
+}
+
+const rows = computed<GroupRow[]>(() =>
+  groups.value.map((group) => ({
+    key: `group:${group.savePath}`,
+    group,
+    children: group.torrents,
+  }))
+);
+
+// 记录折叠的分组，新出现的分组默认展开
+const collapsed = shallowRef(new Set<string>());
+const expandedKeys = computed(() =>
+  rows.value.filter((r) => !collapsed.value.has(r.key)).map((r) => r.key)
+);
+
+function onExpandedChange(keys: DataTableRowKey[]) {
+  const open = new Set(keys);
+  collapsed.value = new Set(
+    rows.value.map((r) => r.key).filter((k) => !open.has(k))
+  );
+}
+
+const checkedKeys = computed(() => [...selectedKeys.value]);
+
+// 级联勾选会带上分组头的键，只保留种子键
+function onCheckedChange(keys: DataTableRowKey[]) {
+  const groupKeys = new Set(rows.value.map((r) => r.key));
+  selectedKeys.value = new Set(
+    keys.filter((k) => !groupKeys.has(k as string)) as string[]
   );
 }
 
 // 多个下载器实例时标出每个种子所在的实例
 const downloaders = useDownloaderInstances();
 
-const tableColumnsValue = computed<DataTableColumns<QbTorrentInfo>>(() => [
+const tableColumnsValue = computed<DataTableColumns<Row>>(() => [
   {
     type: 'selection',
   },
   {
     title: t('downloader.torrent.name'),
     key: 'name',
-    ellipsis: { tooltip: true },
+    // CSS 省略号 + title：不用逐行测量宽度的 tooltip
+    ellipsis: true,
+    className: 'name-col',
     minWidth: 200,
+    colSpan: (row: Row): number =>
+      isGroupRow(row) ? tableColumnsValue.value.length - 1 : 1,
+    cellProps: (row) => ({
+      title: isGroupRow(row) ? row.group.savePath : row.name,
+    }),
+    render: (row) =>
+      isGroupRow(row) ? `${row.group.name} (${row.group.count})` : row.name,
   },
   {
     title: t('downloader.torrent.progress'),
     key: 'progress',
     width: 160,
-    render(row: QbTorrentInfo) {
+    render: torrentCell((row) => {
       return h(AbProgress, {
         value: row.progress * 100,
         label: `${Math.round(row.progress * 100)}%`,
@@ -152,58 +214,58 @@ const tableColumnsValue = computed<DataTableColumns<QbTorrentInfo>>(() => [
             ? 'error'
             : 'active',
       });
-    },
+    }),
   },
   {
     title: t('downloader.torrent.status'),
     key: 'state',
     width: 100,
-    render(row: QbTorrentInfo) {
+    render: torrentCell((row) => {
       return h(AbTag, {
         type: stateType(row.state),
         title: stateLabel(row.state),
       });
-    },
+    }),
   },
   {
     title: t('downloader.torrent.size'),
     key: 'size',
     width: 100,
-    render(row: QbTorrentInfo) {
+    render: torrentCell((row) => {
       return formatSize(row.size);
-    },
+    }),
   },
   {
     title: t('downloader.torrent.dlspeed'),
     key: 'dlspeed',
     width: 110,
-    render(row: QbTorrentInfo) {
+    render: torrentCell((row) => {
       return formatSpeed(row.dlspeed);
-    },
+    }),
   },
   {
     title: t('downloader.torrent.upspeed'),
     key: 'upspeed',
     width: 110,
-    render(row: QbTorrentInfo) {
+    render: torrentCell((row) => {
       return formatSpeed(row.upspeed);
-    },
+    }),
   },
   {
     title: 'ETA',
     key: 'eta',
     width: 80,
-    render(row: QbTorrentInfo) {
+    render: torrentCell((row) => {
       return formatEta(row.eta);
-    },
+    }),
   },
   {
     title: t('downloader.torrent.peers'),
     key: 'peers',
     width: 110,
-    render(row: QbTorrentInfo) {
+    render: torrentCell((row) => {
       return `${row.num_seeds} / ${row.num_leechs}`;
-    },
+    }),
   },
   // 放在最后并完整显示 id（触屏没有悬停提示）
   ...(downloaders.multiple.value
@@ -216,20 +278,6 @@ const tableColumnsValue = computed<DataTableColumns<QbTorrentInfo>>(() => [
       ]
     : []),
 ]);
-
-function onCheckedChange(group: TorrentGroup, keys: string[]) {
-  const groupKeys = group.torrents.map(torrentKey);
-  const otherSelected = selectedKeys.value.filter(
-    (k) => !groupKeys.includes(k)
-  );
-  selectedKeys.value = [...otherSelected, ...keys];
-}
-
-function groupCheckedKeys(group: TorrentGroup): string[] {
-  return group.torrents
-    .map(torrentKey)
-    .filter((k) => selectedKeys.value.includes(k));
-}
 </script>
 
 <template>
@@ -302,30 +350,29 @@ function groupCheckedKeys(group: TorrentGroup): string[] {
         {{ $t('downloader.empty_torrents') }}
       </div>
 
-      <div v-else class="downloader-groups">
-        <ab-fold-panel
-          v-for="group in groups"
-          :key="group.savePath"
-          :title="`${group.name} (${group.count})`"
-          :default-open="true"
-        >
-          <NDataTable
-            :columns="tableColumnsValue"
-            :data="group.torrents"
-            :row-key="torrentKey"
-            :pagination="false"
-            :bordered="false"
-            :checked-row-keys="groupCheckedKeys(group)"
-            size="small"
-            @update:checked-row-keys="(keys: any) => onCheckedChange(group, keys as string[])"
-          />
-        </ab-fold-panel>
-      </div>
+      <!-- 单个虚拟滚动表：只渲染可见行；不放进 NCollapseItem，SSE 数据才能刷新行 -->
+      <NDataTable
+        v-else
+        class="downloader-table"
+        :columns="tableColumnsValue"
+        :data="rows"
+        :row-key="rowKey"
+        :row-class-name="rowClassName"
+        :pagination="false"
+        :bordered="false"
+        :checked-row-keys="checkedKeys"
+        :expanded-row-keys="expandedKeys"
+        virtual-scroll
+        flex-height
+        size="small"
+        @update:checked-row-keys="onCheckedChange"
+        @update:expanded-row-keys="onExpandedChange"
+      />
 
       <Transition name="fade">
-        <div v-if="selectedKeys.length > 0" class="action-bar">
+        <div v-if="selectedKeys.size > 0" class="action-bar">
           <span class="action-bar-count">
-            {{ selectedKeys.length }} {{ $t('downloader.selected') }}
+            {{ selectedKeys.size }} {{ $t('downloader.selected') }}
           </span>
           <div class="action-bar-buttons">
             <ab-button variant="primary" size="sm" @click="resumeSelected">
@@ -354,6 +401,7 @@ function groupCheckedKeys(group: TorrentGroup): string[] {
 .page-downloader {
   overflow: auto;
   flex-grow: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
@@ -362,14 +410,28 @@ function groupCheckedKeys(group: TorrentGroup): string[] {
   display: flex;
   flex-direction: column;
   flex: 1;
+  min-height: 0;
   gap: 12px;
   padding-bottom: 60px;
 }
 
-.downloader-groups {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+// flex-height：表格填满页面剩余高度，虚拟滚动在表体内进行
+.downloader-table {
+  flex: 1;
+  min-height: 0;
+
+  :deep(.group-row .n-data-table-td) {
+    font-weight: 600;
+  }
+
+  // 树形缩进与展开按钮占 40px，名称不换行到下一行
+  :deep(.name-col) {
+    white-space: nowrap;
+  }
+
+  :deep(.name-col .n-data-table-td__ellipsis) {
+    max-width: calc(100% - 40px);
+  }
 }
 
 .downloader-empty {
