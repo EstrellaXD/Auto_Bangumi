@@ -14,7 +14,8 @@ export function hasConfiguredDownloader(instances: PluginInstance[]): boolean {
 
 export const useDownloaderStore = defineStore('downloader', () => {
   const torrents = shallowRef<QbTorrentInfo[]>([]);
-  const selectedKeys = ref<string[]>([]);
+  // Set 而不是响应式数组：成员判断 O(1)，整体替换触发更新
+  const selectedKeys = shallowRef(new Set<string>());
   const loading = ref(false);
 
   const { downloaderData } = useEventStream();
@@ -82,7 +83,7 @@ export const useDownloaderStore = defineStore('downloader', () => {
   const opts = {
     showMessage: true,
     onSuccess() {
-      selectedKeys.value = [];
+      selectedKeys.value = new Set();
     },
     onFinally: getAll,
   };
@@ -97,7 +98,7 @@ export const useDownloaderStore = defineStore('downloader', () => {
   ) {
     const byInstance = new Map<string, string[]>();
     for (const t of torrents.value) {
-      if (!selectedKeys.value.includes(torrentKey(t))) continue;
+      if (!selectedKeys.value.has(torrentKey(t))) continue;
       const hashes = byInstance.get(t.downloader_id) ?? [];
       hashes.push(t.hash);
       byInstance.set(t.downloader_id, hashes);
@@ -134,30 +135,8 @@ export const useDownloaderStore = defineStore('downloader', () => {
     opts
   );
 
-  function toggleKey(key: string) {
-    const idx = selectedKeys.value.indexOf(key);
-    if (idx === -1) {
-      selectedKeys.value.push(key);
-    } else {
-      selectedKeys.value.splice(idx, 1);
-    }
-  }
-
-  function toggleGroup(group: TorrentGroup) {
-    const groupKeys = group.torrents.map(torrentKey);
-    const allSelected = groupKeys.every((k) => selectedKeys.value.includes(k));
-    if (allSelected) {
-      selectedKeys.value = selectedKeys.value.filter(
-        (k) => !groupKeys.includes(k)
-      );
-    } else {
-      const toAdd = groupKeys.filter((k) => !selectedKeys.value.includes(k));
-      selectedKeys.value.push(...toAdd);
-    }
-  }
-
   function clearSelection() {
-    selectedKeys.value = [];
+    selectedKeys.value = new Set();
   }
 
   return {
@@ -170,8 +149,6 @@ export const useDownloaderStore = defineStore('downloader', () => {
     pauseSelected,
     resumeSelected,
     deleteSelected,
-    toggleKey,
-    toggleGroup,
     clearSelection,
   };
 });
