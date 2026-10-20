@@ -1,5 +1,10 @@
 """Tests for the application lifespan wiring in main.create_app."""
 
+import asyncio
+import os
+import subprocess
+import sys
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -21,6 +26,22 @@ def _lifespan_ctx(first_run_boot: bool = False) -> MagicMock:
 
 
 class TestCreateApp:
+    def test_import_main_skips_mcp_and_webauthn(self):
+        """启动不加载 mcp 与 webauthn 库（其它测试已导入它们，须在子进程里检查）。"""
+        src = Path(main.__file__).parent
+        code = (
+            "import sys, main; print(sorted({'mcp', 'webauthn'} & sys.modules.keys()))"
+        )
+        out = subprocess.run(
+            [sys.executable, "-c", code],
+            cwd=src.parent,
+            env={**os.environ, "PYTHONPATH": str(src)},
+            capture_output=True,
+            text=True,
+        )
+        assert out.returncode == 0, out.stderr
+        assert out.stdout.strip().splitlines()[-1] == "[]"
+
     def test_stores_real_context_on_state(self):
         app = main.create_app()
         assert isinstance(app.state.ctx, AppContext)
@@ -98,6 +119,10 @@ class TestMcpEndpoint:
                     },
                 )
                 assert init.status_code == 200
+                from module.mcp import mcp
+
+                manager = mcp.session_manager
+                assert manager._task_group is not None
                 session = {"mcp-session-id": init.headers["mcp-session-id"]}
                 client.post(
                     "/mcp",
@@ -113,6 +138,26 @@ class TestMcpEndpoint:
                 assert '"list_anime"' in listed.text
                 # 旧的 SSE 端点已删除
                 assert client.get("/mcp/sse", headers=self.HEADERS).status_code == 404
+        # 关停时会话管理器随 lifespan 的任务组停止
+        assert manager._task_group is None
+
+    async def test_concurrent_first_requests_build_once(self):
+        lazy = main._LazyMcpApp(MagicMock())
+        inner = AsyncMock()
+        with (
+            patch("module.mcp.create_mcp_app", return_value=inner) as build,
+            patch("module.mcp.mcp") as server,
+        ):
+            async with lazy.running():
+                await asyncio.gather(
+                    *(
+                        lazy({"type": "http"}, AsyncMock(), AsyncMock())
+                        for _ in range(5)
+                    )
+                )
+        build.assert_called_once()
+        server.session_manager.run.assert_called_once()
+        assert inner.await_count == 5
 
     def test_rejected_without_token_or_whitelisted_ip(self):
         with patch("main.AppContext.build", return_value=_lifespan_ctx()):

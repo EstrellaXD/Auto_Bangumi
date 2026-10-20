@@ -42,6 +42,9 @@ exc_value  # __aexit__
 traceback  # __aexit__
 hash_  # for 循环解包
 
+# --- 模块级 __getattr__（PEP 562）：解释器在属性缺失时调用 ---
+__getattr__
+
 # --- 测试 / e2e 支撑：生产路径不调用 ---
 _.check_single  # e2e worker
 _.set_renamed_path  # aria2 测试构造状态

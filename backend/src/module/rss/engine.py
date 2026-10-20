@@ -3,7 +3,7 @@ import logging
 import re
 from collections import defaultdict
 from datetime import datetime, timezone
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 from urllib.parse import urlparse
 
 from ab_sdk import points
@@ -39,6 +39,9 @@ from module.parser.release_policy import preference_identity, preference_revisio
 from module.parser.title_parser import _apply_title_hooks
 from module.plugin import host as plugin_host
 from module.plugin.views import bangumi_info, torrent_info
+
+if TYPE_CHECKING:
+    from .analyser import RSSAnalyser
 
 logger = logging.getLogger(__name__)
 
@@ -162,16 +165,12 @@ class RSSEngine:
             msg_zh="删除 RSS 成功。",
         )
 
-    async def pull_rss(self, rss_item: RSSItem) -> list[Torrent]:
-        torrents = await self._get_torrents(rss_item)
-        new_torrents = await self.db.torrent.check_new(torrents)
-        return new_torrents
-
     async def _pull_rss_with_status(
         self, rss_item: RSSItem
     ) -> tuple[list[Torrent], Optional[str]]:
+        """拉取订阅的全部条目（不去重），聚合分析与下载匹配共用这一份结果。"""
         try:
-            torrents = await self.pull_rss(rss_item)
+            torrents = await self._get_torrents(rss_item)
             return torrents, None
         except Exception as e:
             logger.warning(f"Failed to fetch RSS {rss_item.name}: {e}")
@@ -279,12 +278,17 @@ class RSSEngine:
         ``refresh_rss`` 内部过滤，不做跨请求持久化。
         """
         skip_ids: set[int] = set()
+        candidate_ids = {b.id for _, b in matched if b.id in preference_bangumi}
+        if not candidate_ids:
+            # 本批次没有偏好番剧的候选：无需解析已下载版本
+            return skip_ids
 
         # 已下载版本：按完整内容身份记录当前最高 (偏好得分, 修订号)。
+        # 只解析本批次有候选的番剧。
         existing_best: dict[_PreferenceKey, _PreferenceRank] = {}
         for bangumi_id, torrents in existing_downloaded.items():
             bangumi = preference_bangumi.get(bangumi_id)
-            if not bangumi:
+            if not bangumi or bangumi_id not in candidate_ids:
                 continue
             for torrent in torrents:
                 release = parse_configured_release_title(torrent.name)
@@ -335,17 +339,55 @@ class RSSEngine:
         return skip_ids
 
     async def refresh_rss(
-        self, downloaders: DownloaderPool, rss_id: Optional[int] = None
+        self,
+        downloaders: DownloaderPool,
+        rss_id: Optional[int] = None,
+        analyser: "RSSAnalyser | None" = None,
     ) -> list[SystemEvent]:
         """Refresh feeds with one parser engine for the complete workflow.
 
         匹配到的种子投递到规则的下载器实例，规则未指定时用订阅的，再退回默认实例。
+        给出 ``analyser`` 时，先用同一次拉取的结果为聚合订阅生成新规则。
         """
         with parser_engine_snapshot():
-            return await self._refresh_rss(downloaders, rss_id)
+            return await self._refresh_rss(downloaders, rss_id, analyser)
+
+    async def _analyse_aggregate(
+        self,
+        analyser: "RSSAnalyser",
+        item_results: list[tuple[RSSItem, tuple[list[Torrent], Optional[str]]]],
+        bangumi_list: list[Bangumi],
+    ) -> list[Bangumi]:
+        """为聚合订阅生成新规则，返回之后用于匹配的番剧列表。"""
+        for rss_item, (torrents, error) in item_results:
+            if not rss_item.aggregate or error:
+                continue
+            try:
+                if await analyser.rss_to_data(rss_item, torrents, self, bangumi_list):
+                    # 新规则要能被后续订阅与本轮下载匹配到
+                    bangumi_list = await self.db.bangumi.search_all()
+            except Exception:
+                # 仅当该 RSS 确实已在遍历期间被 API 删除时才视为预期情况；
+                # 其余异常可能是真实 bug，需在 WARNING 级别带完整堆栈。
+                if await self.db.rss.search_id(rss_item.id) is None:
+                    logger.debug(
+                        "Skipping RSS id=%s, deleted during iteration",
+                        rss_item.id,
+                    )
+                else:
+                    logger.warning(
+                        "Error analysing RSS id=%s (%s)",
+                        rss_item.id,
+                        rss_item.url,
+                        exc_info=True,
+                    )
+        return bangumi_list
 
     async def _refresh_rss(
-        self, downloaders: DownloaderPool, rss_id: Optional[int] = None
+        self,
+        downloaders: DownloaderPool,
+        rss_id: Optional[int] = None,
+        analyser: "RSSAnalyser | None" = None,
     ) -> list[SystemEvent]:
         # Get All RSS Items
         if not rss_id:
@@ -384,6 +426,10 @@ class RSSEngine:
         # torrent against it in memory (this is the job the old module-level
         # TTL cache existed to do).
         bangumi_list = await self.db.bangumi.search_all()
+        if analyser is not None:
+            bangumi_list = await self._analyse_aggregate(
+                analyser, item_results, bangumi_list
+            )
         events: list[SystemEvent] = []
 
         # Bangumi with a release-group/resolution preference need per-episode
@@ -393,13 +439,6 @@ class RSSEngine:
             for b in bangumi_list
             if b.id is not None and (b.preferred_group or b.preferred_resolution)
         }
-        existing_downloaded: dict[int, list[Torrent]] = {}
-        if preference_bangumi:
-            existing_downloaded = (
-                await self.db.torrent.search_downloaded_by_bangumi_ids(
-                    list(preference_bangumi)
-                )
-            )
 
         # First pass: match every torrent against the bangumi list (this also
         # tags torrent.bangumi_id as a side effect) without downloading yet,
@@ -408,20 +447,38 @@ class RSSEngine:
         item_matches: list[
             tuple[RSSItem, list[Torrent], Optional[str], list[Optional[Bangumi]]]
         ] = []
-        for rss_item, (new_torrents, error) in item_results:
+        for rss_item, (torrents, error) in item_results:
+            try:
+                new_torrents = await self.db.torrent.check_new(torrents)
+            except Exception as e:
+                # 查库出错只算该订阅失败，其余订阅照常处理
+                logger.warning(f"Failed to dedup RSS {rss_item.name}: {e}")
+                new_torrents, error = [], str(e)
             matches = [self.match_torrent(t, bangumi_list) for t in new_torrents]
             matches = await self._apply_plugin_filters(new_torrents, matches)
             item_matches.append((rss_item, new_torrents, error, matches))
 
+        matched_pairs = [
+            (torrent, matched)
+            for _, new_torrents, _, matches in item_matches
+            for torrent, matched in zip(new_torrents, matches)
+            if matched is not None
+        ]
+        # 只为本批次有候选的偏好番剧加载已下载版本；没有候选时不查库
+        candidate_ids = {
+            b.id
+            for _, b in matched_pairs
+            if b.id is not None and b.id in preference_bangumi
+        }
+        existing_downloaded: dict[int, list[Torrent]] = {}
+        if candidate_ids:
+            existing_downloaded = (
+                await self.db.torrent.search_downloaded_by_bangumi_ids(
+                    list(candidate_ids)
+                )
+            )
         skip_ids = self._select_preference_skips(
-            [
-                (torrent, matched)
-                for _, new_torrents, _, matches in item_matches
-                for torrent, matched in zip(new_torrents, matches)
-                if matched is not None
-            ],
-            preference_bangumi,
-            existing_downloaded,
+            matched_pairs, preference_bangumi, existing_downloaded
         )
 
         # Process results sequentially (DB operations)

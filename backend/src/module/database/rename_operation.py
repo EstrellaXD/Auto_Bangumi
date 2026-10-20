@@ -63,7 +63,7 @@ class RenameOperationDatabase:
             RenameOperation.target_path == target_path,
         )
         if active_only:
-            statement = statement.where(RenameOperation.state != "done")
+            statement = statement.where(col(RenameOperation.state).not_in(["done"]))
         statement = statement.order_by(  # type: ignore[assignment]
             col(RenameOperation.updated_at).desc()
         )

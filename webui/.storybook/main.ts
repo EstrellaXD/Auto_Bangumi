@@ -10,6 +10,13 @@ const config: StorybookConfig = {
   },
   viteFinal(config) {
     config.plugins?.push(Unocss());
+    // 故事用字符串 template 选项，需要完整版（含编译器）的 vue
+    const alias = config.resolve?.alias;
+    if (Array.isArray(alias)) {
+      config.resolve!.alias = alias.filter(
+        (a) => !(a.find instanceof RegExp && a.find.source === '^vue$')
+      );
+    }
     // Add other configuration here depending on your use case
     return config;
   },

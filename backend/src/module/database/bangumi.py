@@ -601,8 +601,15 @@ class BangumiDatabase:
         result = await self.session.execute(statement)
         return list(result.scalars().all())
 
-    async def match_list(self, torrent_list: list, rss_link: str) -> list:
-        match_datas = await self.search_all()
+    async def match_list(
+        self,
+        torrent_list: list,
+        rss_link: str,
+        match_datas: list[Bangumi] | None = None,
+    ) -> list:
+        # 调用方可传入本轮已加载的番剧列表，省去每次 search_all
+        if match_datas is None:
+            match_datas = await self.search_all()
         if not match_datas:
             return torrent_list
 

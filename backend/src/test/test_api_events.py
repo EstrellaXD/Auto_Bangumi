@@ -2,19 +2,33 @@
 
 import asyncio
 import json
+import os
 import time
+from itertools import chain, repeat
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from module.api import v1
-from module.api.events import _downloader_payload, _log_payload, _status_payload
+from module.api import events, v1
+from module.api.events import (
+    _downloader_payload,
+    _LogCursor,
+    _status_payload,
+    _TorrentCache,
+)
+from module.api.log import _clear_log_files
 
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def fresh_torrent_cache(monkeypatch):
+    """种子列表缓存是模块级共享状态（含绑定事件循环的锁），每个用例换一份。"""
+    monkeypatch.setattr(events, "_torrents", _TorrentCache())
 
 
 @pytest.fixture
@@ -191,31 +205,154 @@ class TestEventGeneratorNonBlocking:
         assert json.loads(downloader_event["data"]) is None
 
 
-class TestLogPayload:
-    async def test_log_payload_missing_file_returns_none(self, tmp_path):
-        """_log_payload returns None when the log file doesn't exist yet."""
-        missing = tmp_path / "does-not-exist.log"
-        with patch("module.api.events.LOG_PATH", missing):
-            result = await _log_payload()
+class TestTorrentCache:
+    async def test_concurrent_streams_share_one_fetch_per_ttl(self, monkeypatch):
+        """N 个连接同时取种子列表，TTL 内只查询一次下载器；过期后再查一次。"""
+        fetch = AsyncMock(return_value=[{"hash": "abc"}])
+        monkeypatch.setattr(events, "_downloader_payload", fetch)
+        cache = _TorrentCache()
 
-        assert result is None
+        results = await asyncio.gather(*(cache.get() for _ in range(10)))
+        await cache.get()
+        assert fetch.await_count == 1
+        assert set(results) == {json.dumps([{"hash": "abc"}])}
 
-    async def test_log_payload_reads_tail(self, tmp_path):
-        """_log_payload decodes the tail bytes read via _read_log_tail.
+        monkeypatch.setattr(events, "_DOWNLOADER_CACHE_SECONDS", 0)
+        await cache.get()
+        assert fetch.await_count == 2
 
-        _read_log_tail (imported from module.api.log) resolves LOG_PATH via
-        its own module binding, so both names must be patched together.
-        """
+
+class TestLogCursor:
+    """log 帧：首帧整段尾部；之后只推新增完整行；轮转/截断后重推整段。"""
+
+    @pytest.fixture
+    def log_file(self, tmp_path):
+        """_read_log_tail 通过 module.api.log 自己的 LOG_PATH 绑定读文件，两处一起替换。"""
         log_file = tmp_path / "app.log"
-        log_file.write_text("hello world\n")
-
         with (
             patch("module.api.events.LOG_PATH", log_file),
             patch("module.api.log.LOG_PATH", log_file),
         ):
-            result = await _log_payload()
+            yield log_file
 
-        assert result == "hello world\n"
+    async def test_missing_file_yields_no_frame(self, log_file):
+        assert await _LogCursor().frame() is None
+
+    async def test_first_frame_is_full_tail(self, log_file):
+        log_file.write_text("hello world\n")
+
+        frame = await _LogCursor().frame()
+
+        assert frame == {"event": "log", "data": "hello world\n"}
+
+    @pytest.mark.parametrize(
+        ("appended", "expected"),
+        [
+            ("second 第二行\n", "second 第二行\n"),
+            # 半行留到写完整再推，偏移只前进到最后一个换行
+            ("second\nthi", "second\n"),
+            ("", None),
+            ("thi", None),
+        ],
+    )
+    async def test_append_yields_only_new_complete_lines(
+        self, log_file, appended, expected
+    ):
+        log_file.write_text("hello world\n")
+        cursor = _LogCursor()
+        await cursor.frame()
+
+        with log_file.open("a") as f:
+            f.write(appended)
+        frame = await cursor.frame()
+
+        if expected is None:
+            assert frame is None
+        else:
+            assert frame == {"event": "log_append", "data": expected}
+
+    async def test_partial_line_is_sent_once_completed(self, log_file):
+        log_file.write_text("hello world\n")
+        cursor = _LogCursor()
+        await cursor.frame()
+
+        with log_file.open("a") as f:
+            f.write("thi")
+        assert await cursor.frame() is None
+        with log_file.open("a") as f:
+            f.write("rd\n")
+
+        assert await cursor.frame() == {"event": "log_append", "data": "third\n"}
+
+    async def test_empty_log_on_connect_yields_log_clear(self, log_file):
+        """清空后重连：空日志推 log_clear，前端才会丢掉上个连接的旧文本。"""
+        log_file.write_text("")
+        cursor = _LogCursor()
+
+        assert await cursor.frame() == {"event": "log_clear", "data": "1"}
+        assert await cursor.frame() is None
+
+    @pytest.mark.parametrize("clear", ["truncate", "api"])
+    async def test_cleared_log_yields_log_clear_then_appends(self, log_file, clear):
+        """截断或经 /log/clear 清空：推一次 log_clear，之后的新行按增量推。"""
+        log_file.write_text("old line\n")
+        cursor = _LogCursor()
+        await cursor.frame()
+
+        if clear == "truncate":
+            log_file.write_text("")
+        else:
+            _clear_log_files()
+        assert await cursor.frame() == {"event": "log_clear", "data": "1"}
+        assert await cursor.frame() is None
+        with log_file.open("a") as f:
+            f.write("fresh\n")
+
+        assert await cursor.frame() == {"event": "log_append", "data": "fresh\n"}
+
+    async def test_clear_then_regrow_past_offset_sends_full_frame(self, log_file):
+        """清空后、下一次读取前日志已长过旧偏移：仍推整段，而不是从旧偏移增量。"""
+        log_file.write_text("old line\n")
+        cursor = _LogCursor()
+        await cursor.frame()
+
+        _clear_log_files()
+        with log_file.open("a") as f:
+            f.write("fresh line after clear\n")
+
+        assert await cursor.frame() == {
+            "event": "log",
+            "data": "fresh line after clear\n",
+        }
+
+    @pytest.mark.parametrize(
+        ("change", "expected"),
+        [
+            ("truncate", "new\n"),
+            # 轮转后 log.txt 近乎为空，整段尾部会拼上 .1 备份
+            ("rotate", "old line one\nold line two\nnew\n"),
+            # 同 inode、同大小，但 mtime 回退（被整体替换写回）
+            ("mtime_reset", "NEW line one\nNEW line two\n"),
+        ],
+    )
+    async def test_rotation_or_truncation_yields_full_frame(
+        self, log_file, change, expected
+    ):
+        log_file.write_text("old line one\nold line two\n")
+        cursor = _LogCursor()
+        await cursor.frame()
+
+        if change == "truncate":
+            log_file.write_text("new\n")
+        elif change == "rotate":
+            log_file.rename(log_file.with_name(f"{log_file.name}.1"))
+            log_file.write_text("new\n")
+        else:
+            st = log_file.stat()
+            log_file.write_text("NEW line one\nNEW line two\n")
+            os.utime(log_file, ns=(st.st_atime_ns, st.st_mtime_ns - 10**9))
+
+        assert await cursor.frame() == {"event": "log", "data": expected}
 
 
 # ---------------------------------------------------------------------------
@@ -235,7 +372,7 @@ class TestNotificationEvent:
         monkeypatch.setattr(host, "_bus", bus)
         return bus
 
-    def _generator(self, tmp_path, *, tick=0.01, payload=None):
+    def _generator(self, tmp_path, *, tick=0.01, payload=None, downloader=None):
         from module.api.events import _event_generator
 
         request = AsyncMock()
@@ -249,7 +386,7 @@ class TestNotificationEvent:
         patches = (
             patch(
                 "module.api.events._downloader_payload",
-                new=AsyncMock(return_value=None),
+                new=downloader or AsyncMock(return_value=None),
             ),
             patch("module.api.events.LOG_PATH", tmp_path / "missing.log"),
             patch("module.api.events._notification_payload", new=notification),
@@ -283,12 +420,41 @@ class TestNotificationEvent:
         with patches[0], patches[1], patches[2], patches[3]:
             try:
                 await self._collect(gen, 3)  # 第一个 tick
-                # tick3 status、tick5 downloader —— 中间不应再有 notification
+                # tick3 status、tick6 status（tick5 的 downloader 负载未变，不推）
+                # —— 中间不应再有 notification
                 more = await self._collect(gen, 2)
             finally:
                 await gen.aclose()
 
-        assert [e["event"] for e in more] == ["status", "downloader"]
+        assert [e["event"] for e in more] == ["status", "status"]
+
+    @pytest.mark.parametrize(
+        ("second", "expected"),
+        [
+            (
+                [{"hash": "a"}],
+                ["status", "downloader", "notification", "status", "status"],
+            ),
+            (
+                [{"hash": "b"}],
+                ["status", "downloader", "notification", "status", "downloader"],
+            ),
+        ],
+    )
+    async def test_downloader_frame_only_when_payload_changes(
+        self, tmp_path, bus, monkeypatch, second, expected
+    ):
+        fetch = AsyncMock(side_effect=chain([[{"hash": "a"}]], repeat(second)))
+        monkeypatch.setattr(events, "_DOWNLOADER_CACHE_SECONDS", 0)
+        gen, patches = self._generator(tmp_path, downloader=fetch)
+        with patches[0], patches[1], patches[2], patches[3]:
+            try:
+                got = await self._collect(gen, 5)  # tick0 … tick5
+            finally:
+                await gen.aclose()
+
+        assert [e["event"] for e in got] == expected
+        assert fetch.await_count == 2
 
     async def test_inbox_change_pushes_frame_immediately(self, tmp_path, bus):
         from module.notification.inbox import bump_inbox_revision, inbox_revision

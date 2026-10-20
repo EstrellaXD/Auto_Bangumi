@@ -8,6 +8,14 @@ definePage({
 });
 
 const { editRule } = storeToRefs(useBangumiStore());
+const editRuleOpen = computed({
+  get: () => editRule.value.show,
+  set: (val) => (editRule.value.show = val),
+});
+const { comp: EditRule, shown: editRuleShown } = useLazyModal(
+  editRuleOpen,
+  () => import('@/components/ab-edit-rule.vue')
+);
 
 // 插件页面的标题取自清单（清单到达前留空，避免闪出路由名 Plugin；清单已到达
 // 或加载失败仍无匹配页面时回退为插件 id）；插件市场用翻译后的标题，其它页面沿用路由名
@@ -74,9 +82,12 @@ function onApplyRule(rule: BangumiRule) {
       </div>
     </main>
 
-    <ab-edit-rule
-      v-model:show="editRule.show"
+    <component
+      :is="EditRule"
+      v-if="EditRule"
       v-model:rule="editRule.item"
+      :show="editRuleShown"
+      @update:show="editRuleOpen = $event"
       @enable="onEnableRule"
       @archive="onArchiveRule"
       @unarchive="onUnarchiveRule"

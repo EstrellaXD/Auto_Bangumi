@@ -25,29 +25,8 @@ async def rss_tick(analyser: RSSAnalyser, notifier: NotificationManager) -> None
     """Analyse aggregate RSS feeds and refresh the RSS engine once."""
     async with DownloaderPool() as downloaders:
         async with Database() as db:
-            engine = RSSEngine(db)
-            # Analyse RSS
-            rss_list = await db.rss.search_aggregate()
-            for rss in rss_list:
-                try:
-                    await analyser.rss_to_data(rss, engine)
-                except Exception:
-                    # 仅当该 RSS 确实已在遍历期间被 API 删除时才视为预期情况；
-                    # 其余异常可能是真实 bug，需在 WARNING 级别带完整堆栈。
-                    if await db.rss.search_id(rss.id) is None:
-                        logger.debug(
-                            "Skipping RSS id=%s, deleted during iteration",
-                            rss.id,
-                        )
-                    else:
-                        logger.warning(
-                            "Error analysing RSS id=%s (%s)",
-                            rss.id,
-                            rss.url,
-                            exc_info=True,
-                        )
-            # Run RSS Engine
-            events = await engine.refresh_rss(downloaders)
+            # 每个订阅本轮只拉取一次，聚合分析与下载匹配共用结果（#1026）
+            events = await RSSEngine(db).refresh_rss(downloaders, analyser=analyser)
     if events:
         # 站内通知中心要求事件总是送达 notifier（send_event 内部先落库，
         # 再按 settings.notification.enable 决定是否外发）。

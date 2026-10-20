@@ -10,7 +10,7 @@ returned events into ``notifier.send_event`` calls, gated by
 
 import asyncio
 import time
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import ANY, AsyncMock, MagicMock, patch
 
 from module.core.loops import (
     offset_scan_tick,
@@ -93,7 +93,6 @@ class TestRssTick:
         analyser = AsyncMock()
 
         mock_db = AsyncMock()
-        mock_db.rss.search_aggregate = AsyncMock(return_value=[])
         mock_engine = AsyncMock()
         mock_engine.refresh_rss = AsyncMock(return_value=events)
 
@@ -110,6 +109,7 @@ class TestRssTick:
             mock_settings.bangumi_manage.eps_complete = False
             await rss_tick(analyser, notifier)
 
+        mock_engine.refresh_rss.assert_awaited_once_with(ANY, analyser=analyser)
         notifier.send_event.assert_awaited_once_with(events[0])
 
     async def test_events_forwarded_even_when_external_push_disabled(self):
@@ -119,7 +119,6 @@ class TestRssTick:
         analyser = AsyncMock()
 
         mock_db = AsyncMock()
-        mock_db.rss.search_aggregate = AsyncMock(return_value=[])
         mock_engine = AsyncMock()
         mock_engine.refresh_rss = AsyncMock(return_value=events)
 

@@ -318,3 +318,85 @@ async def test_tmdb_parser_live():
     assert tmdb_info.title == "冰海战记"
     assert tmdb_info.year == bangumi_year
     assert tmdb_info.last_season == bangumi_season
+
+
+async def test_tmdb_parser_negative_result_is_cached_until_ttl_expires(mocker):
+    """查不到的标题在 TTL 内只请求一次，过期后重新请求。"""
+    requests: list[str] = []
+
+    async def fake_get_json(url: str) -> dict:
+        requests.append(url)
+        return {"results": []}
+
+    mocker.patch.object(
+        tmdb_parser_module.RequestContent, "get_json", side_effect=fake_get_json
+    )
+    now = mocker.patch.object(tmdb_parser_module.time, "monotonic", return_value=0.0)
+    tmdb_parser_module._tmdb_cache.clear()
+
+    assert await tmdb_parser("不存在", "zh", test=True) is None
+    first = len(requests)
+    assert await tmdb_parser("不存在", "zh", test=True) is None
+    assert len(requests) == first
+
+    now.return_value = tmdb_parser_module._TMDB_NEGATIVE_TTL + 1
+    assert await tmdb_parser("不存在", "zh", test=True) is None
+    assert len(requests) == 2 * first
+
+
+async def test_tmdb_parser_cache_hit_refreshes_lru_order(mocker):
+    """命中的条目移到队尾，满员淘汰的是最久未用而非最早写入的条目。"""
+    mocker.patch.object(tmdb_parser_module, "_TMDB_CACHE_MAX", 2)
+    mocker.patch.object(
+        tmdb_parser_module.RequestContent, "get_json", side_effect=_fake_get_json
+    )
+    tmdb_parser_module._tmdb_cache.clear()
+
+    await tmdb_parser("A", "zh", test=True)
+    await tmdb_parser("B", "zh", test=True)
+    await tmdb_parser("A", "zh", test=True)  # 命中，A 变为最近使用
+    await tmdb_parser("C", "zh", test=True)  # 淘汰 B
+
+    assert list(tmdb_parser_module._tmdb_cache) == [
+        "A:zh:True:False",
+        "C:zh:True:False",
+    ]
+
+
+async def test_tmdb_parser_request_failure_is_not_cached(mocker):
+    """请求失败（get_json 返回 None）不当作「无匹配」缓存，下次照常请求。"""
+    requests: list[str] = []
+
+    async def fake_get_json(url: str) -> dict | None:
+        requests.append(url)
+        return None
+
+    mocker.patch.object(
+        tmdb_parser_module.RequestContent, "get_json", side_effect=fake_get_json
+    )
+    tmdb_parser_module._tmdb_cache.clear()
+
+    assert await tmdb_parser("海盗战记", "zh", test=True) is None
+    assert tmdb_parser_module._tmdb_cache == {}
+    first = len(requests)
+    assert await tmdb_parser("海盗战记", "zh", test=True) is None
+    assert len(requests) == 2 * first
+
+
+async def test_tmdb_parser_failed_animation_check_does_not_cache_movie(mocker):
+    """判断动画的请求失败时不回退成电影，也不缓存。"""
+
+    async def fake_get_json(url: str) -> dict | None:
+        if "/search/tv" in url:
+            return {"results": [{"id": 82684}]}
+        if "/search/movie" in url:
+            return _MOVIE_SEARCH_RESULT
+        return None
+
+    mocker.patch.object(
+        tmdb_parser_module.RequestContent, "get_json", side_effect=fake_get_json
+    )
+    tmdb_parser_module._tmdb_cache.clear()
+
+    assert await tmdb_parser("海盗战记", "zh", test=True) is None
+    assert tmdb_parser_module._tmdb_cache == {}

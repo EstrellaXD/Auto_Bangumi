@@ -14,13 +14,18 @@ export function hasConfiguredDownloader(instances: PluginInstance[]): boolean {
 
 export const useDownloaderStore = defineStore('downloader', () => {
   const torrents = shallowRef<QbTorrentInfo[]>([]);
-  const selectedKeys = ref<string[]>([]);
+  // Set 而不是响应式数组：成员判断 O(1)，整体替换触发更新
+  const selectedKeys = shallowRef(new Set<string>());
   const loading = ref(false);
 
   const { downloaderData } = useEventStream();
+  // SSE 帧计数：getAll 请求期间收到过新帧时丢弃 HTTP 结果——服务端只在
+  // 负载变化时重推，旧响应覆盖新帧后已删除的种子会一直留在列表里。
+  let sseFrames = 0;
   // SSE 已连接时使用推送数据，省去 downloader.vue 页面自己的 5s 轮询请求。
   watch(downloaderData, (data) => {
     if (data === null) return;
+    sseFrames += 1;
     torrents.value = data;
   });
 
@@ -65,8 +70,10 @@ export const useDownloaderStore = defineStore('downloader', () => {
 
   async function getAll() {
     loading.value = true;
+    const frames = sseFrames;
     try {
-      torrents.value = await apiDownloader.getTorrents();
+      const data = await apiDownloader.getTorrents();
+      if (frames === sseFrames) torrents.value = data;
     } catch {
       // Keep the last known list — a failed 5s poll (e.g. during a backend
       // restart) must not blank the page into a fake "no torrents" state.
@@ -82,7 +89,7 @@ export const useDownloaderStore = defineStore('downloader', () => {
   const opts = {
     showMessage: true,
     onSuccess() {
-      selectedKeys.value = [];
+      selectedKeys.value = new Set();
     },
     onFinally: getAll,
   };
@@ -97,7 +104,7 @@ export const useDownloaderStore = defineStore('downloader', () => {
   ) {
     const byInstance = new Map<string, string[]>();
     for (const t of torrents.value) {
-      if (!selectedKeys.value.includes(torrentKey(t))) continue;
+      if (!selectedKeys.value.has(torrentKey(t))) continue;
       const hashes = byInstance.get(t.downloader_id) ?? [];
       hashes.push(t.hash);
       byInstance.set(t.downloader_id, hashes);
@@ -134,30 +141,8 @@ export const useDownloaderStore = defineStore('downloader', () => {
     opts
   );
 
-  function toggleKey(key: string) {
-    const idx = selectedKeys.value.indexOf(key);
-    if (idx === -1) {
-      selectedKeys.value.push(key);
-    } else {
-      selectedKeys.value.splice(idx, 1);
-    }
-  }
-
-  function toggleGroup(group: TorrentGroup) {
-    const groupKeys = group.torrents.map(torrentKey);
-    const allSelected = groupKeys.every((k) => selectedKeys.value.includes(k));
-    if (allSelected) {
-      selectedKeys.value = selectedKeys.value.filter(
-        (k) => !groupKeys.includes(k)
-      );
-    } else {
-      const toAdd = groupKeys.filter((k) => !selectedKeys.value.includes(k));
-      selectedKeys.value.push(...toAdd);
-    }
-  }
-
   function clearSelection() {
-    selectedKeys.value = [];
+    selectedKeys.value = new Set();
   }
 
   return {
@@ -170,8 +155,6 @@ export const useDownloaderStore = defineStore('downloader', () => {
     pauseSelected,
     resumeSelected,
     deleteSelected,
-    toggleKey,
-    toggleGroup,
     clearSelection,
   };
 });
