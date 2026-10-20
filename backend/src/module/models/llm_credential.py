@@ -1,6 +1,6 @@
 """订阅类 LLM 提供商的凭据行（OAuth/device-flow token）。
 
-刻意存数据库而非 config：token 永远不进 ``settings.dict()``，因此不可能
+刻意存数据库而非 config：token 永远不进 ``settings.model_dump()``，因此不可能
 经 ``GET /config/get`` 泄漏；前端只能通过 auth/status 看到连接状态。
 """
 

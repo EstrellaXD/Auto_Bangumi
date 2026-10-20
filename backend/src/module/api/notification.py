@@ -19,7 +19,10 @@ from module.notification.inbox import bump_inbox_revision
 from module.security.api import get_current_user
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/notification", tags=["notification"])
+router = APIRouter(
+    prefix="/notification", tags=["notification"], dependencies=[Depends(get_current_user)]
+)
+
 
 
 class TestProviderRequest(BaseModel):
@@ -54,7 +57,7 @@ class TestResponse(BaseModel):
 
 
 @router.post(
-    "/test", response_model=TestResponse, dependencies=[Depends(get_current_user)]
+    "/test", response_model=TestResponse
 )
 async def test_provider(request: TestProviderRequest):
     """Test a configured notification provider by its index.
@@ -84,7 +87,6 @@ async def test_provider(request: TestProviderRequest):
 @router.post(
     "/test-config",
     response_model=TestResponse,
-    dependencies=[Depends(get_current_user)],
 )
 async def test_provider_config(request: TestProviderConfigRequest):
     """Test an unsaved notification provider configuration.
@@ -174,7 +176,6 @@ def _to_out(message) -> InboxMessageOut:
 @router.get(
     "/messages",
     response_model=InboxListResponse,
-    dependencies=[Depends(get_current_user)],
 )
 async def list_messages(
     unread_only: bool = False,
@@ -194,7 +195,6 @@ async def list_messages(
 
 @router.get(
     "/messages/unread-count",
-    dependencies=[Depends(get_current_user)],
 )
 async def unread_count(db: Database = Depends(get_db)):
     return {"unread_count": await db.inbox.unread_count()}
@@ -203,7 +203,6 @@ async def unread_count(db: Database = Depends(get_db)):
 @router.post(
     "/messages/read-all",
     response_model=ResponseModel,
-    dependencies=[Depends(get_current_user)],
 )
 async def mark_all_read(db: Database = Depends(get_db)):
     changed = await db.inbox.mark_all_read()
@@ -219,7 +218,6 @@ async def mark_all_read(db: Database = Depends(get_db)):
 @router.post(
     "/messages/{message_id}/read",
     response_model=ResponseModel,
-    dependencies=[Depends(get_current_user)],
 )
 async def mark_read(message_id: int, db: Database = Depends(get_db)):
     if not await db.inbox.mark_read(message_id):
@@ -236,7 +234,6 @@ async def mark_read(message_id: int, db: Database = Depends(get_db)):
 @router.delete(
     "/messages/{message_id}",
     response_model=ResponseModel,
-    dependencies=[Depends(get_current_user)],
 )
 async def delete_message(message_id: int, db: Database = Depends(get_db)):
     if not await db.inbox.delete(message_id):
@@ -253,7 +250,6 @@ async def delete_message(message_id: int, db: Database = Depends(get_db)):
 @router.delete(
     "/messages",
     response_model=ResponseModel,
-    dependencies=[Depends(get_current_user)],
 )
 async def clear_messages(db: Database = Depends(get_db)):
     removed = await db.inbox.clear()

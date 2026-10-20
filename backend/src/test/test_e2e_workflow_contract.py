@@ -114,7 +114,7 @@ def test_pr_dependencies_and_generated_outputs_are_cached() -> None:
     downloader = _job(source, "e2e-downloader-image")
 
     for job in (runtime, downloader):
-        assert "astral-sh/setup-uv@v4" in job
+        assert "astral-sh/setup-uv@v10" in job
         assert "enable-cache: true" in job
         assert "cache-dependency-glob: backend/uv.lock" in job
         assert "uv sync --directory backend --locked --group dev" in job

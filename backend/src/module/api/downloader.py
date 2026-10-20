@@ -22,7 +22,10 @@ from module.security.api import get_current_user
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/downloader", tags=["downloader"])
+router = APIRouter(
+    prefix="/downloader", tags=["downloader"], dependencies=[Depends(get_current_user)]
+)
+
 
 
 class TorrentHashesRequest(BaseModel):
@@ -51,7 +54,7 @@ def _client(downloader_id: str | None) -> DownloadClient:
     return DownloadClient(downloader_id)
 
 
-@router.get("/instances", dependencies=[Depends(get_current_user)])
+@router.get("/instances")
 async def get_instances():
     """下载器实例列表（供规则 / 订阅选择下载器）。"""
     return {
@@ -64,7 +67,7 @@ async def get_instances():
     }
 
 
-@router.get("/torrents", dependencies=[Depends(get_current_user)])
+@router.get("/torrents")
 async def get_torrents():
     """所有下载器实例的种子（每条带 downloader_id）；不可用的实例跳过。"""
     torrents = await list_torrents()
@@ -73,7 +76,7 @@ async def get_torrents():
     return torrents
 
 
-@router.get("/rename-conflicts", dependencies=[Depends(get_current_user)])
+@router.get("/rename-conflicts")
 async def get_rename_conflicts():
     """List durable media rename conflicts awaiting user action."""
 
@@ -84,7 +87,6 @@ async def get_rename_conflicts():
 
 @router.post(
     "/rename-conflicts/{operation_id}/retry",
-    dependencies=[Depends(get_current_user)],
 )
 async def retry_rename_conflict(operation_id: int):
     """Clear one terminal conflict so the next rename pass revalidates it."""
@@ -109,7 +111,7 @@ async def retry_rename_conflict(operation_id: int):
     }
 
 
-@router.post("/torrents/pause", dependencies=[Depends(get_current_user)])
+@router.post("/torrents/pause")
 async def pause_torrents(req: TorrentHashesRequest):
     hashes = "|".join(req.hashes)
     async with _client(req.downloader_id) as client:
@@ -117,7 +119,7 @@ async def pause_torrents(req: TorrentHashesRequest):
     return {"msg_en": "Torrents paused", "msg_zh": "种子已暂停"}
 
 
-@router.post("/torrents/resume", dependencies=[Depends(get_current_user)])
+@router.post("/torrents/resume")
 async def resume_torrents(req: TorrentHashesRequest):
     hashes = "|".join(req.hashes)
     async with _client(req.downloader_id) as client:
@@ -125,7 +127,7 @@ async def resume_torrents(req: TorrentHashesRequest):
     return {"msg_en": "Torrents resumed", "msg_zh": "种子已恢复"}
 
 
-@router.post("/torrents/delete", dependencies=[Depends(get_current_user)])
+@router.post("/torrents/delete")
 async def delete_torrents(req: TorrentDeleteRequest):
     hashes = "|".join(req.hashes)
     async with _client(req.downloader_id) as client:
@@ -139,7 +141,7 @@ async def delete_torrents(req: TorrentDeleteRequest):
     return {"status": True, "msg_en": "Torrents deleted", "msg_zh": "种子已删除"}
 
 
-@router.post("/torrents/tag", dependencies=[Depends(get_current_user)])
+@router.post("/torrents/tag")
 async def tag_torrent(req: TorrentTagRequest):
     """Tag a torrent with a bangumi ID for accurate offset lookup.
 
@@ -167,7 +169,7 @@ async def tag_torrent(req: TorrentTagRequest):
     }
 
 
-@router.post("/torrents/tag/auto", dependencies=[Depends(get_current_user)])
+@router.post("/torrents/tag/auto")
 async def auto_tag_torrents():
     """Auto-tag all untagged Bangumi torrents based on name/path matching.
 

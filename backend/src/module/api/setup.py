@@ -46,7 +46,7 @@ def _require_setup_needed():
     if SENTINEL_PATH.exists():
         raise HTTPException(status_code=403, detail="Setup already completed.")
     # Allow setup in dev mode even if settings differ
-    if VERSION != "DEV_VERSION" and settings.dict() != Config().dict():
+    if VERSION != "DEV_VERSION" and settings.model_dump() != Config().model_dump():
         raise HTTPException(status_code=403, detail="Setup already completed.")
 
 
@@ -189,7 +189,7 @@ async def get_setup_status():
     if VERSION == "DEV_VERSION":
         need_setup = not SENTINEL_PATH.exists()
     else:
-        need_setup = not SENTINEL_PATH.exists() and settings.dict() == Config().dict()
+        need_setup = not SENTINEL_PATH.exists() and settings.model_dump() == Config().model_dump()
     return SetupStatusResponse(need_setup=need_setup, version=VERSION)
 
 
@@ -410,7 +410,7 @@ async def complete_setup(
         response.delete_cookie(key="token", httponly=True, samesite="strict")
 
         # 2. Update configuration
-        config_dict = settings.dict()
+        config_dict = settings.model_dump()
         # 向导填写的下载器写入默认实例（slots.downloader 指向的实例）
         plugins = config_dict["plugins"]
         default = next(

@@ -137,9 +137,9 @@ class TestUpdateConfig:
         self, authed_client, mock_settings, mock_ctx, engine
     ):
         """PATCH persists either supported parser engine identifier."""
-        current = Config().dict()
-        mock_settings.dict.return_value = current
-        update_data = Config().dict()
+        current = Config().model_dump()
+        mock_settings.model_dump.return_value = current
+        update_data = Config().model_dump()
         update_data["rss_parser"]["engine"] = engine
 
         with patch("module.api.config.settings", mock_settings):
@@ -152,7 +152,7 @@ class TestUpdateConfig:
 
     def test_update_config_rejects_unknown_parser_engine(self, authed_client):
         """PATCH returns 422 for an unsupported parser engine."""
-        update_data = Config().dict()
+        update_data = Config().model_dump()
         update_data["rss_parser"]["engine"] = "preview"
 
         response = authed_client.patch("/api/v1/config/update", json=update_data)
@@ -624,7 +624,7 @@ class TestRestoreMasked:
 
         # 删除第一个渠道后保存：插件渠道取回自己的值
         providers.pop(0)
-        mock_settings.dict.return_value = config.dict()
+        mock_settings.model_dump.return_value = config.model_dump()
         with patch("module.api.config.settings", mock_settings):
             response = authed_client.patch("/api/v1/config/update", json=data)
         assert response.status_code == 200
@@ -637,7 +637,7 @@ class TestRestoreMasked:
         self, authed_client, mock_settings
     ):
         """PATCH /config/update must not overwrite a real password with '********'."""
-        mock_settings.dict.return_value = {
+        mock_settings.model_dump.return_value = {
             "program": {"rss_time": 900, "rename_time": 60, "webui_port": 7892},
             "plugins": {
                 "instances": [

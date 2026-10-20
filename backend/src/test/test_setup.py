@@ -59,7 +59,7 @@ def mock_first_run():
         patch("module.api.setup.settings") as mock_settings,
     ):
         mock_sentinel.exists.return_value = False
-        mock_settings.dict.side_effect = lambda: Config().dict()
+        mock_settings.model_dump.side_effect = lambda: Config().model_dump()
         yield mock_settings
 
 
@@ -96,8 +96,8 @@ class TestSetupStatus:
             ),  # Non-dev version to test config check
         ):
             mock_sentinel.exists.return_value = False
-            mock_settings.dict.return_value = {"test": "changed"}
-            mock_config.return_value.dict.return_value = {"test": "default"}
+            mock_settings.model_dump.return_value = {"test": "changed"}
+            mock_config.return_value.model_dump.return_value = {"test": "default"}
             response = client.get("/api/v1/setup/status")
             assert response.status_code == 200
             data = response.json()

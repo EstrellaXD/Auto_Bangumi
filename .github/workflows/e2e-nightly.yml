@@ -79,7 +79,7 @@ jobs:
       - name: Set up Python 3.13
         uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
+          python-version: "3.14"
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v4

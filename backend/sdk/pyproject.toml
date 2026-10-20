@@ -9,7 +9,7 @@ build-backend = "setuptools.build_meta"
 name = "autobangumi-sdk"
 dynamic = ["version"]
 description = "AutoBangumi plugin SDK and ab-plugin CLI"
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 license = "MIT"
 dependencies = [
     "pydantic>=2.0.0",

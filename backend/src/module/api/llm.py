@@ -35,7 +35,10 @@ from module.parser.analyser.providers.registry import registry
 from module.security.api import get_current_user
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/config/llm", tags=["config"])
+router = APIRouter(
+    prefix="/config/llm", tags=["config"], dependencies=[Depends(get_current_user)]
+)
+
 
 # 不透明 handle -> 待完成授权的服务端明细。``blob`` 是适配器 begin_auth
 # 返回的 state（device_code / PKCE verifier 等敏感态），只留服务端，绝不
@@ -103,7 +106,6 @@ class ProvidersResponse(BaseModel):
 @router.get(
     "/providers",
     response_model=ProvidersResponse,
-    dependencies=[Depends(get_current_user)],
 )
 async def list_providers():
     infos = registry.list_infos()
@@ -146,7 +148,6 @@ async def list_providers():
 
 @router.post(
     "/providers/{provider_id}/install",
-    dependencies=[Depends(get_current_user)],
 )
 async def install_provider(provider_id: str, ctx: AppContext = Depends(get_context)):
     from module.llm_plugins import PluginInstaller
@@ -171,7 +172,6 @@ async def install_provider(provider_id: str, ctx: AppContext = Depends(get_conte
 
 @router.delete(
     "/providers/{provider_id}",
-    dependencies=[Depends(get_current_user)],
 )
 async def uninstall_provider(provider_id: str):
     from module.llm_plugins import PluginInstaller
@@ -246,7 +246,6 @@ def _store_pending(provider_id: str, challenge: AuthChallenge) -> str:
 
 @router.post(
     "/providers/{provider_id}/auth/begin",
-    dependencies=[Depends(get_current_user)],
 )
 async def auth_begin(provider_id: str):
     try:
@@ -284,7 +283,6 @@ async def auth_begin(provider_id: str):
 
 @router.post(
     "/providers/{provider_id}/auth/complete",
-    dependencies=[Depends(get_current_user)],
 )
 async def auth_complete(provider_id: str, req: AuthCompleteRequest):
     """redirect_paste 流程：前端回传授权 code；device flow 由服务端轮询完成。"""
@@ -310,7 +308,6 @@ async def auth_complete(provider_id: str, req: AuthCompleteRequest):
 
 @router.get(
     "/providers/{provider_id}/auth/status",
-    dependencies=[Depends(get_current_user)],
 )
 async def auth_status(provider_id: str):
     return await _provider_status(provider_id)
@@ -318,7 +315,6 @@ async def auth_status(provider_id: str):
 
 @router.delete(
     "/providers/{provider_id}/auth",
-    dependencies=[Depends(get_current_user)],
 )
 async def auth_disconnect(provider_id: str):
     store = CredentialStore(provider_id)

@@ -11,7 +11,10 @@ from module.security.api import get_current_user
 
 from .response import u_response
 
-router = APIRouter(prefix="/rss", tags=["rss"])
+router = APIRouter(
+    prefix="/rss", tags=["rss"], dependencies=[Depends(get_current_user)]
+)
+
 
 # RSSItem.parser 的合法取值（与 webui ab-add-rss 的选项一致）；
 # 这些值即便与搜索站点同名（mikan）也不做站点名映射
@@ -19,14 +22,14 @@ PARSER_TYPES = {"mikan", "tmdb", "parser"}
 
 
 @router.get(
-    path="", response_model=list[RSSItem], dependencies=[Depends(get_current_user)]
+    path="", response_model=list[RSSItem]
 )
 async def get_rss(db: Database = Depends(get_db)):
     return await db.rss.search_all()
 
 
 @router.post(
-    path="/add", response_model=APIResponse, dependencies=[Depends(get_current_user)]
+    path="/add", response_model=APIResponse
 )
 async def add_rss(rss: RSSItem, db: Database = Depends(get_db)):
     engine = RSSEngine(db)
@@ -39,7 +42,6 @@ async def add_rss(rss: RSSItem, db: Database = Depends(get_db)):
 @router.post(
     path="/enable/many",
     response_model=APIResponse,
-    dependencies=[Depends(get_current_user)],
 )
 async def enable_many_rss(
     rss_ids: list[int],
@@ -53,7 +55,6 @@ async def enable_many_rss(
 @router.delete(
     path="/delete/{rss_id}",
     response_model=APIResponse,
-    dependencies=[Depends(get_current_user)],
 )
 async def delete_rss(rss_id: int, db: Database = Depends(get_db)):
     if await db.rss.delete(rss_id):
@@ -71,7 +72,6 @@ async def delete_rss(rss_id: int, db: Database = Depends(get_db)):
 @router.post(
     path="/delete/many",
     response_model=APIResponse,
-    dependencies=[Depends(get_current_user)],
 )
 async def delete_many_rss(
     rss_ids: list[int],
@@ -85,7 +85,6 @@ async def delete_many_rss(
 @router.patch(
     path="/disable/{rss_id}",
     response_model=APIResponse,
-    dependencies=[Depends(get_current_user)],
 )
 async def disable_rss(rss_id: int, db: Database = Depends(get_db)):
     if await db.rss.disable(rss_id):
@@ -106,7 +105,6 @@ async def disable_rss(rss_id: int, db: Database = Depends(get_db)):
 @router.post(
     path="/disable/many",
     response_model=APIResponse,
-    dependencies=[Depends(get_current_user)],
 )
 async def disable_many_rss(rss_ids: list[int], db: Database = Depends(get_db)):
     engine = RSSEngine(db)
@@ -117,7 +115,6 @@ async def disable_many_rss(rss_ids: list[int], db: Database = Depends(get_db)):
 @router.patch(
     path="/update/{rss_id}",
     response_model=APIResponse,
-    dependencies=[Depends(get_current_user)],
 )
 async def update_rss(
     rss_id: int,
@@ -139,7 +136,6 @@ async def update_rss(
 @router.post(
     path="/refresh/all",
     response_model=APIResponse,
-    dependencies=[Depends(get_current_user)],
 )
 async def refresh_all(db: Database = Depends(get_db)):
     async with DownloaderPool() as downloaders:
@@ -157,7 +153,6 @@ async def refresh_all(db: Database = Depends(get_db)):
 @router.post(
     path="/refresh/{rss_id}",
     response_model=APIResponse,
-    dependencies=[Depends(get_current_user)],
 )
 async def refresh_rss(rss_id: int, db: Database = Depends(get_db)):
     async with DownloaderPool() as downloaders:
@@ -172,7 +167,6 @@ async def refresh_rss(rss_id: int, db: Database = Depends(get_db)):
 @router.get(
     path="/torrent/{rss_id}",
     response_model=list[Torrent],
-    dependencies=[Depends(get_current_user)],
 )
 async def get_torrent(
     rss_id: int,
@@ -189,7 +183,6 @@ analyser = RSSAnalyser()
 @router.post(
     "/analysis",
     response_model=Bangumi | Movie,
-    dependencies=[Depends(get_current_user)],
 )
 async def analysis(rss: RSSItem):
     data = await analyser.link_to_data(rss)
@@ -199,7 +192,7 @@ async def analysis(rss: RSSItem):
 
 
 @router.post(
-    "/collect", response_model=APIResponse, dependencies=[Depends(get_current_user)]
+    "/collect", response_model=APIResponse
 )
 async def download_collection(data: Bangumi):
     async with DownloadClient(resolve_downloader_id(data.downloader_id)) as client:
@@ -209,7 +202,7 @@ async def download_collection(data: Bangumi):
 
 
 @router.post(
-    "/subscribe", response_model=APIResponse, dependencies=[Depends(get_current_user)]
+    "/subscribe", response_model=APIResponse
 )
 async def subscribe(data: Bangumi, rss: RSSItem):
     # 搜索订阅时前端传来的是站点名（nyaa/dmhy），而分析器只认识解析器类型

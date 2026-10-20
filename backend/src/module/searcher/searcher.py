@@ -99,7 +99,7 @@ class SearchTorrent:
                             bangumi.official_title = tmdb_title
                         if not bangumi.poster_link and tmdb_poster:
                             bangumi.poster_link = tmdb_poster
-                    yield json.dumps(bangumi.dict(), separators=(",", ":"))
+                    yield json.dumps(bangumi.model_dump(), separators=(",", ":"))
 
     @staticmethod
     def special_url(data: Bangumi | Movie, site: str) -> RSSItem:

@@ -492,7 +492,3 @@ class Config(BaseModel):
 
     def model_dump(self, *args, by_alias=True, **kwargs):
         return super().model_dump(*args, by_alias=by_alias, **kwargs)
-
-    # Keep dict() for backward compatibility
-    def dict(self, *args, by_alias=True, **kwargs):
-        return self.model_dump(*args, by_alias=by_alias, **kwargs)

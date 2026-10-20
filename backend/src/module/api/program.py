@@ -14,7 +14,8 @@ from .deps import get_context
 from .response import u_response
 
 logger = logging.getLogger(__name__)
-router = APIRouter(tags=["program"])
+router = APIRouter(tags=["program"], dependencies=[Depends(get_current_user)])
+
 
 
 # Note: Lifespan events (startup/shutdown) are handled in main.py via the
@@ -22,7 +23,7 @@ router = APIRouter(tags=["program"])
 
 
 @router.post(
-    "/restart", response_model=APIResponse, dependencies=[Depends(get_current_user)]
+    "/restart", response_model=APIResponse
 )
 async def restart(ctx: AppContext = Depends(get_context)):
     try:
@@ -41,7 +42,7 @@ async def restart(ctx: AppContext = Depends(get_context)):
 
 
 @router.post(
-    "/start", response_model=APIResponse, dependencies=[Depends(get_current_user)]
+    "/start", response_model=APIResponse
 )
 async def start(ctx: AppContext = Depends(get_context)):
     try:
@@ -60,14 +61,14 @@ async def start(ctx: AppContext = Depends(get_context)):
 
 
 @router.post(
-    "/stop", response_model=APIResponse, dependencies=[Depends(get_current_user)]
+    "/stop", response_model=APIResponse
 )
 async def stop(ctx: AppContext = Depends(get_context)):
     resp = await ctx.stop()
     return u_response(resp)
 
 
-@router.get("/status", response_model=dict, dependencies=[Depends(get_current_user)])
+@router.get("/status", response_model=dict)
 async def program_status(ctx: AppContext = Depends(get_context)):
     if not ctx.is_running:
         return {
@@ -84,7 +85,7 @@ async def program_status(ctx: AppContext = Depends(get_context)):
 
 
 @router.post(
-    "/shutdown", response_model=APIResponse, dependencies=[Depends(get_current_user)]
+    "/shutdown", response_model=APIResponse
 )
 async def shutdown_program(ctx: AppContext = Depends(get_context)):
     await ctx.stop()
@@ -104,7 +105,6 @@ async def shutdown_program(ctx: AppContext = Depends(get_context)):
     "/check/downloader",
     tags=["check"],
     response_model=bool,
-    dependencies=[Depends(get_current_user)],
 )
 async def check_downloader_status(ctx: AppContext = Depends(get_context)):
     return await ctx.check_downloader()

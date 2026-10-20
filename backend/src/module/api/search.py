@@ -5,10 +5,13 @@ from module.conf.search_provider import get_provider, save_provider
 from module.searcher import SearchTorrent, available_sites
 from module.security.api import get_current_user
 
-router = APIRouter(prefix="/search", tags=["search"])
+router = APIRouter(
+    prefix="/search", tags=["search"], dependencies=[Depends(get_current_user)]
+)
 
 
-@router.get("/bangumi", dependencies=[Depends(get_current_user)])
+
+@router.get("/bangumi")
 async def search_torrents(site: str = "mikan", keywords: str = Query(None)):
     """
     Server Send Event for per Bangumi item
@@ -26,7 +29,7 @@ async def search_torrents(site: str = "mikan", keywords: str = Query(None)):
 
 
 @router.get(
-    "/provider", response_model=list[str], dependencies=[Depends(get_current_user)]
+    "/provider", response_model=list[str]
 )
 async def search_provider():
     return list(available_sites())
@@ -35,7 +38,6 @@ async def search_provider():
 @router.get(
     "/provider/config",
     response_model=dict[str, str],
-    dependencies=[Depends(get_current_user)],
 )
 async def get_search_provider_config():
     """Get all search providers with their URL templates.
@@ -49,7 +51,6 @@ async def get_search_provider_config():
 @router.put(
     "/provider/config",
     response_model=dict[str, str],
-    dependencies=[Depends(get_current_user)],
 )
 async def update_search_provider_config(providers: dict[str, str]):
     """Update search providers configuration."""

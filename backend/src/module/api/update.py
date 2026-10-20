@@ -27,7 +27,10 @@ from .deps import get_context
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/update", tags=["update"])
+router = APIRouter(
+    prefix="/update", tags=["update"], dependencies=[Depends(get_current_user)]
+)
+
 
 # 退出前的延迟：先让 HTTP 响应与最后一帧 SSE 进度刷出，再退出进程。
 _RESTART_DELAY_SECONDS = 1.5
@@ -55,7 +58,7 @@ def schedule_restart() -> None:
     task.add_done_callback(_RESTART_TASKS.discard)
 
 
-@router.get("/check", dependencies=[Depends(get_current_user)])
+@router.get("/check")
 async def check_update(channel: str | None = None, force: bool = False):
     """查询 GitHub Release，返回最新版本、更新提示与本地覆盖层状态。
 
@@ -81,7 +84,7 @@ async def _notify_apply_result(ctx: AppContext, result) -> None:
         logger.warning("Failed to emit update-result notification", exc_info=True)
 
 
-@router.post("/apply", dependencies=[Depends(get_current_user)])
+@router.post("/apply")
 async def apply_update(
     channel: str | None = None, ctx: AppContext = Depends(get_context)
 ):
@@ -97,7 +100,7 @@ async def apply_update(
     )
 
 
-@router.post("/rollback", dependencies=[Depends(get_current_user)])
+@router.post("/rollback")
 async def rollback_update(ctx: AppContext = Depends(get_context)):
     """回滚到上一个覆盖层版本（无备份则回退到镜像版本）；成功后安排重启。"""
     result = await updater.rollback()

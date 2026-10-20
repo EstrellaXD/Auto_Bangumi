@@ -18,10 +18,10 @@ jobs:
       - name: Set up Python 3.13
         uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
-      - uses: astral-sh/setup-uv@v4
+          python-version: "3.14"
+      - uses: astral-sh/setup-uv@v10
         with:
-          version: "latest"
+          version: "0.13.x"
       - name: Install dependencies
         run: cd backend && uv sync --group dev
       - name: Lint
@@ -302,9 +302,9 @@ jobs:
           echo ${{ needs.version-info.outputs.version }}
           echo "VERSION='${{ needs.version-info.outputs.version }}'" >> module/__version__.py
 
-      - uses: astral-sh/setup-uv@v4
+      - uses: astral-sh/setup-uv@v10
         with:
-          version: "latest"
+          version: "0.13.x"
 
       - name: Generate requirements.txt for non-uv consumers (#994)
         run: |

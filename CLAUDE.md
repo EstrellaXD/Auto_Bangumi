@@ -26,7 +26,7 @@ cd backend && uv run pytest src/test/test_xxx.py -v  # run specific test
 
 # Linting and formatting
 cd backend && uv run ruff check src
-cd backend && uv run black src
+cd backend && uv run ruff format src
 
 # Add a dependency
 cd backend && uv add <package>
@@ -126,7 +126,7 @@ webui/src/
 
 ## Code Style
 
-- Python: Black (88 char lines), Ruff linter (E, F, I rules), target Python 3.10+
+- Python: ruff format (88 char lines), Ruff linter (E, F, I rules), target Python 3.14
 - TypeScript: ESLint + Prettier
 - Run formatters before committing
 

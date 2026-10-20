@@ -47,12 +47,12 @@ jobs:
       - name: Set up Python 3.13
         uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
+          python-version: "3.14"
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@v10
         with:
-          version: "0.11.26"
+          version: "0.13.x"
           enable-cache: true
           cache-dependency-glob: backend/uv.lock
 
@@ -174,7 +174,7 @@ jobs:
       - name: Set up Python 3.13
         uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
+          python-version: "3.14"
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
@@ -294,12 +294,12 @@ jobs:
       - name: Set up Python 3.13
         uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
+          python-version: "3.14"
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@v10
         with:
-          version: "0.11.26"
+          version: "0.13.x"
           enable-cache: true
           cache-dependency-glob: backend/uv.lock
 
