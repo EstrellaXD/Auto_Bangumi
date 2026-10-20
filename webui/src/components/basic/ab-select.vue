@@ -1,7 +1,6 @@
 <script lang="ts" setup>
 import { computed, inject } from 'vue';
 import { NSelect } from 'naive-ui';
-import { isObject } from 'radash';
 import type { SelectOption } from 'naive-ui';
 import { abFieldInjectionKey } from './ab-field.vue';
 import type { SelectItem } from '#/components';
@@ -35,7 +34,7 @@ const field = inject(abFieldInjectionKey, null);
 const normalizedOptions = computed<SelectOption[]>(() => {
   if (props.options) return props.options;
   return (props.items ?? []).map((item) =>
-    isObject(item)
+    typeof item === 'object'
       ? { label: item.label ?? String(item.value), value: item.value }
       : { label: item, value: item }
   );

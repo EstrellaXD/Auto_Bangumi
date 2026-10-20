@@ -3,7 +3,7 @@
   "type": "module",
   "version": "0.0.0",
   "private": true,
-  "packageManager": "pnpm@9.11.0+sha512.0a203ffaed5a3f63242cd064c8fb5892366c103e328079318f78062f24ea8c9d50bc6a47aa3567cabefd824d170e78fa2745ed1f16b132e16436146b7688f19b",
+  "packageManager": "pnpm@12.14.0",
   "scripts": {
     "prepare": "cd .. && husky install ./webui/.husky",
     "test:build": "vue-tsc --noEmit",
@@ -20,12 +20,10 @@
     "test:e2e:webkit": "playwright test --project=webkit-mobile",
     "test:e2e:typecheck": "tsc --noEmit -p tsconfig.e2e.json",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build",
-    "generate-pwa-assets": "pwa-assets-generator --preset minimal public/images/logo.svg"
+    "build-storybook": "storybook build"
   },
   "dependencies": {
     "@headlessui/vue": "^1.7.23",
-    "@vueuse/components": "^10.11.1",
     "@vueuse/core": "^10.11.1",
     "axios": "^1.7.9",
     "naive-ui": "^2.44.1",
@@ -50,7 +48,7 @@
     "@storybook/testing-library": "0.0.14-next.2",
     "@storybook/vue3": "^7.6.20",
     "@storybook/vue3-vite": "^7.6.20",
-    "@types/node": "^18.19.50",
+    "@types/node": "^24",
     "@unocss/preset-attributify": "^0.55.7",
     "@unocss/preset-rem-to-px": "^0.51.13",
     "@unocss/reset": "^0.51.13",
@@ -64,7 +62,6 @@
     "happy-dom": "^12.10.3",
     "husky": "^8.0.3",
     "prettier": "^2.8.8",
-    "radash": "^12.1.0",
     "sass-embedded": "^1.79.3",
     "storybook": "^7.6.20",
     "typescript": "^4.9.5",

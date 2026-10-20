@@ -31,7 +31,6 @@ export default defineConfig(({ mode }) => ({
     AutoImport({
       imports: [
         'vue',
-        'vitest',
         'pinia',
         {
           '@vueuse/core': [
@@ -51,13 +50,6 @@ export default defineConfig(({ mode }) => ({
     }),
     Components({
       dts: 'types/dts/components.d.ts',
-      dirs: [
-        'src/components',
-        'src/components/basic',
-        'src/components/layout',
-        'src/components/setting',
-        'src/components/setup',
-      ],
     }),
     VueI18nPlugin({
       include: resolve(__dirname, './src/i18n/**'),

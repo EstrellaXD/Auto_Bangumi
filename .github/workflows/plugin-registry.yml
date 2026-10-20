@@ -60,14 +60,14 @@ jobs:
         with:
           version: "latest"
       - &pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
-          version: 9
+          version: 12.14.0
           run_install: false
       - &node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
       - &deps
         name: Install backend
         run: mkdir -p backend/config && cd backend && uv sync --group dev

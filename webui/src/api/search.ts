@@ -1,4 +1,3 @@
-import { omit } from 'radash';
 import type { BangumiAPI, BangumiRule } from '#/bangumi';
 
 type EventSourceStatus = 'OPEN' | 'CONNECTING' | 'CLOSED';
@@ -43,10 +42,11 @@ export const apiSearch = {
           return;
         }
         const _data = JSON.parse(e.data) as BangumiAPI;
+        const { filter, rss_link, ...rest } = _data;
         const newData: BangumiRule = {
-          ...omit(_data, ['filter', 'rss_link']),
-          filter: _data.filter.split(','),
-          rss_link: _data.rss_link.split(','),
+          ...rest,
+          filter: filter.split(','),
+          rss_link: rss_link.split(','),
         };
         // 兜底去重：服务端每条流内已按订阅链接去重，这里防异常场景的重复项
         const id = newData.rss_link?.[0] || newData.title_raw;

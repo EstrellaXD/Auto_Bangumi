@@ -1,2 +1,9 @@
 packages:
   - packages/*
+publicHoistPattern:
+  - '@vue/runtime-core'
+  - '*eslint*'
+  - '*prettier*'
+allowBuilds:
+  esbuild: true
+  vue-demi: true

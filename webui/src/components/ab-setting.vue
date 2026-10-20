@@ -1,6 +1,5 @@
 <script lang="ts" setup>
 import { NDynamicTags } from 'naive-ui';
-import { isObject } from 'radash';
 import AbField from './basic/ab-field.vue';
 import AbInput from './basic/ab-input.vue';
 import AbSelect from './basic/ab-select.vue';
@@ -26,7 +25,9 @@ const labelText = computed(() =>
 // 写回时保持字符串（配置值均为字符串）
 const selectValue = computed<string | number | null>({
   get() {
-    return isObject(data.value) ? (data.value as SelectItem).value : data.value;
+    return typeof data.value === 'object' && data.value !== null
+      ? (data.value as SelectItem).value
+      : data.value;
   },
   set(value) {
     data.value = value;

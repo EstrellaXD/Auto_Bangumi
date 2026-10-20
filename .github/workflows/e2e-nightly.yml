@@ -14,7 +14,7 @@ concurrency:
 
 env:
   E2E_VERSION: 3.3.999-e2e.1
-  PNPM_VERSION: 9.11.0
+  PNPM_VERSION: 12.14.0
   PLAYWRIGHT_VERSION: 1.61.1
 
 jobs:
@@ -82,7 +82,7 @@ jobs:
           python-version: "3.13"
 
       - name: Set up pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
           version: ${{ env.PNPM_VERSION }}
           run_install: false
@@ -90,7 +90,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: 24
           cache: pnpm
           cache-dependency-path: webui/pnpm-lock.yaml
 
