@@ -337,8 +337,7 @@ class RenameConflictEvent(SystemEvent):
     def describe(self) -> tuple[str, str]:
         return (
             "媒体文件重命名冲突",
-            f"种子：{self.torrent_name}\n目标：{self.target_path}\n"
-            f"原因：{self.reason}",
+            f"种子：{self.torrent_name}\n目标：{self.target_path}\n原因：{self.reason}",
         )
 
 

@@ -144,7 +144,9 @@ class NotificationProvider(BaseModel):
     # 保留未知字段以免保存配置时被丢弃
     model_config = ConfigDict(extra="allow")
 
-    type: str = Field(..., description="Provider type (telegram, discord, bark, etc.)")
+    type: str = Field(
+        default=..., description="Provider type (telegram, discord, bark, etc.)"
+    )
     enabled: bool = Field(default=True, description="Whether this provider is enabled")
 
     # Common fields (with env var expansion)
@@ -256,8 +258,7 @@ class LLM(BaseModel):
     base_url: str = Field(
         default="",
         description=(
-            "Custom base URL, only used by the openai provider. "
-            "Empty = official API."
+            "Custom base URL, only used by the openai provider. Empty = official API."
         ),
     )
     mode: Literal["fallback", "primary"] = Field(
@@ -342,8 +343,7 @@ class Security(BaseModel):
     webauthn_origin: str = Field(
         default="",
         description=(
-            "Expected WebAuthn origin. Empty = derive from the request "
-            "headers instead."
+            "Expected WebAuthn origin. Empty = derive from the request headers instead."
         ),
     )
 
@@ -492,7 +492,3 @@ class Config(BaseModel):
 
     def model_dump(self, *args, by_alias=True, **kwargs):
         return super().model_dump(*args, by_alias=by_alias, **kwargs)
-
-    # Keep dict() for backward compatibility
-    def dict(self, *args, by_alias=True, **kwargs):
-        return self.model_dump(*args, by_alias=by_alias, **kwargs)

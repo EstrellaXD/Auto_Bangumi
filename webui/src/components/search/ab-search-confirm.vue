@@ -1,12 +1,12 @@
 <script lang="ts" setup>
 import {
-  CheckOne,
-  Close,
+  ChevronDown,
+  ChevronRight,
+  CircleCheck,
   Copy,
-  Down,
-  ErrorPicture,
-  Right,
-} from '@icon-park/vue-next';
+  ImageOff,
+  X,
+} from '@lucide/vue';
 import { NDynamicTags, NSpin, useMessage } from 'naive-ui';
 import type {
   BangumiRule,
@@ -47,7 +47,6 @@ const posterSrc = computed(() =>
   resolvePosterUrl(localBangumi.value.poster_link)
 );
 const showAdvanced = ref(false);
-const copied = ref(false);
 const offsetLoading = ref(false);
 
 // Offset mismatch detection state
@@ -127,23 +126,14 @@ const infoTags = computed(() => {
 });
 
 // Copy RSS link
-let copyTimer: ReturnType<typeof setTimeout> | undefined;
+const { copy, copied } = useClipboard({ copiedDuring: 2000 });
 
 async function copyRssLink() {
   const rssLink = localBangumi.value.rss_link?.[0] || '';
   if (rssLink) {
-    await navigator.clipboard.writeText(rssLink);
-    copied.value = true;
-    clearTimeout(copyTimer);
-    copyTimer = setTimeout(() => {
-      copied.value = false;
-    }, 2000);
+    await copy(rssLink);
   }
 }
-
-onBeforeUnmount(() => {
-  clearTimeout(copyTimer);
-});
 
 // Auto detect offset
 async function autoDetectOffset() {
@@ -170,13 +160,15 @@ function handleConfirm() {
     <div class="confirm-modal" role="dialog" aria-modal="true">
       <!-- Header -->
       <header class="confirm-header">
-        <h2 class="confirm-title">{{ $t('search.confirm.title') }}</h2>
+        <h2 class="confirm-title">
+          {{ $t('search.confirm.title') }}
+        </h2>
         <ab-icon-button
           class="close-btn"
           :label="$t('common.close')"
           @click="emit('cancel')"
         >
-          <Close theme="outline" size="18" />
+          <X :size="18" />
         </ab-icon-button>
       </header>
 
@@ -186,16 +178,18 @@ function handleConfirm() {
         <div class="bangumi-info">
           <div class="bangumi-poster">
             <template v-if="localBangumi.poster_link">
-              <img :src="posterSrc" :alt="localBangumi.official_title" />
+              <img :src="posterSrc" :alt="localBangumi.official_title">
             </template>
             <template v-else>
               <div class="poster-placeholder">
-                <ErrorPicture theme="outline" size="32" />
+                <ImageOff :size="32" />
               </div>
             </template>
           </div>
           <div class="bangumi-meta">
-            <h3 class="bangumi-title">{{ localBangumi.official_title }}</h3>
+            <h3 class="bangumi-title">
+              {{ localBangumi.official_title }}
+            </h3>
             <p v-if="localBangumi.title_raw" class="bangumi-subtitle">
               {{ localBangumi.title_raw }}
             </p>
@@ -230,8 +224,8 @@ function handleConfirm() {
               :aria-label="$t('search.confirm.copy_rss')"
               @click="copyRssLink"
             >
-              <CheckOne v-if="copied" theme="outline" size="14" />
-              <Copy v-else theme="outline" size="14" />
+              <CircleCheck v-if="copied" :size="14" />
+              <Copy v-else :size="14" />
             </button>
           </div>
         </div>
@@ -240,9 +234,8 @@ function handleConfirm() {
         <div class="advanced-section">
           <button class="advanced-toggle" @click="showAdvanced = !showAdvanced">
             <component
-              :is="showAdvanced ? Down : Right"
-              theme="outline"
-              size="14"
+              :is="showAdvanced ? ChevronDown : ChevronRight"
+              :size="14"
             />
             {{ $t('search.confirm.advanced') }}
           </button>

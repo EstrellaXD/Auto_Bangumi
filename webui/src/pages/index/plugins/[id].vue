@@ -7,13 +7,13 @@ definePage({
 });
 
 // 插件经 page 挂载点提供的独立页面；同一插件声明多个时取第一个
-const route = useRoute();
+const route = useRoute('Plugin');
 const { slots, loaded, loadFailed } = usePluginUi();
 const ui = computed(() =>
   slots.value.find(
     (s) =>
       s.slot === 'page' &&
-      s.plugin_id === (route.params as Record<string, string>).id
+      s.plugin_id === route.params.id
   )
 );
 </script>

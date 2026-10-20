@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { Refresh } from '@icon-park/vue-next';
+import { RefreshCw } from '@lucide/vue';
 import type { BangumiRule } from '#/bangumi';
 import type { BangumiGroup } from '@/components/calendar/types';
 
@@ -129,7 +129,9 @@ function onRuleSelect(rule: BangumiRule) {
     <div class="calendar-header anim-fade-in">
       <!-- 页面本身已有 h1 “Calendar”，这里不再重复标题，只留说明文字 -->
       <div class="calendar-header-text">
-        <p class="calendar-subtitle">{{ $t('calendar.subtitle') }}</p>
+        <p class="calendar-subtitle">
+          {{ $t('calendar.subtitle') }}
+        </p>
       </div>
       <ab-icon-button
         class="calendar-refresh-btn"
@@ -138,7 +140,7 @@ function onRuleSelect(rule: BangumiRule) {
         :label="$t('calendar.refresh')"
         @click="refreshCalendar"
       >
-        <Refresh :size="18" />
+        <RefreshCw :size="18" />
       </ab-icon-button>
     </div>
 

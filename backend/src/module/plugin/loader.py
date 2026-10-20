@@ -128,7 +128,7 @@ def installed_version(root: Path, plugin_id: str) -> str | None:
     try:
         data = json.loads((root / plugin_id / INSTALLED_FILE).read_text("utf-8"))
         return str(data["version"])
-    except (OSError, ValueError, KeyError, TypeError):
+    except OSError, ValueError, KeyError, TypeError:
         return None
 
 

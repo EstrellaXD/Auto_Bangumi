@@ -45,7 +45,7 @@ MIKAN_MIXED_COLLECTION = (
     "日语音轨; 外挂繁中字幕 (整理时间：2025.11.12)"
 )
 MIKAN_MIXED_ROOT = (
-    "Fushigi Yugi_TV+OVA+Manga+Novel+Music+Other_" "dub jpn sub cht (2025-11-12)"
+    "Fushigi Yugi_TV+OVA+Manga+Novel+Music+Other_dub jpn sub cht (2025-11-12)"
 )
 
 
@@ -309,7 +309,7 @@ def test_mixed_collection_preserves_a_numeric_work_title(raw: str) -> None:
     "raw",
     (
         "[TV+OVA][1080p]",
-        "[APTX4869][CONAN][名侦探柯南 1045&1046 降下天罚的生日派对]" "[TV+OVA][1080p]",
+        "[APTX4869][CONAN][名侦探柯南 1045&1046 降下天罚的生日派对][TV+OVA][1080p]",
     ),
 )
 def test_titleless_mixed_structure_is_still_materialized(raw: str) -> None:
@@ -486,7 +486,7 @@ def test_rejected_structural_marker_inside_group_does_not_infer_media() -> None:
 
 
 def test_shadowed_episode_title_candidate_does_not_remove_title_text() -> None:
-    raw = "[Group] Anime S01E01 Season 2 Episode 3 - Another Title " "[1080p]"
+    raw = "[Group] Anime S01E01 Season 2 Episode 3 - Another Title [1080p]"
 
     parsed = parse_release_title(raw)
 

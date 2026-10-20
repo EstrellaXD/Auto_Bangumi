@@ -17,8 +17,8 @@ const { slots, loaded, loadFailed } = usePluginUi();
 const pageTitle = computed(() => {
   const name = String(route.name ?? '');
   if (name === 'Market') return t('market.title');
-  if (name !== 'Plugin') return name;
-  const id = (route.params as Record<string, string>).id;
+  if (route.name !== 'Plugin') return name;
+  const id = route.params.id;
   const ui = slots.value.find((s) => s.slot === 'page' && s.plugin_id === id);
   if (ui) return slotTitle(ui, lang.value === 'zh-CN' ? 'zh-CN' : 'en-US');
   return loaded.value || loadFailed.value ? id : '';
@@ -60,7 +60,7 @@ function onApplyRule(rule: BangumiRule) {
       <ab-sidebar />
 
       <div id="main-content" class="layout-content">
-        <ab-page-title :title="pageTitle"></ab-page-title>
+        <ab-page-title :title="pageTitle" />
 
         <RouterView v-slot="{ Component }">
           <transition name="page" mode="out-in">

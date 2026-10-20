@@ -4,17 +4,16 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 import uvicorn
-from fastapi import FastAPI, Request
+from fastapi import APIRouter, Depends, FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
+from starlette.routing import Route
 
 from module.api import v1
 from module.api.health import router as health_router
 from module.conf import VERSION, settings, setup_logger
 from module.core import AppContext
-from module.mcp import create_mcp_app
+from module.mcp import create_mcp_app, mcp
 
 setup_logger(reset=True)
 logger = logging.getLogger(__name__)
@@ -47,7 +46,9 @@ async def lifespan(app: FastAPI):
         # supervised background task and returns immediately (CONTRACT #5),
         # so this does not block server startup.
         await ctx.start_tasks()
-    yield
+    # 子应用不会运行自己的 lifespan，MCP 会话管理器在这里启动
+    async with app.state.mcp_sessions.run():
+        yield
     # Shutdown
     await ctx.stop()
     await ctx.plugins.stop()
@@ -73,8 +74,11 @@ def create_app() -> FastAPI:
     # it stays reachable without auth for container/orchestrator health checks
     app.include_router(health_router)
 
-    # mount MCP server (SSE transport for LLM tool integration)
-    app.mount("/mcp", create_mcp_app(ctx))
+    # MCP 服务（Streamable HTTP）：用路由而不是 mount，端点才是 /mcp 本身
+    # （mount 只匹配 /mcp/...，/mcp 会被 307 重定向到 /mcp/）
+    app.router.routes.append(Route("/mcp", endpoint=create_mcp_app(ctx)))
+    # 每次 create_mcp_app 都新建会话管理器，记下本应用的这一个供 lifespan 运行
+    app.state.mcp_sessions = mcp.session_manager
 
     return app
 
@@ -94,33 +98,17 @@ def posters(path: str):
 
 
 # 前端插件组件与宿主同源（第 3.8 节），只允许加载本站脚本：远程脚本与内联脚本
-# 都被拒绝。只加在 SPA 文档上，/docs 的 Swagger 页面依赖内联脚本与 CDN。
-_SPA_HEADERS = {"Content-Security-Policy": "script-src 'self'"}
+# 都被拒绝。只加在前端静态文件上，/docs 的 Swagger 页面依赖内联脚本与 CDN。
+def _spa_csp(response: Response) -> None:
+    response.headers["Content-Security-Policy"] = "script-src 'self'"
 
 
 def mount_webui(app: FastAPI, dist: Path) -> None:
-    app.mount("/assets", StaticFiles(directory=dist / "assets"), name="assets")
-    app.mount("/images", StaticFiles(directory=dist / "images"), name="images")
-    # 自托管 Inter 字体：index.html 以 /fonts/*.woff2 预加载，不挂载则被下面的
-    # SPA 兜底路由回成 index.html，全站字体静默回退。在线更新可能覆盖进来
-    # 更旧的、没有 fonts/ 的 dist，故按存在性挂载。
-    if (dist / "fonts").is_dir():
-        app.mount("/fonts", StaticFiles(directory=dist / "fonts"), name="fonts")
-    # app.mount("/icons", StaticFiles(directory="dist/icons"), name="icons")
-    templates = Jinja2Templates(directory=dist)
-
-    # dist/ is immutable inside the container — snapshot once instead of
-    # hitting the filesystem on every request.
-    dist_files = frozenset(os.listdir(dist))
-
-    @app.get("/{path:path}")
-    def html(request: Request, path: str):
-        if path in dist_files:
-            return FileResponse(dist / path, headers=_SPA_HEADERS)
-        else:
-            return templates.TemplateResponse(
-                request, "index.html", headers=_SPA_HEADERS
-            )
+    # 前端路由优先级最低，只在没有路径操作或挂载匹配时生效；浏览器导航
+    # （Accept: text/html）到不存在的路径时回落到 index.html，其它请求返回 404
+    web = APIRouter(dependencies=[Depends(_spa_csp)])
+    web.frontend("/", directory=dist)
+    app.include_router(web)
 
 
 if VERSION != "DEV_VERSION":
@@ -143,4 +131,7 @@ if __name__ == "__main__":
         host=host,
         port=settings.program.webui_port,
         log_config=uvicorn_logging_config,
+        # 原生 SSE 没有关停监听，常开的事件流会让退出一直等到浏览器断开；
+        # 限定等待时间，/shutdown 与在线更新的重启才能按时完成
+        timeout_graceful_shutdown=5,
     )

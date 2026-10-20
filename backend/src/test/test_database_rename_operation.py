@@ -1,6 +1,7 @@
 """RenameOperationDatabase — #1078 durable rename/replacement state."""
 
 from datetime import datetime, timedelta, timezone
+from typing import Any
 
 import pytest
 from sqlalchemy.exc import IntegrityError
@@ -11,7 +12,7 @@ from module.models import RenameOperation
 
 
 def _operation(**overrides) -> RenameOperation:
-    values = {
+    values: dict[str, Any] = {
         "downloader_type": "qbittorrent",
         "kind": "replacement",
         "state": "planned",

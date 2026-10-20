@@ -31,7 +31,9 @@ const passwordError = computed(() => {
 <template>
   <ab-container :title="t('setup.account.title')" class="wizard-step">
     <div class="step-content">
-      <p class="step-subtitle">{{ t('setup.account.subtitle') }}</p>
+      <p class="step-subtitle">
+        {{ t('setup.account.subtitle') }}
+      </p>
 
       <div class="form-fields">
         <ab-field :label="t('setup.account.username')">
@@ -42,7 +44,7 @@ const passwordError = computed(() => {
             autocomplete="username"
             placeholder="admin"
             class="setup-input"
-          />
+          >
         </ab-field>
 
         <ab-field :label="t('setup.account.password')">
@@ -52,7 +54,7 @@ const passwordError = computed(() => {
             :aria-label="t('setup.account.password')"
             autocomplete="new-password"
             class="setup-input"
-          />
+          >
         </ab-field>
 
         <ab-field :label="t('setup.account.confirm_password')">
@@ -62,10 +64,12 @@ const passwordError = computed(() => {
             :aria-label="t('setup.account.confirm_password')"
             autocomplete="new-password"
             class="setup-input"
-          />
+          >
         </ab-field>
 
-        <p v-if="passwordError" class="error-text">{{ passwordError }}</p>
+        <p v-if="passwordError" class="error-text">
+          {{ passwordError }}
+        </p>
       </div>
 
       <div class="wizard-actions">

@@ -4,6 +4,7 @@ import json
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import mcp.types as mcp_types
 import pytest
 from fastapi import APIRouter, FastAPI, HTTPException
 from fastapi.testclient import TestClient
@@ -383,9 +384,29 @@ async def _search(args):
     return {"q": args.get("q"), "hits": [1, 2]}
 
 
+def _tool_json(result: mcp_types.CallToolResult):
+    """工具结果只有一段 JSON 文本，返回解析后的值。"""
+    [content] = result.content
+    assert isinstance(content, mcp_types.TextContent)
+    return json.loads(content.text)
+
+
+async def _read_text(uri: str) -> str:
+    from mcp.server.lowlevel.helper_types import ReadResourceContents
+
+    from module.mcp import mcp
+
+    [content] = await mcp.read_resource(uri)
+    assert isinstance(content, ReadResourceContents)
+    assert isinstance(content.content, str)
+    return content.content
+
+
 class TestMcp:
-    def test_plugin_tools_listed_with_namespace(self, registry):
-        from module.mcp.tools import TOOLS, all_tools
+    async def test_plugin_tools_listed_with_namespace(self, registry):
+        from mcp.server.mcpserver import MCPServer
+
+        from module.mcp import mcp
 
         add(
             registry,
@@ -394,27 +415,29 @@ class TestMcp:
             McpTool("Search", _search, {"type": "object"}),
             plugin_id="demo",
         )
-        names = [t.name for t in all_tools()]
-        assert names[: len(TOOLS)] == [t.name for t in TOOLS]
-        assert "demo__search" in names
+        builtin = [t.name for t in await MCPServer.list_tools(mcp)]
+        names = [t.name for t in await mcp.list_tools()]
+        assert names == builtin + ["demo__search"]
 
     async def test_call_dispatches_to_plugin(self, registry):
-        from module.mcp.tools import handle_tool
+        from module.mcp import mcp
 
         add(registry, points.MCP_TOOL, "search", McpTool("S", _search), "demo")
-        [content] = await handle_tool("demo__search", {"q": "x"})
-        assert json.loads(content.text) == {"q": "x", "hits": [1, 2]}
+        result = await mcp.call_tool("demo__search", {"q": "x"})
+        assert not result.is_error
+        assert _tool_json(result) == {"q": "x", "hits": [1, 2]}
 
     async def test_unknown_names_keep_error(self, registry):
-        from module.mcp.tools import handle_tool
+        from module.mcp import mcp
 
         add(registry, points.MCP_TOOL, "search", McpTool("S", _search), "demo")
         for name in ("nope", "demo__nope", "other__search"):
-            [content] = await handle_tool(name, {})
-            assert json.loads(content.text) == {"error": f"Unknown tool: {name}"}
+            result = await mcp.call_tool(name, {})
+            assert result.is_error
+            assert _tool_json(result) == {"error": f"Unknown tool: {name}"}
 
     async def test_failure_returns_error_and_counts(self, registry, breaker):
-        from module.mcp.tools import handle_tool
+        from module.mcp import mcp
 
         async def boom(args):
             raise RuntimeError("plugin bug")
@@ -422,8 +445,45 @@ class TestMcp:
         add(registry, points.MCP_TOOL, "boom", McpTool("B", boom), "demo")
         ctx = SimpleNamespace(plugins=SimpleNamespace(breaker=breaker))
         with patch("module.mcp.plugins.get_context", return_value=ctx):
-            [content] = await handle_tool("demo__boom", {})
-        assert json.loads(content.text) == {"error": "plugin bug"}
+            result = await mcp.call_tool("demo__boom", {})
+        assert result.is_error
+        assert _tool_json(result) == {"error": "plugin bug"}
+        assert breaker._failures["demo"] == 1
+
+    async def test_invalid_arguments_rejected_before_handler(self, registry, breaker):
+        from module.mcp import mcp
+
+        handler = AsyncMock()
+        schema = {
+            "type": "object",
+            "properties": {"q": {"type": "string"}},
+            "required": ["q"],
+        }
+        add(registry, points.MCP_TOOL, "search", McpTool("S", handler, schema), "demo")
+        ctx = SimpleNamespace(plugins=SimpleNamespace(breaker=breaker))
+        with patch("module.mcp.plugins.get_context", return_value=ctx):
+            result = await mcp.call_tool("demo__search", {})
+        assert result.is_error
+        assert "'q' is a required property" in _tool_json(result)["error"]
+        handler.assert_not_called()
+        assert "demo" not in breaker._failures
+
+    async def test_invalid_schema_counts_against_plugin(self, registry, breaker):
+        from module.mcp import mcp
+
+        handler = AsyncMock()
+        add(
+            registry,
+            points.MCP_TOOL,
+            "s",
+            McpTool("S", handler, {"type": "obj"}),
+            "demo",
+        )
+        ctx = SimpleNamespace(plugins=SimpleNamespace(breaker=breaker))
+        with patch("module.mcp.plugins.get_context", return_value=ctx):
+            result = await mcp.call_tool("demo__s", {})
+        assert result.is_error
+        handler.assert_not_called()
         assert breaker._failures["demo"] == 1
 
     def test_invalid_names_and_bad_factories_skipped(self, registry):
@@ -435,7 +495,10 @@ class TestMcp:
         assert [t.name for t in list_plugin_tools()] == ["demo__ok"]
 
     async def test_plugin_resources(self, registry):
-        from module.mcp.resources import RESOURCES, all_resources, handle_resource
+        from mcp.server.mcpserver import MCPServer
+        from mcp.server.mcpserver.exceptions import ResourceNotFoundError
+
+        from module.mcp import mcp
 
         async def stats():
             return {"count": 3}
@@ -445,24 +508,26 @@ class TestMcp:
 
         add(registry, points.MCP_RESOURCE, "stats", McpResource("Stats", stats), "demo")
         add(registry, points.MCP_RESOURCE, "text", McpResource("Text", text), "demo")
-        uris = [str(r.uri) for r in all_resources()]
-        assert uris[: len(RESOURCES)] == [str(r.uri) for r in RESOURCES]
+        builtin = [r.uri for r in await MCPServer.list_resources(mcp)]
+        uris = [r.uri for r in await mcp.list_resources()]
+        assert uris[: len(builtin)] == builtin
         assert "autobangumi://plugins/demo/stats" in uris
-        stats_json = await handle_resource("autobangumi://plugins/demo/stats")
+        stats_json = await _read_text("autobangumi://plugins/demo/stats")
         assert json.loads(stats_json) == {"count": 3}
-        assert await handle_resource("autobangumi://plugins/demo/text") == "plain"
-        missing = await handle_resource("autobangumi://plugins/demo/none")
-        assert json.loads(missing) == {
-            "error": "Unknown resource: autobangumi://plugins/demo/none"
-        }
+        assert await _read_text("autobangumi://plugins/demo/text") == "plain"
+        with pytest.raises(
+            ResourceNotFoundError,
+            match="Unknown resource: autobangumi://plugins/demo/none",
+        ):
+            await mcp.read_resource("autobangumi://plugins/demo/none")
 
     @pytest.mark.parametrize("resource_id", ["stats", "Weekly Stats", "统计"])
     async def test_read_resource_via_protocol_returns_plugin_content(
         self, registry, resource_id
     ):
-        from mcp import types
+        from mcp import Client, types
 
-        from module.mcp import server
+        from module.mcp import mcp
 
         async def stats():
             return {"count": 3}
@@ -474,20 +539,14 @@ class TestMcp:
             McpResource("Stats", stats),
             "demo",
         )
-        [listed] = [
-            r
-            for r in await server.list_resources()
-            if str(r.uri).startswith("autobangumi://plugins/")
-        ]
-        handler = server.server.request_handlers[types.ReadResourceRequest]
-        result = await handler(
-            types.ReadResourceRequest(
-                method="resources/read",
-                params=types.ReadResourceRequestParams(uri=listed.uri),
-            )
-        )
-        assert isinstance(result.root, types.ReadResourceResult)
-        [content] = result.root.contents
+        async with Client(mcp) as client:
+            [listed] = [
+                r
+                for r in (await client.list_resources()).resources
+                if r.uri.startswith("autobangumi://plugins/")
+            ]
+            result = await client.read_resource(listed.uri)
+        [content] = result.contents
         assert isinstance(content, types.TextResourceContents)
         assert json.loads(content.text) == {"count": 3}
 
@@ -498,17 +557,18 @@ class TestMcp:
             (points.MCP_RESOURCE, McpResource(None, _search)),  # type: ignore[arg-type]
         ],
     )
-    def test_list_malformed_plugin_spec_skipped_and_counted(
+    async def test_list_malformed_plugin_spec_skipped_and_counted(
         self, registry, breaker, point, impl
     ):
-        from module.mcp.resources import RESOURCES, all_resources
-        from module.mcp.tools import TOOLS, all_tools
+        from mcp.server.mcpserver import MCPServer
+
+        from module.mcp import mcp
 
         add(registry, point, "bad", impl, "demo")
         ctx = SimpleNamespace(plugins=SimpleNamespace(breaker=breaker))
         with patch("module.mcp.plugins.get_context", return_value=ctx):
-            assert len(all_tools()) == len(TOOLS)
-            assert len(all_resources()) == len(RESOURCES)
+            assert await mcp.list_tools() == await MCPServer.list_tools(mcp)
+            assert await mcp.list_resources() == await MCPServer.list_resources(mcp)
         assert breaker._failures["demo"] == 1
 
     async def test_read_plugin_resource_hung_handler_times_out_and_counts(
@@ -516,8 +576,9 @@ class TestMcp:
     ):
         import asyncio
 
-        from module.mcp import plugins
-        from module.mcp.resources import handle_resource
+        from mcp.server.mcpserver.exceptions import ResourceError
+
+        from module.mcp import mcp, plugins
 
         async def hang():
             await asyncio.Event().wait()
@@ -525,16 +586,25 @@ class TestMcp:
         monkeypatch.setattr(plugins, "DEFAULT_TOOL_TIMEOUT", 0.01)
         add(registry, points.MCP_RESOURCE, "hang", McpResource("H", hang), "demo")
         ctx = SimpleNamespace(plugins=SimpleNamespace(breaker=breaker))
-        with patch("module.mcp.plugins.get_context", return_value=ctx):
-            raw = await handle_resource("autobangumi://plugins/demo/hang")
-        assert "error" in json.loads(raw)
+        with (
+            patch("module.mcp.plugins.get_context", return_value=ctx),
+            pytest.raises(ResourceError, match="TimeoutError"),
+        ):
+            await mcp.read_resource("autobangumi://plugins/demo/hang")
         assert breaker._failures["demo"] == 1
 
-    async def test_mcp_server_handlers_include_plugins(self, registry):
-        from module.mcp import server
+    async def test_plugin_tool_via_protocol(self, registry):
+        from mcp import Client
+
+        from module.mcp import mcp
 
         add(registry, points.MCP_TOOL, "search", McpTool("S", _search), "demo")
-        assert "demo__search" in [t.name for t in await server.list_tools()]
+        async with Client(mcp) as client:
+            listed = await client.list_tools()
+            assert "demo__search" in [t.name for t in listed.tools]
+            result = await client.call_tool("demo__search", {"q": "x"})
+        assert not result.is_error
+        assert _tool_json(result) == {"q": "x", "hits": [1, 2]}
 
 
 # ---------------------------------------------------------------- end to end
@@ -589,7 +659,7 @@ entry = "x:Y"
 async def test_plugin_end_to_end(registry, monkeypatch, tmp_path):
     from module.core import AppContext
     from module.core.scheduler import Scheduler
-    from module.mcp.tools import all_tools, handle_tool
+    from module.mcp import mcp
 
     # AppContext 会设置进程级 bus/runner；用 monkeypatch 让测试结束后复原
     monkeypatch.setattr(host, "_bus", None)
@@ -632,9 +702,9 @@ async def test_plugin_end_to_end(registry, monkeypatch, tmp_path):
         assert title == f"yo: {event.describe()[0]}"
 
         # MCP
-        assert "full__greet" in [t.name for t in all_tools()]
-        [content] = await handle_tool("full__greet", {})
-        assert json.loads(content.text) == {"greeting": "yo"}
+        assert "full__greet" in [t.name for t in await mcp.list_tools()]
+        result = await mcp.call_tool("full__greet", {})
+        assert _tool_json(result) == {"greeting": "yo"}
 
         # 路由
         app = FastAPI()
@@ -652,44 +722,7 @@ async def test_plugin_end_to_end(registry, monkeypatch, tmp_path):
         settings_obj.plugins.enabled["full"] = False
         await manager.apply_settings()
         assert client.get("/api/v1/plugins/full/greet").status_code == 404
-        assert "full__greet" not in [t.name for t in all_tools()]
+        assert "full__greet" not in [t.name for t in await mcp.list_tools()]
         assert await render_event(event, "bark") == event.describe()
     finally:
         await manager.stop()
-
-
-# ---------------------------------------------------------------- MCP SSE
-
-
-async def test_mcp_sse_endpoint_sends_response_only_once(monkeypatch):
-    """/sse 结束后不能再发第二次 http.response.start（3.x 起每次断开都报
-    AssertionError）。"""
-    from contextlib import asynccontextmanager
-
-    from module.mcp import server as mcp_server
-
-    @asynccontextmanager
-    async def fake_connect_sse(scope, receive, send):
-        await send({"type": "http.response.start", "status": 200, "headers": []})
-        await send({"type": "http.response.body", "body": b"", "more_body": False})
-        yield (object(), object())
-
-    async def fake_run(*args, **kwargs):
-        return None
-
-    monkeypatch.setattr(mcp_server.sse, "connect_sse", fake_connect_sse)
-    monkeypatch.setattr(mcp_server.server, "run", fake_run)
-    sent: list[dict] = []
-
-    async def receive():
-        return {"type": "http.disconnect"}
-
-    async def send(message):
-        sent.append(message)
-
-    await mcp_server.handle_sse(
-        {"type": "http", "method": "GET", "path": "/sse", "headers": []},
-        receive,
-        send,
-    )
-    assert [m["type"] for m in sent].count("http.response.start") == 1

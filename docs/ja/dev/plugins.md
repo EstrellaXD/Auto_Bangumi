@@ -11,7 +11,7 @@
 1. SDK とコマンドラインをインストールします。wheel は 4.0 の各 beta / 正式版の [GitHub Releases](https://github.com/EstrellaXD/Auto_Bangumi/releases) に添付されます（ファイル名は `autobangumi_sdk-<SDK バージョン>-py3-none-any.whl`）。PyPI には公開しません。詳しくは [SDK の入手](/ja/dev/plugins/sdk) を参照してください。
 
    ```bash
-   uv tool install ./autobangumi_sdk-0.5.0-py3-none-any.whl
+   uv tool install ./autobangumi_sdk-0.6.0-py3-none-any.whl
    ```
 
 2. ひな形を作ってテストします。ひな形の `pyproject.toml` は `autobangumi-sdk` に依存しますが、このパッケージは PyPI にありません。先に `uv add` でダウンロードした wheel を指定します。
@@ -19,7 +19,7 @@
    ```bash
    ab-plugin new my-rename --kind rename   # notifier、search も選べます
    cd my-rename
-   uv add ../autobangumi_sdk-0.5.0-py3-none-any.whl   # wheel の実際のパスに置き換えます
+   uv add ../autobangumi_sdk-0.6.0-py3-none-any.whl   # wheel の実際のパスに置き換えます
    uv run pytest                                      # ひな形にはコントラクトテストが付いています
    ```
 

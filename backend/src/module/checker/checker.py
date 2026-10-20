@@ -16,7 +16,7 @@ _default_config_dict: dict | None = None
 def _get_default_config_dict() -> dict:
     global _default_config_dict
     if _default_config_dict is None:
-        _default_config_dict = Config().dict()
+        _default_config_dict = Config().model_dump()
     return _default_config_dict
 
 
@@ -42,7 +42,7 @@ class Checker:
     def check_first_run() -> bool:
         if Path("config/.setup_complete").exists():
             return False
-        return settings.dict() == _get_default_config_dict()
+        return settings.model_dump() == _get_default_config_dict()
 
     @staticmethod
     def check_version() -> semver.Version | None:

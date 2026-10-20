@@ -67,7 +67,7 @@ def _read_applied(updates_root: Path) -> dict | None:
     try:
         data = json.loads(applied.read_text(encoding="utf-8"))
         return data if isinstance(data, dict) else None
-    except (OSError, ValueError):
+    except OSError, ValueError:
         return None
 
 
@@ -135,7 +135,7 @@ def _chown_app_tree(path: Path) -> None:
         import pwd
 
         pwd.getpwnam("ab")
-    except (ImportError, KeyError):
+    except ImportError, KeyError:
         logger.warning("User 'ab' not found; skipping ownership fix for %s", path)
         return
     import subprocess
@@ -241,7 +241,7 @@ def _sync_venv_to_lock(
             import pwd
 
             pwd.getpwnam("ab")
-        except (ImportError, KeyError):
+        except ImportError, KeyError:
             logger.error("User 'ab' not found; refusing to run uv sync as root.")
             return
         # 降权执行前先把 venv 交给 ab，否则无写权限。

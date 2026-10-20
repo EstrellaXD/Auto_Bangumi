@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-import httpx
+import httpx2
 import pytest
 
 pytestmark = pytest.mark.e2e
@@ -26,7 +26,7 @@ def test_exact_digest_qb_image_uses_only_local_webseed_capabilities(
     assert compose["services"]["qbittorrent"]["image"] == QB_IMAGE
     downloader_stack.image_identity("qbittorrent", QB_IMAGE)
 
-    with httpx.Client(
+    with httpx2.Client(
         base_url=downloader_stack.qb_url,
         timeout=10,
         trust_env=False,

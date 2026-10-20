@@ -11,7 +11,7 @@
 1. 安装 SDK 与命令行。轮子随每个 4.0 beta / 正式版发布在 [GitHub Releases](https://github.com/EstrellaXD/Auto_Bangumi/releases) 的附件中（文件名 `autobangumi_sdk-<SDK 版本>-py3-none-any.whl`），不发布到 PyPI。详见 [获取 SDK](/dev/plugins/sdk)。
 
    ```bash
-   uv tool install ./autobangumi_sdk-0.5.0-py3-none-any.whl
+   uv tool install ./autobangumi_sdk-0.6.0-py3-none-any.whl
    ```
 
 2. 生成骨架并测试。骨架的 `pyproject.toml` 依赖 `autobangumi-sdk`，而 PyPI 上没有这个包，所以先用 `uv add` 让它指向下载的轮子：
@@ -19,7 +19,7 @@
    ```bash
    ab-plugin new my-rename --kind rename   # 也可选 notifier、search
    cd my-rename
-   uv add ../autobangumi_sdk-0.5.0-py3-none-any.whl   # 换成轮子的实际路径
+   uv add ../autobangumi_sdk-0.6.0-py3-none-any.whl   # 换成轮子的实际路径
    uv run pytest                                      # 骨架自带契约测试
    ```
 

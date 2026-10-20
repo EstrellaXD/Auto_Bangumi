@@ -6,7 +6,7 @@ import threading
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 
-import httpx
+import httpx2
 import pytest
 
 pytestmark = pytest.mark.e2e
@@ -57,7 +57,7 @@ def test_tcp_proxy_forwards_http_without_interpreting_the_protocol():
     proxy_thread = threading.Thread(target=proxy.serve_forever, daemon=True)
     proxy_thread.start()
     try:
-        response = httpx.get(
+        response = httpx2.get(
             f"http://127.0.0.1:{proxy.server_address[1]}/health?through=proxy",
             timeout=5,
             trust_env=False,

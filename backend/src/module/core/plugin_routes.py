@@ -62,7 +62,7 @@ class PluginRoutes:
                 logger.warning("[Plugin:%s] 路由创建失败：%s", plugin_id, reason)
                 self._breaker.record_failure(plugin_id, reason)
                 return None
-        logger.debug("[Plugin:%s] 已挂载 %d 条路由", plugin_id, len(combined.routes))
+        logger.debug("[Plugin:%s] 已挂载路由", plugin_id)
         return combined
 
     async def dispatch(

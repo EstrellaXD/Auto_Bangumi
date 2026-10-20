@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { Down } from '@icon-park/vue-next';
+import { ChevronDown } from '@lucide/vue';
 import AbMenu from './ab-menu.vue';
 import type { AbMenuItem } from './ab-menu.vue';
 
@@ -10,19 +10,17 @@ export interface AbSplitOption {
 
 // 分体按钮：主区执行当前选项，箭头打开选项菜单（替代旧 ab-button-multi）。
 // 选中项通过 v-model:value 受控，不再内部私藏状态。
-const props = withDefaults(
-  defineProps<{
-    options: AbSplitOption[];
-    loading?: boolean;
-    disabled?: boolean;
-    size?: 'sm' | 'md';
-  }>(),
-  {
-    loading: false,
-    disabled: false,
-    size: 'md',
-  }
-);
+const {
+  loading = false,
+  disabled = false,
+  size = 'md',
+  options,
+} = defineProps<{
+  options: AbSplitOption[];
+  loading?: boolean;
+  disabled?: boolean;
+  size?: 'sm' | 'md';
+}>();
 
 const emit = defineEmits<{ click: [value: string] }>();
 
@@ -30,12 +28,12 @@ const value = defineModel<string>('value', { required: true });
 
 const selected = computed(
   () =>
-    props.options.find((option) => option.value === value.value) ??
-    props.options[0]
+    options.find((option) => option.value === value.value) ??
+    options[0]
 );
 
 const menuItems = computed<AbMenuItem[]>(() =>
-  props.options.map((option) => ({
+  options.map((option) => ({
     key: option.value,
     label: option.label,
     handler: () => {
@@ -45,7 +43,7 @@ const menuItems = computed<AbMenuItem[]>(() =>
 );
 
 function onMainClick() {
-  if (props.disabled || props.loading) return;
+  if (disabled || loading) return;
   emit('click', selected.value.value);
 }
 </script>
@@ -59,7 +57,7 @@ function onMainClick() {
       :aria-busy="loading || undefined"
       @click="onMainClick"
     >
-      <span v-if="loading" class="ab-split-spin" aria-hidden="true"></span>
+      <span v-if="loading" class="ab-split-spin" aria-hidden="true" />
       {{ selected?.label }}
     </button>
 
@@ -71,7 +69,7 @@ function onMainClick() {
           :disabled="disabled || loading"
           :aria-label="$t('common.moreActions')"
         >
-          <Down size="12" />
+          <ChevronDown :size="12" />
         </button>
       </template>
     </AbMenu>

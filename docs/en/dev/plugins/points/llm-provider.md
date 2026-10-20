@@ -27,6 +27,7 @@ class MyPlugin(Plugin):
 ## Notes
 
 - `ProviderInfo` drives the frontend form and the provider list. `auth_kind` is `api_key`, `oauth` or `device_code`.
-- An adapter gets the model name, key, `base_url`, timeout and a proxy-aware httpx client factory through `AdapterContext`. It does not read the global configuration.
+- An adapter gets the model name, key, `base_url`, timeout and a proxy-aware httpx2 client factory through `AdapterContext`. It does not read the global configuration.
+- The factory returns an `httpx2.AsyncClient` (since SDK 0.6; before, it was `httpx`). To catch network errors, use `httpx2.HTTPError` and related classes. The `httpx` exception classes do not catch its errors.
 - A subscription-type provider (`oauth` / `device_code`) implements the auth flow hooks (`AuthChallenge`, `TokenSet`). When the credentials are no longer valid and the refresh fails, raise `AuthExpiredError`. AB then trips the breaker for this provider and sends an `llm_auth_failure` event.
 - Existing LLM plugins in the `plugin.json` format (released as `llm-plugins`) still work. New plugins use `plugin.toml` and this extension point.

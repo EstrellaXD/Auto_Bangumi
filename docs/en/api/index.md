@@ -208,7 +208,7 @@ These endpoints need no authentication. `GET /setup/status` is always available 
 
 ## MCP
 
-AB provides an MCP server under `/mcp` at the root path (SSE transport). A client connects to `GET /mcp/sse` and sends messages to `POST /mcp/messages/`.
+AB provides an MCP server at `/mcp` at the root path (Streamable HTTP transport). In the MCP client, set the server URL to `http://<AB address>:7892/mcp`. The SSE endpoint `/mcp/sse` of 3.x and 4.0.0-beta.2 and earlier is removed.
 
 - Access control is different from the REST API. The client IP must be in `security.mcp_whitelist`, or the request must have a token with `scope=mcp` (`Authorization: Bearer <token>`). If `mcp_whitelist` is empty, AB refuses all IP-based access. Tokens still work.
 - Built-in tools: `list_anime`, `get_anime`, `search_anime`, `subscribe_anime`, `unsubscribe_anime`, `list_downloads`, `list_rss_feeds`, `get_program_status`, `refresh_feeds`, `update_anime`.

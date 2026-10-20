@@ -16,7 +16,7 @@ async function requireStatus(
   if (response.status() !== expected) {
     throw new Error(
       `${response.url()} returned ${response.status()} ` +
-        `${response.statusText()}, expected ${expected}`
+      `${response.statusText()}, expected ${expected}`
     );
   }
   return response;

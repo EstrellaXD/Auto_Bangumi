@@ -1,6 +1,7 @@
-<script lang="tsx" setup>
+<script lang="ts" setup>
 import { type DataTableColumns, NDataTable } from 'naive-ui';
 import AbProgress from '@/components/basic/ab-progress.vue';
+import AbTag from '@/components/basic/ab-tag.vue';
 import { useConfirm } from '@/hooks/useConfirm';
 import type { QbTorrentInfo, TorrentGroup } from '#/downloader';
 import { useDownloaderInstances } from '@/hooks/useDownloaderInstances';
@@ -83,9 +84,10 @@ function formatEta(seconds: number): string {
   if (seconds <= 0 || seconds === 8640000) return '-';
   if (seconds < 60) return `${seconds}s`;
   if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
-  const h = Math.floor(seconds / 3600);
+  // 不能叫 h：unimport 按名字判断，模块里出现 `const h` 就不再自动导入 vue 的 h()
+  const hours = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
-  return `${h}h${m}m`;
+  return `${hours}h${m}m`;
 }
 
 function stateLabel(state: string): string {
@@ -110,7 +112,7 @@ function stateLabel(state: string): string {
   return map[state] || state;
 }
 
-function stateType(state: string): string {
+function stateType(state: string): 'neutral' | 'success' | 'info' | 'danger' {
   if (state.includes('paused') || state.includes('stopped')) return 'neutral';
   if (state === 'downloading' || state === 'forcedDL') return 'success';
   if (state.includes('UP') || state === 'uploading') return 'info';
@@ -142,17 +144,14 @@ const tableColumnsValue = computed<DataTableColumns<QbTorrentInfo>>(() => [
     key: 'progress',
     width: 160,
     render(row: QbTorrentInfo) {
-      return (
-        <AbProgress
-          value={row.progress * 100}
-          label={`${Math.round(row.progress * 100)}%`}
-          state={
-            row.state === 'error' || row.state === 'missingFiles'
-              ? 'error'
-              : 'active'
-          }
-        />
-      );
+      return h(AbProgress, {
+        value: row.progress * 100,
+        label: `${Math.round(row.progress * 100)}%`,
+        state:
+          row.state === 'error' || row.state === 'missingFiles'
+            ? 'error'
+            : 'active',
+      });
     },
   },
   {
@@ -160,9 +159,10 @@ const tableColumnsValue = computed<DataTableColumns<QbTorrentInfo>>(() => [
     key: 'state',
     width: 100,
     render(row: QbTorrentInfo) {
-      return (
-        <ab-tag type={stateType(row.state)} title={stateLabel(row.state)} />
-      );
+      return h(AbTag, {
+        type: stateType(row.state),
+        title: stateLabel(row.state),
+      });
     },
   },
   {
@@ -236,7 +236,9 @@ function groupCheckedKeys(group: TorrentGroup): string[] {
   <div class="page-downloader">
     <div v-if="isNull" class="empty-guide">
       <div class="empty-guide-header anim-fade-in">
-        <div class="empty-guide-title">{{ $t('downloader.empty.title') }}</div>
+        <div class="empty-guide-title">
+          {{ $t('downloader.empty.title') }}
+        </div>
         <div class="empty-guide-subtitle">
           {{ $t('downloader.empty.subtitle') }}
         </div>
@@ -244,7 +246,9 @@ function groupCheckedKeys(group: TorrentGroup): string[] {
 
       <div class="empty-guide-steps">
         <div class="empty-guide-step anim-slide-up" style="--delay: 0.15s">
-          <div class="empty-guide-step-number">1</div>
+          <div class="empty-guide-step-number">
+            1
+          </div>
           <div class="empty-guide-step-content">
             <div class="empty-guide-step-title">
               {{ $t('downloader.empty.step1_title') }}
@@ -256,7 +260,9 @@ function groupCheckedKeys(group: TorrentGroup): string[] {
         </div>
 
         <div class="empty-guide-step anim-slide-up" style="--delay: 0.3s">
-          <div class="empty-guide-step-number">2</div>
+          <div class="empty-guide-step-number">
+            2
+          </div>
           <div class="empty-guide-step-content">
             <div class="empty-guide-step-title">
               {{ $t('downloader.empty.step2_title') }}
@@ -268,7 +274,9 @@ function groupCheckedKeys(group: TorrentGroup): string[] {
         </div>
 
         <div class="empty-guide-step anim-slide-up" style="--delay: 0.45s">
-          <div class="empty-guide-step-number">3</div>
+          <div class="empty-guide-step-number">
+            3
+          </div>
           <div class="empty-guide-step-content">
             <div class="empty-guide-step-title">
               {{ $t('downloader.empty.step3_title') }}
@@ -320,15 +328,21 @@ function groupCheckedKeys(group: TorrentGroup): string[] {
             {{ selectedKeys.length }} {{ $t('downloader.selected') }}
           </span>
           <div class="action-bar-buttons">
-            <ab-button variant="primary" size="sm" @click="resumeSelected">{{
-              $t('downloader.action.resume')
-            }}</ab-button>
-            <ab-button variant="secondary" size="sm" @click="pauseSelected">{{
-              $t('downloader.action.pause')
-            }}</ab-button>
-            <ab-button variant="danger" size="sm" @click="onDeleteSelected">{{
-              $t('downloader.action.delete')
-            }}</ab-button>
+            <ab-button variant="primary" size="sm" @click="resumeSelected">
+              {{
+                $t('downloader.action.resume')
+              }}
+            </ab-button>
+            <ab-button variant="secondary" size="sm" @click="pauseSelected">
+              {{
+                $t('downloader.action.pause')
+              }}
+            </ab-button>
+            <ab-button variant="danger" size="sm" @click="onDeleteSelected">
+              {{
+                $t('downloader.action.delete')
+              }}
+            </ab-button>
           </div>
         </div>
       </Transition>

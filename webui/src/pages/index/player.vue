@@ -10,7 +10,9 @@ const { url } = storeToRefs(usePlayerStore());
   <div class="page-embed">
     <div v-if="url === ''" class="empty-guide">
       <div class="empty-guide-header anim-fade-in">
-        <div class="empty-guide-title">{{ $t('player.empty.title') }}</div>
+        <div class="empty-guide-title">
+          {{ $t('player.empty.title') }}
+        </div>
         <div class="empty-guide-subtitle">
           {{ $t('player.empty.subtitle') }}
         </div>
@@ -18,7 +20,9 @@ const { url } = storeToRefs(usePlayerStore());
 
       <div class="empty-guide-steps">
         <div class="empty-guide-step anim-slide-up" style="--delay: 0.15s">
-          <div class="empty-guide-step-number">1</div>
+          <div class="empty-guide-step-number">
+            1
+          </div>
           <div class="empty-guide-step-content">
             <div class="empty-guide-step-title">
               {{ $t('player.empty.step1_title') }}
@@ -30,7 +34,9 @@ const { url } = storeToRefs(usePlayerStore());
         </div>
 
         <div class="empty-guide-step anim-slide-up" style="--delay: 0.3s">
-          <div class="empty-guide-step-number">2</div>
+          <div class="empty-guide-step-number">
+            2
+          </div>
           <div class="empty-guide-step-content">
             <div class="empty-guide-step-title">
               {{ $t('player.empty.step2_title') }}
@@ -42,7 +48,9 @@ const { url } = storeToRefs(usePlayerStore());
         </div>
 
         <div class="empty-guide-step anim-slide-up" style="--delay: 0.45s">
-          <div class="empty-guide-step-number">3</div>
+          <div class="empty-guide-step-number">
+            3
+          </div>
           <div class="empty-guide-step-content">
             <div class="empty-guide-step-title">
               {{ $t('player.empty.step3_title') }}
@@ -70,7 +78,7 @@ const { url } = storeToRefs(usePlayerStore());
       frameborder="0"
       allowfullscreen="true"
       class="embed-frame"
-    ></iframe>
+    />
   </div>
 </template>
 

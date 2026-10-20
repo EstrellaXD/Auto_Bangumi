@@ -15,17 +15,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python 3.13
+      - name: Set up Python 3.14
         uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
-      - uses: astral-sh/setup-uv@v4
+          python-version: "3.14"
+      - uses: astral-sh/setup-uv@v10.3.0
         with:
-          version: "latest"
+          version: "0.13.x"
       - name: Install dependencies
         run: cd backend && uv sync --group dev
       - name: Lint
         run: cd backend && uv run ruff check src
+      - name: Format check
+        run: cd backend && uv run ruff format --check src
       - name: Dead code
         run: cd backend && uv run vulture
       - name: Type check
@@ -48,12 +50,12 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         name: Install pnpm
         with:
-          version: 9
+          version: 12.14.0
           run_install: false
 
       - name: Get pnpm store directory
@@ -125,12 +127,12 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         name: Install pnpm
         with:
-          version: 9
+          version: 12.14.0
           run_install: false
 
       - name: Get pnpm store directory
@@ -302,9 +304,9 @@ jobs:
           echo ${{ needs.version-info.outputs.version }}
           echo "VERSION='${{ needs.version-info.outputs.version }}'" >> module/__version__.py
 
-      - uses: astral-sh/setup-uv@v4
+      - uses: astral-sh/setup-uv@v10.3.0
         with:
-          version: "latest"
+          version: "0.13.x"
 
       - name: Generate requirements.txt for non-uv consumers (#994)
         run: |

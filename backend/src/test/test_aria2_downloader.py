@@ -11,7 +11,7 @@ verified by patching ``Aria2Downloader._call`` and letting the real logic
 import os
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import httpx
+import httpx2
 import pytest
 
 from module.database import Database
@@ -92,7 +92,7 @@ class TestCallRpcLayer:
     async def test_call_timeout_raises_connection_error(self):
         aria2 = _aria2()
         aria2._client = AsyncMock()
-        aria2._client.post = AsyncMock(side_effect=httpx.TimeoutException("timed out"))
+        aria2._client.post = AsyncMock(side_effect=httpx2.TimeoutException("timed out"))
 
         with pytest.raises(Aria2ConnectionError):
             await aria2._call("getVersion")
@@ -100,7 +100,7 @@ class TestCallRpcLayer:
     async def test_call_request_error_raises_connection_error(self):
         aria2 = _aria2()
         aria2._client = AsyncMock()
-        aria2._client.post = AsyncMock(side_effect=httpx.ConnectError("refused"))
+        aria2._client.post = AsyncMock(side_effect=httpx2.ConnectError("refused"))
 
         with pytest.raises(Aria2ConnectionError):
             await aria2._call("getVersion")

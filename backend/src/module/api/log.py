@@ -8,7 +8,9 @@ from module.conf import LOG_PATH
 from module.models import APIResponse
 from module.security.api import get_current_user
 
-router = APIRouter(prefix="/log", tags=["log"])
+router = APIRouter(
+    prefix="/log", tags=["log"], dependencies=[Depends(get_current_user)]
+)
 
 
 _TAIL_BYTES = 512 * 1024  # 512 KB
@@ -58,7 +60,7 @@ def _read_log_tail() -> bytes:
     return data
 
 
-@router.get("", response_model=str, dependencies=[Depends(get_current_user)])
+@router.get("", response_model=str)
 async def get_log():
     if LOG_PATH.exists():
         # Up to 512 KB of sync file I/O; keep it off the event loop.
@@ -75,9 +77,7 @@ def _clear_log_files() -> None:
         backup.unlink(missing_ok=True)
 
 
-@router.post(
-    "/clear", response_model=APIResponse, dependencies=[Depends(get_current_user)]
-)
+@router.post("/clear", response_model=APIResponse)
 async def clear_log():
     if LOG_PATH.exists():
         # 截断 + 删除备份都是文件 I/O，与 get_log 一样放线程池执行

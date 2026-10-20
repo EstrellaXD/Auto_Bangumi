@@ -3,7 +3,7 @@
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import httpx
+import httpx2
 import pytest
 
 from module.network.request_url import (
@@ -44,7 +44,7 @@ class TestSharedClientLimits:
 
     async def test_client_follows_redirects(self):
         """Regression for #983: mikanime mirror returns 302 to the canonical
-        URL but httpx refuses to follow by default, so the RSS fetch fails."""
+        URL but httpx2 refuses to follow by default, so the RSS fetch fails."""
         client = await get_shared_client()
         assert client.follow_redirects is True
 
@@ -83,7 +83,7 @@ class TestRetryWithReset:
         """get_url should retry a ConnectTimeout on the same shared client,
         without closing/resetting it -- other concurrent callers may still
         have in-flight requests on that connection pool."""
-        import httpx
+        import httpx2
 
         call_count = 0
 
@@ -91,7 +91,7 @@ class TestRetryWithReset:
             nonlocal call_count
             call_count += 1
             if call_count == 1:
-                raise httpx.ConnectTimeout("Connection timed out")
+                raise httpx2.ConnectTimeout("Connection timed out")
             resp = MagicMock()
             resp.status_code = 200
             resp.raise_for_status = MagicMock()
@@ -122,12 +122,12 @@ class TestPoolTimeoutRecovery:
     共享连接池被占满后永久 PoolTimeout。遇到 PoolTimeout 时应换新 client。"""
 
     async def _get_with_poisoned_pool(self):
-        import httpx
+        import httpx2
 
         import module.network.request_url as mod
 
         old, new = AsyncMock(), AsyncMock()
-        old.get.side_effect = httpx.PoolTimeout("pool full")
+        old.get.side_effect = httpx2.PoolTimeout("pool full")
         resp = MagicMock(status_code=200, raise_for_status=MagicMock())
         new.get.return_value = resp
         mod._shared_client = old
@@ -135,7 +135,9 @@ class TestPoolTimeoutRecovery:
         try:
             with (
                 patch("module.network.request_url.asyncio.sleep", new=AsyncMock()),
-                patch("module.network.request_url.httpx.AsyncClient", return_value=new),
+                patch(
+                    "module.network.request_url.httpx2.AsyncClient", return_value=new
+                ),
             ):
                 async with RequestURL() as req:
                     result = await req.get_url("https://example.com/x", retry=2)
@@ -194,11 +196,11 @@ class TestRateLimit429:
     URL = "https://nyaa.si/download/1.torrent"
 
     @staticmethod
-    def _resp_429(headers: dict | None = None) -> httpx.Response:
-        return httpx.Response(
+    def _resp_429(headers: dict | None = None) -> httpx2.Response:
+        return httpx2.Response(
             429,
             headers=headers or {},
-            request=httpx.Request("GET", TestRateLimit429.URL),
+            request=httpx2.Request("GET", TestRateLimit429.URL),
         )
 
     @staticmethod
@@ -277,7 +279,7 @@ class TestRateLimit429:
         assert calls == 2
 
     async def test_get_url_non_429_status_does_not_retry(self):
-        resp_404 = httpx.Response(404, request=httpx.Request("GET", self.URL))
+        resp_404 = httpx2.Response(404, request=httpx2.Request("GET", self.URL))
         result, calls, mock_sleep = await self._run([resp_404])
         assert result is None
         assert calls == 1

@@ -263,7 +263,8 @@ class TestSearchSite:
         assert item.parser == "tmdb"
 
     @pytest.mark.parametrize(
-        "bad_factory", [broken_factory, object, lambda: SearchSite(None)]  # type: ignore[arg-type]
+        "bad_factory",
+        [broken_factory, object, lambda: SearchSite(None)],  # type: ignore[arg-type]
     )
     def test_available_sites_broken_factory_skipped(self, registry, bad_factory):
         from module.searcher import available_sites

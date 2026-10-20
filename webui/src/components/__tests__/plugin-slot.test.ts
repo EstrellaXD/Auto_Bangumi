@@ -141,8 +141,7 @@ describe('plugin-slot', () => {
     const wrapper = mountSlot(ui);
     await flushPromises();
     // 组件通过注入的 host 订阅事件
-    const el = wrapper.find('.plugin-slot__body').element.shadowRoot!
-      .firstElementChild!.nextElementSibling as unknown as {
+    const el = wrapper.find('.plugin-slot__body').element.shadowRoot!.firstElementChild!.nextElementSibling as unknown as {
       host: { events: { on: (kind: string, cb: () => void) => void } };
     };
     el.host.events.on('demo.event', () => {});

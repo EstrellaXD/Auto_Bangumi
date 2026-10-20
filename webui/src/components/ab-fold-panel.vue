@@ -1,48 +1,60 @@
 <script lang="ts" setup>
-import { Down } from '@icon-park/vue-next';
-import { Disclosure, DisclosureButton, DisclosurePanel } from '@headlessui/vue';
+import { ChevronDown } from '@lucide/vue';
+import { NCollapse, NCollapseItem } from 'naive-ui';
 
-// 折叠面板 v2：headlessui 提供键盘/aria-expanded；
-// 旋转箭头 + grid-rows 高度动画（reduced-motion 下直接切换）。
-withDefaults(
-  defineProps<{
-    title: string;
-    defaultOpen?: boolean;
-  }>(),
-  {
-    title: 'title',
-    defaultOpen: true,
-  }
-);
+// 折叠面板 v2：naive-ui NCollapse 负责展开状态与高度动画（reduced-motion 下由全局规则直接切换）。
+// NCollapse 的头部是无语义的 div，可聚焦的 button 与 aria-expanded 由插槽提供；
+// 点击冒泡到 naive-ui 的头部触发切换。正文始终挂载（display-directive="show"）。
+// 正文是以标题命名的 region，按钮用 aria-controls 指向它（headlessui 原先自动提供）。
+const { title = 'title', defaultOpen = true } = defineProps<{
+  title: string;
+  defaultOpen?: boolean;
+}>();
+
+const id = useId();
 </script>
 
 <template>
-  <Disclosure v-slot="{ open }" :default-open="defaultOpen">
-    <div class="fold-panel">
-      <DisclosureButton
-        class="fold-panel-header"
-        :class="{ 'fold-panel-header--open': open }"
-      >
-        <div class="fold-panel-title">{{ title }}</div>
-        <slot name="extra"></slot>
-        <Down
-          class="fold-panel-chevron"
-          :class="{ 'fold-panel-chevron--open': open }"
-          :size="14"
-        />
-      </DisclosureButton>
+  <NCollapse
+    class="fold-panel"
+    display-directive="show"
+    :default-expanded-names="defaultOpen ? ['panel'] : []"
+  >
+    <NCollapseItem name="panel">
+      <template #header="{ collapsed }">
+        <button
+          :id="`${id}-header`"
+          type="button"
+          class="fold-panel-header"
+          :class="{ 'fold-panel-header--open': !collapsed }"
+          :aria-expanded="!collapsed"
+          :aria-controls="`${id}-body`"
+        >
+          <div class="fold-panel-title">
+            {{ title }}
+          </div>
+          <slot name="extra" />
+          <ChevronDown
+            class="fold-panel-chevron"
+            :class="{ 'fold-panel-chevron--open': !collapsed }"
+            :size="14"
+          />
+        </button>
+      </template>
+      <template #arrow>
+        <span />
+      </template>
 
-      <div class="fold-panel-collapse" :class="{ 'is-open': open }">
-        <div class="fold-panel-clip">
-          <DisclosurePanel static>
-            <div class="fold-panel-body">
-              <slot></slot>
-            </div>
-          </DisclosurePanel>
-        </div>
+      <div
+        :id="`${id}-body`"
+        class="fold-panel-body"
+        role="region"
+        :aria-labelledby="`${id}-header`"
+      >
+        <slot />
       </div>
-    </div>
-  </Disclosure>
+    </NCollapseItem>
+  </NCollapse>
 </template>
 
 <style lang="scss" scoped>
@@ -106,24 +118,17 @@ withDefaults(
   }
 }
 
-// grid-rows 高度动画：0fr ↔ 1fr（不动画 height 本身）
-.fold-panel-collapse {
-  display: grid;
-  grid-template-rows: 0fr;
-  visibility: hidden;
-  transition: grid-template-rows var(--transition-normal),
-    visibility 0s var(--transition-normal);
-
-  &.is-open {
-    grid-template-rows: 1fr;
-    visibility: visible;
-    transition: grid-template-rows var(--transition-normal), visibility 0s;
-  }
+// naive-ui 的箭头与正文上边距不用：箭头画在 button 里，间距由 body 自己给
+.fold-panel :deep(.n-collapse-item-arrow) {
+  display: none;
 }
 
-.fold-panel-clip {
-  min-height: 0;
-  overflow: hidden;
+// naive-ui 的选择器带三层祖先类，这里写全才能压过
+.fold-panel
+  :deep(
+    .n-collapse-item .n-collapse-item__content-wrapper .n-collapse-item__content-inner
+  ) {
+  padding-top: 0;
 }
 
 .fold-panel-body {
@@ -137,7 +142,6 @@ withDefaults(
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .fold-panel-collapse,
   .fold-panel-chevron {
     transition: none;
   }

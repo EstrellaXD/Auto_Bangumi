@@ -27,6 +27,7 @@ class MyPlugin(Plugin):
 ## 要点
 
 - `ProviderInfo` 驱动前端表单和提供商列表：`auth_kind` 为 `api_key`、`oauth` 或 `device_code`。
-- 适配器通过 `AdapterContext` 拿到模型名、密钥、`base_url`、超时和代理感知的 httpx 客户端工厂，不读全局配置。
+- 适配器通过 `AdapterContext` 拿到模型名、密钥、`base_url`、超时和代理感知的 httpx2 客户端工厂，不读全局配置。
+- 工厂返回 `httpx2.AsyncClient`（SDK 0.6 起，此前为 `httpx`）；捕获网络异常时用 `httpx2.HTTPError` 等，`httpx` 的异常类捕获不到它抛出的错误。
 - 订阅类提供商（`oauth` / `device_code`）实现认证流程钩子（`AuthChallenge`、`TokenSet`）。凭据失效且刷新失败时抛出 `AuthExpiredError`，AB 会熔断该提供商并发 `llm_auth_failure` 事件。
 - 现有的 `plugin.json` 格式 LLM 插件（`llm-plugins` 发布）继续可用；新插件使用 `plugin.toml` 与本扩展点。

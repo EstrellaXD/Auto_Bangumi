@@ -4,7 +4,7 @@ import runpy
 import threading
 from pathlib import Path
 
-import httpx
+import httpx2
 import pytest
 
 pytestmark = pytest.mark.e2e
@@ -32,7 +32,7 @@ def fake_qb_url():
         thread.join(timeout=5)
 
 
-def login(client: httpx.Client) -> None:
+def login(client: httpx2.Client) -> None:
     response = client.post(
         "/api/v2/auth/login",
         data={"username": "admin", "password": "adminadmin"},
@@ -42,7 +42,7 @@ def login(client: httpx.Client) -> None:
 
 
 def test_qb_endpoints_and_successful_delete_update_state(fake_qb_url):
-    with httpx.Client(base_url=fake_qb_url) as client:
+    with httpx2.Client(base_url=fake_qb_url) as client:
         login(client)
 
         assert client.get("/api/v2/app/version").text == "v5.2.3"
@@ -76,7 +76,7 @@ def test_qb_endpoints_and_successful_delete_update_state(fake_qb_url):
 
 
 def test_forced_delete_failure_is_atomic(fake_qb_url):
-    with httpx.Client(base_url=fake_qb_url) as client:
+    with httpx2.Client(base_url=fake_qb_url) as client:
         login(client)
 
         response = client.post(
@@ -95,7 +95,7 @@ def test_forced_delete_failure_is_atomic(fake_qb_url):
 
 
 def test_request_journal_preserves_form_shape_and_redacts_secrets(fake_qb_url):
-    with httpx.Client(base_url=fake_qb_url) as client:
+    with httpx2.Client(base_url=fake_qb_url) as client:
         login(client)
 
         response = client.post(
@@ -137,7 +137,7 @@ def test_request_journal_preserves_form_shape_and_redacts_secrets(fake_qb_url):
 
 
 def test_admin_reset_restores_presets_and_clears_journal(fake_qb_url):
-    with httpx.Client(base_url=fake_qb_url) as client:
+    with httpx2.Client(base_url=fake_qb_url) as client:
         login(client)
         client.post(
             "/api/v2/torrents/delete",

@@ -1,13 +1,13 @@
 <script lang="ts" setup>
 import {
   Calendar,
-  Close,
-  Down,
+  ChevronDown,
+  Languages,
   Monitor,
-  PeoplesTwo,
   Search,
-  Translate,
-} from '@icon-park/vue-next';
+  Users,
+  X,
+} from '@lucide/vue';
 import { NSpin } from 'naive-ui';
 import { onKeyStroke } from '@vueuse/core';
 import AbSearchConfirm from './ab-search-confirm.vue';
@@ -45,7 +45,7 @@ const {
 const subscribing = ref(false);
 
 const showProvider = ref(false);
-const searchInputRef = ref<HTMLInputElement | null>(null);
+const searchInputRef = useTemplateRef<HTMLInputElement>('searchInputRef');
 
 // Multi-select filter state
 const activeFilters = ref<{
@@ -638,7 +638,7 @@ function handleFilterClick(
                 aria-label="Search"
                 @click="onSearch"
               >
-                <Search theme="outline" size="20" />
+                <Search :size="20" />
               </button>
               <NSpin v-else :size="18" />
 
@@ -650,7 +650,7 @@ function handleFilterClick(
                 class="search-input"
                 aria-label="Search anime"
                 @keyup.enter="onSearch"
-              />
+              >
 
               <div class="provider-select">
                 <button
@@ -661,7 +661,7 @@ function handleFilterClick(
                   @click="showProvider = !showProvider"
                 >
                   <span class="provider-label">{{ provider }}</span>
-                  <Down :size="14" />
+                  <ChevronDown :size="14" />
                 </button>
 
                 <transition name="dropdown">
@@ -685,7 +685,7 @@ function handleFilterClick(
               :label="$t('common.close')"
               @click="handleClose"
             >
-              <Close theme="outline" size="20" />
+              <X :size="20" />
             </ab-icon-button>
           </header>
 
@@ -694,13 +694,13 @@ function handleFilterClick(
             <!-- Group Filters -->
             <div v-if="filterOptions.group.length > 0" class="filter-category">
               <span class="category-icon">
-                <PeoplesTwo theme="outline" :size="16" />
+                <Users :size="16" />
               </span>
               <div class="filter-chips">
                 <button
                   v-for="option in getVisibleOptions(
                     'group',
-                    filterOptions.group
+                    filterOptions.group,
                   )"
                   :key="option"
                   class="filter-chip chip-group"
@@ -733,13 +733,13 @@ function handleFilterClick(
               class="filter-category"
             >
               <span class="category-icon">
-                <Monitor theme="outline" :size="16" />
+                <Monitor :size="16" />
               </span>
               <div class="filter-chips">
                 <button
                   v-for="option in getVisibleOptions(
                     'resolution',
-                    filterOptions.resolution
+                    filterOptions.resolution,
                   )"
                   :key="option"
                   class="filter-chip chip-resolution"
@@ -772,13 +772,13 @@ function handleFilterClick(
               class="filter-category"
             >
               <span class="category-icon">
-                <Translate theme="outline" :size="16" />
+                <Languages :size="16" />
               </span>
               <div class="filter-chips">
                 <button
                   v-for="option in getVisibleOptions(
                     'subtitle',
-                    filterOptions.subtitle
+                    filterOptions.subtitle,
                   )"
                   :key="option"
                   class="filter-chip chip-subtitle"
@@ -808,13 +808,13 @@ function handleFilterClick(
             <!-- Season Filters -->
             <div v-if="filterOptions.season.length > 0" class="filter-category">
               <span class="category-icon">
-                <Calendar theme="outline" :size="16" />
+                <Calendar :size="16" />
               </span>
               <div class="filter-chips">
                 <button
                   v-for="option in getVisibleOptions(
                     'season',
-                    filterOptions.season
+                    filterOptions.season,
                   )"
                   :key="option"
                   class="filter-chip chip-season"
@@ -844,9 +844,7 @@ function handleFilterClick(
             <!-- Selected Filters Summary -->
             <div class="filter-summary">
               <div v-if="hasActiveFilters" class="selected-filters">
-                <span class="selected-label"
-                  >{{ $t('search.filter.active') }}:</span
-                >
+                <span class="selected-label">{{ $t('search.filter.active') }}:</span>
                 <div class="selected-chips">
                   <button
                     v-for="tag in selectedFilterTags"
@@ -911,7 +909,7 @@ function handleFilterClick(
                       v-if="group.poster_link"
                       :src="getPosterUrl(group.poster_link)"
                       :alt="group.official_title"
-                    />
+                    >
                     <div v-else class="bangumi-poster-placeholder">
                       <span class="placeholder-title">{{
                         group.official_title

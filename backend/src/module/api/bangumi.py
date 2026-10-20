@@ -62,12 +62,12 @@ class DetectOffsetResponse(BaseModel):
     tmdb_info: Optional[TMDBSummary]
 
 
-router = APIRouter(prefix="/bangumi", tags=["bangumi"])
-
-
-@router.get(
-    "/get/all", response_model=list[Bangumi], dependencies=[Depends(get_current_user)]
+router = APIRouter(
+    prefix="/bangumi", tags=["bangumi"], dependencies=[Depends(get_current_user)]
 )
+
+
+@router.get("/get/all", response_model=list[Bangumi])
 async def get_all_data(db: Database = Depends(get_db)):
     return await db.bangumi.search_all()
 
@@ -75,7 +75,6 @@ async def get_all_data(db: Database = Depends(get_db)):
 @router.get(
     "/get/{bangumi_id}",
     response_model=Bangumi,
-    dependencies=[Depends(get_current_user)],
 )
 async def get_data(bangumi_id: int, db: Database = Depends(get_db)):
     manager = TorrentManager(db)
@@ -86,7 +85,6 @@ async def get_data(bangumi_id: int, db: Database = Depends(get_db)):
 @router.patch(
     "/update/{bangumi_id}",
     response_model=APIResponse,
-    dependencies=[Depends(get_current_user)],
 )
 async def update_rule(
     bangumi_id: int,
@@ -128,7 +126,6 @@ def _aggregate_response(
 @router.post(
     path="/delete/many",
     response_model=APIResponse,
-    dependencies=[Depends(get_current_user)],
 )
 async def delete_many_rule(
     bangumi_id: list[int], file: bool = False, db: Database = Depends(get_db)
@@ -143,7 +140,6 @@ async def delete_many_rule(
 @router.delete(
     path="/delete/{bangumi_id}",
     response_model=APIResponse,
-    dependencies=[Depends(get_current_user)],
 )
 async def delete_rule(
     bangumi_id: int, file: bool = False, db: Database = Depends(get_db)
@@ -157,7 +153,6 @@ async def delete_rule(
 @router.post(
     path="/disable/many",
     response_model=APIResponse,
-    dependencies=[Depends(get_current_user)],
 )
 async def disable_many_rule(
     bangumi_id: list[int], file: bool = False, db: Database = Depends(get_db)
@@ -172,7 +167,6 @@ async def disable_many_rule(
 @router.post(
     path="/disable/{bangumi_id}",
     response_model=APIResponse,
-    dependencies=[Depends(get_current_user)],
 )
 async def disable_rule(
     bangumi_id: int, file: bool = False, db: Database = Depends(get_db)
@@ -185,7 +179,6 @@ async def disable_rule(
 @router.post(
     path="/enable/{bangumi_id}",
     response_model=APIResponse,
-    dependencies=[Depends(get_current_user)],
 )
 async def enable_rule(bangumi_id: int, db: Database = Depends(get_db)):
     manager = TorrentManager(db)
@@ -196,7 +189,6 @@ async def enable_rule(bangumi_id: int, db: Database = Depends(get_db)):
 @router.get(
     path="/refresh/poster/all",
     response_model=APIResponse,
-    dependencies=[Depends(get_current_user)],
 )
 async def refresh_poster_all(db: Database = Depends(get_db)):
     manager = TorrentManager(db)
@@ -207,7 +199,6 @@ async def refresh_poster_all(db: Database = Depends(get_db)):
 @router.get(
     path="/refresh/poster/{bangumi_id}",
     response_model=APIResponse,
-    dependencies=[Depends(get_current_user)],
 )
 async def refresh_poster_one(bangumi_id: int, db: Database = Depends(get_db)):
     manager = TorrentManager(db)
@@ -218,7 +209,6 @@ async def refresh_poster_one(bangumi_id: int, db: Database = Depends(get_db)):
 @router.get(
     path="/refresh/calendar",
     response_model=APIResponse,
-    dependencies=[Depends(get_current_user)],
 )
 async def refresh_calendar(db: Database = Depends(get_db)):
     manager = TorrentManager(db)
@@ -226,9 +216,7 @@ async def refresh_calendar(db: Database = Depends(get_db)):
     return u_response(resp)
 
 
-@router.post(
-    "/reset/all", response_model=APIResponse, dependencies=[Depends(get_current_user)]
-)
+@router.post("/reset/all", response_model=APIResponse)
 async def reset_all(db: Database = Depends(get_db)):
     await db.bangumi.delete_all()
     return JSONResponse(
@@ -243,7 +231,6 @@ async def reset_all(db: Database = Depends(get_db)):
 @router.patch(
     path="/archive/{bangumi_id}",
     response_model=APIResponse,
-    dependencies=[Depends(get_current_user)],
 )
 async def archive_rule(bangumi_id: int, db: Database = Depends(get_db)):
     """Archive a bangumi."""
@@ -255,7 +242,6 @@ async def archive_rule(bangumi_id: int, db: Database = Depends(get_db)):
 @router.patch(
     path="/unarchive/{bangumi_id}",
     response_model=APIResponse,
-    dependencies=[Depends(get_current_user)],
 )
 async def unarchive_rule(bangumi_id: int, db: Database = Depends(get_db)):
     """Unarchive a bangumi."""
@@ -267,7 +253,6 @@ async def unarchive_rule(bangumi_id: int, db: Database = Depends(get_db)):
 @router.get(
     path="/refresh/metadata",
     response_model=APIResponse,
-    dependencies=[Depends(get_current_user)],
 )
 async def refresh_metadata(db: Database = Depends(get_db)):
     """Refresh TMDB metadata and auto-archive ended series."""
@@ -279,7 +264,6 @@ async def refresh_metadata(db: Database = Depends(get_db)):
 @router.get(
     path="/suggest-offset/{bangumi_id}",
     response_model=OffsetSuggestion,
-    dependencies=[Depends(get_current_user)],
 )
 async def suggest_offset(bangumi_id: int, db: Database = Depends(get_db)):
     """Suggest offset based on TMDB episode counts."""
@@ -291,7 +275,6 @@ async def suggest_offset(bangumi_id: int, db: Database = Depends(get_db)):
 @router.post(
     path="/detect-offset",
     response_model=DetectOffsetResponse,
-    dependencies=[Depends(get_current_user)],
 )
 async def detect_offset(request: DetectOffsetRequest):
     """Detect season/episode mismatch with TMDB data.
@@ -347,7 +330,6 @@ async def detect_offset(request: DetectOffsetRequest):
 @router.post(
     path="/dismiss-review/{bangumi_id}",
     response_model=APIResponse,
-    dependencies=[Depends(get_current_user)],
 )
 async def dismiss_review(bangumi_id: int):
     """Clear the needs_review flag for a bangumi after user reviews."""
@@ -383,7 +365,6 @@ async def _trigger_rename() -> None:
 @router.post(
     path="/apply-offset/many",
     response_model=APIResponse,
-    dependencies=[Depends(get_current_user)],
 )
 async def apply_offset_many(bangumi_id: list[int]):
     """Apply suggested offsets for multiple bangumi and trigger a rename pass."""
@@ -411,7 +392,6 @@ async def apply_offset_many(bangumi_id: list[int]):
 @router.post(
     path="/apply-offset/{bangumi_id}",
     response_model=APIResponse,
-    dependencies=[Depends(get_current_user)],
 )
 async def apply_offset(bangumi_id: int):
     """Apply the suggested season/episode offset and trigger a rename pass."""
@@ -442,7 +422,6 @@ async def apply_offset(bangumi_id: int):
 @router.get(
     path="/needs-review",
     response_model=list[Bangumi],
-    dependencies=[Depends(get_current_user)],
 )
 async def get_needs_review():
     """Get all bangumi that need review for offset mismatch."""
@@ -453,7 +432,6 @@ async def get_needs_review():
 @router.patch(
     path="/{bangumi_id}/weekday",
     response_model=APIResponse,
-    dependencies=[Depends(get_current_user)],
 )
 async def set_weekday(bangumi_id: int, request: SetWeekdayRequest):
     """Manually set the broadcast weekday for a bangumi."""
@@ -500,7 +478,6 @@ async def set_weekday(bangumi_id: int, request: SetWeekdayRequest):
 @router.get(
     path="/torrents/orphans",
     response_model=list[Torrent],
-    dependencies=[Depends(get_current_user)],
 )
 async def get_orphan_torrents(db: Database = Depends(get_db)):
     """List all torrent records not associated with any bangumi."""
@@ -510,7 +487,6 @@ async def get_orphan_torrents(db: Database = Depends(get_db)):
 @router.get(
     path="/torrents/orphans/count",
     response_model=int,
-    dependencies=[Depends(get_current_user)],
 )
 async def get_orphan_torrent_count(db: Database = Depends(get_db)):
     """Count torrent records not associated with any bangumi."""
@@ -520,7 +496,6 @@ async def get_orphan_torrent_count(db: Database = Depends(get_db)):
 @router.delete(
     path="/torrents/orphans",
     response_model=APIResponse,
-    dependencies=[Depends(get_current_user)],
 )
 async def delete_orphan_torrents(db: Database = Depends(get_db)):
     """Delete all torrent records not associated with any bangumi."""
@@ -538,7 +513,6 @@ async def delete_orphan_torrents(db: Database = Depends(get_db)):
 @router.delete(
     path="/torrents/orphans/{torrent_id}",
     response_model=APIResponse,
-    dependencies=[Depends(get_current_user)],
 )
 async def delete_orphan_torrent(torrent_id: int, db: Database = Depends(get_db)):
     """Delete a single orphan torrent record."""
@@ -566,7 +540,6 @@ async def delete_orphan_torrent(torrent_id: int, db: Database = Depends(get_db))
 @router.get(
     path="/{bangumi_id}/torrents",
     response_model=list[Torrent],
-    dependencies=[Depends(get_current_user)],
 )
 async def get_bangumi_torrents(bangumi_id: int, db: Database = Depends(get_db)):
     """List all torrent records associated with a bangumi."""
@@ -576,7 +549,6 @@ async def get_bangumi_torrents(bangumi_id: int, db: Database = Depends(get_db)):
 @router.delete(
     path="/{bangumi_id}/torrents",
     response_model=APIResponse,
-    dependencies=[Depends(get_current_user)],
 )
 async def delete_bangumi_torrents(bangumi_id: int, db: Database = Depends(get_db)):
     """Delete all torrent records associated with a bangumi."""
@@ -594,7 +566,6 @@ async def delete_bangumi_torrents(bangumi_id: int, db: Database = Depends(get_db
 @router.delete(
     path="/{bangumi_id}/torrents/{torrent_id}",
     response_model=APIResponse,
-    dependencies=[Depends(get_current_user)],
 )
 async def delete_bangumi_torrent(
     bangumi_id: int, torrent_id: int, db: Database = Depends(get_db)

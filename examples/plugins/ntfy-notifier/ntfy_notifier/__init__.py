@@ -6,7 +6,7 @@
 
 from collections.abc import Callable
 
-import httpx
+import httpx2
 from pydantic import BaseModel, Field
 
 from ab_sdk import Plugin, points, provider, secret_field
@@ -24,7 +24,7 @@ class Channel:
         self,
         options: Options,
         settings: NotifierSettings,
-        client_factory: Callable[[], httpx.AsyncClient],
+        client_factory: Callable[[], httpx2.AsyncClient],
     ) -> None:
         self.options = options
         self.settings = settings
@@ -34,7 +34,7 @@ class Channel:
         opts = self.options
         if not opts.topic:
             return False
-        # 标题含中文：httpx 的 str 头值只接受 ASCII，用 bytes 发 UTF-8
+        # 标题含中文：httpx2 的 str 头值只接受 ASCII，用 bytes 发 UTF-8
         headers = {b"Title": message.title.encode("utf-8")}
         if opts.token:
             headers[b"Authorization"] = f"Bearer {opts.token}".encode()
@@ -45,7 +45,7 @@ class Channel:
                     content=message.body.encode("utf-8"),
                     headers=headers,
                 )
-        except httpx.HTTPError:
+        except httpx2.HTTPError:
             return False
         return resp.is_success
 
@@ -60,8 +60,8 @@ class NtfyNotifier(Plugin[Options]):
     config_model = Options
 
     # 测试可替换为带 MockTransport 的客户端
-    client_factory: Callable[[], httpx.AsyncClient] = staticmethod(
-        lambda: httpx.AsyncClient(timeout=10)
+    client_factory: Callable[[], httpx2.AsyncClient] = staticmethod(
+        lambda: httpx2.AsyncClient(timeout=10)
     )
 
     @provider(points.NOTIFIER, id="ntfy")

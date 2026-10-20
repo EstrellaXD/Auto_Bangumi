@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { Caution, Close } from '@icon-park/vue-next';
+import { TriangleAlert, X } from '@lucide/vue';
 import type { OffsetSuggestionDetail, TMDBSummary } from '#/bangumi';
 
 const props = withDefaults(
@@ -93,18 +93,22 @@ function handleCancel() {
           <!-- Header -->
           <header class="dialog-header">
             <div class="header-icon">
-              <Caution theme="filled" size="20" />
+              <TriangleAlert :size="20" />
             </div>
-            <h2 class="dialog-title">{{ t('offset.dialog_title') }}</h2>
+            <h2 class="dialog-title">
+              {{ t('offset.dialog_title') }}
+            </h2>
             <button class="close-btn" aria-label="Close" @click="handleCancel">
-              <Close theme="outline" size="18" />
+              <X :size="18" />
             </button>
           </header>
 
           <!-- Content -->
           <div class="dialog-content">
             <!-- Bangumi title -->
-            <div class="bangumi-title">{{ bangumiTitle }}</div>
+            <div class="bangumi-title">
+              {{ bangumiTitle }}
+            </div>
 
             <!-- Comparison section -->
             <div class="comparison">
@@ -123,30 +127,30 @@ function handleCancel() {
                 </div>
               </div>
 
-              <div class="comparison-vs">&ne;</div>
+              <div class="comparison-vs">
+                &ne;
+              </div>
 
               <!-- TMDB data -->
               <div class="comparison-box">
-                <div class="comparison-label">{{ t('offset.tmdb_data') }}</div>
+                <div class="comparison-label">
+                  {{ t('offset.tmdb_data') }}
+                </div>
                 <div v-if="tmdbInfo" class="comparison-value">
-                  <span class="value-label"
-                    >{{ t('offset.total_seasons') }}:</span
-                  >
+                  <span class="value-label">{{ t('offset.total_seasons') }}:</span>
                   <span class="value-num">{{ tmdbInfo.total_seasons }}</span>
                 </div>
                 <div
                   v-if="
-                    tmdbInfo &&
-                    tmdbInfo.season_episode_counts[
-                      parsedSeason + (suggestion?.season_offset ?? 0)
-                    ]
+                    tmdbInfo
+                      && tmdbInfo.season_episode_counts[
+                        parsedSeason + (suggestion?.season_offset ?? 0)
+                      ]
                   "
                   class="comparison-value"
                 >
-                  <span class="value-label"
-                    >S{{ parsedSeason + (suggestion?.season_offset ?? 0) }}
-                    {{ t('offset.episode') }}:</span
-                  >
+                  <span class="value-label">S{{ parsedSeason + (suggestion?.season_offset ?? 0) }}
+                    {{ t('offset.episode') }}:</span>
                   <span class="value-num">{{
                     tmdbInfo.season_episode_counts[
                       parsedSeason + (suggestion?.season_offset ?? 0)
@@ -169,38 +173,32 @@ function handleCancel() {
 
             <!-- Offset inputs -->
             <div class="offset-section">
-              <div class="offset-title">{{ t('offset.suggested_offset') }}</div>
+              <div class="offset-title">
+                {{ t('offset.suggested_offset') }}
+              </div>
               <div class="offset-row">
-                <label class="offset-label"
-                  >{{ t('offset.season_offset') }}:</label
-                >
+                <label class="offset-label">{{ t('offset.season_offset') }}:</label>
                 <input
                   v-model.number="seasonOffset"
                   type="number"
                   class="offset-input"
-                />
-                <span class="offset-hint"
-                  >&rarr; S{{ parsedSeason }}
+                >
+                <span class="offset-hint">&rarr; S{{ parsedSeason }}
                   {{ t('offset.season') === '季度' ? '变为' : 'becomes' }} S{{
                     Math.max(1, parsedSeason + seasonOffset)
-                  }}</span
-                >
+                  }}</span>
               </div>
               <div class="offset-row">
-                <label class="offset-label"
-                  >{{ t('offset.episode_offset') }}:</label
-                >
+                <label class="offset-label">{{ t('offset.episode_offset') }}:</label>
                 <input
                   v-model.number="episodeOffset"
                   type="number"
                   class="offset-input"
-                />
-                <span class="offset-hint"
-                  >&rarr; E{{ parsedEpisode }}
+                >
+                <span class="offset-hint">&rarr; E{{ parsedEpisode }}
                   {{ t('offset.season') === '季度' ? '保持' : 'stays' }} E{{
                     Math.max(1, parsedEpisode + episodeOffset)
-                  }}</span
-                >
+                  }}</span>
               </div>
             </div>
 

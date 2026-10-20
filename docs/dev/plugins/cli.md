@@ -3,8 +3,8 @@
 `ab-plugin` 随 `autobangumi-sdk` 轮子安装，只依赖 `ab_sdk`，不需要安装 AutoBangumi。
 
 ```bash
-uv tool install ./autobangumi_sdk-0.5.0-py3-none-any.whl
-# 或在项目里：uv add ./autobangumi_sdk-0.5.0-py3-none-any.whl
+uv tool install ./autobangumi_sdk-0.6.0-py3-none-any.whl
+# 或在项目里：uv add ./autobangumi_sdk-0.6.0-py3-none-any.whl
 ```
 
 轮子在 4.0 beta / 正式版的 GitHub Release 附件中，不发布到 PyPI，见 [获取 SDK](/dev/plugins/sdk)。契约测试需要 pytest：`new` 生成的 `pyproject.toml` 已在 `dev` 依赖组里带上 pytest；自己建的项目用 `uv add --dev pytest`（或安装 `autobangumi-sdk[test]`）。
@@ -65,7 +65,7 @@ ab-plugin dev [path] [--config-dir config]
 ```bash
 ab-plugin new my-notify --kind notifier
 cd my-notify
-uv add ../autobangumi_sdk-0.5.0-py3-none-any.whl   # 只需一次
+uv add ../autobangumi_sdk-0.6.0-py3-none-any.whl   # 只需一次
 uv run pytest            # 契约测试
 ab-plugin dev . --config-dir /path/to/autobangumi/config   # 链接并开启热重载，重启 AB 一次
 # 改代码 → AB 自动重载 → 在 WebUI 里验证

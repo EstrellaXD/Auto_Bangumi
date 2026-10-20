@@ -44,7 +44,7 @@ def _break(plugin_dir: Path, problem: str) -> None:
     manifest = plugin_dir / "plugin.toml"
     if problem == "sdk":
         manifest.write_text(
-            manifest.read_text().replace('sdk = ">=0.5,<1"', 'sdk = ">=9"')
+            manifest.read_text().replace('sdk = ">=0.6,<1"', 'sdk = ">=9"')
         )
     elif problem == "entry":
         (plugin_dir / "my_plugin" / "__init__.py").unlink()

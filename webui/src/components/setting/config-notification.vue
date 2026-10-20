@@ -271,7 +271,7 @@ function getFieldsForType(type: string) {
 
 <template>
   <ab-fold-panel :title="$t('config.notification_set.title')">
-    <div space-y-8>
+    <div class="space-y-8">
       <!-- Global enable switch -->
       <ab-setting
         v-model:data="notificationEnabled"
@@ -282,7 +282,7 @@ function getFieldsForType(type: string) {
       />
 
       <!-- Provider list -->
-      <div v-if="notificationEnabled" space-y-8>
+      <div v-if="notificationEnabled" class="space-y-8">
         <div
           v-for="(provider, index) in providers"
           :key="index"
@@ -307,17 +307,16 @@ function getFieldsForType(type: string) {
             >
               <div
                 v-if="testingIndex === index"
-                i-carbon-circle-dash
-                animate-spin
+                class="i-carbon-circle-dash animate-spin"
               />
-              <div v-else i-carbon-play />
+              <div v-else class="i-carbon-play" />
             </ab-icon-button>
             <ab-icon-button
               size="sm"
               :label="$t('config.notification_set.edit')"
               @click="openEditDialog(index)"
             >
-              <div i-carbon-edit />
+              <div class="i-carbon-edit" />
             </ab-icon-button>
             <ab-icon-button
               size="sm"
@@ -340,7 +339,7 @@ function getFieldsForType(type: string) {
               :label="$t('config.notification_set.remove')"
               @click="onRemoveProvider(index)"
             >
-              <div i-carbon-trash-can />
+              <div class="i-carbon-trash-can" />
             </ab-icon-button>
           </div>
         </div>
@@ -354,12 +353,12 @@ function getFieldsForType(type: string) {
           {{ listResult.message }}
         </div>
 
-        <div line></div>
+        <div class="line" />
 
         <!-- Add provider button -->
-        <div flex="~ justify-end">
+        <div class="flex justify-end">
           <ab-button size="sm" variant="primary" @click="openAddDialog">
-            <div i-carbon-add />
+            <div class="i-carbon-add" />
             {{ $t('config.notification_set.add_provider') }}
           </ab-button>
         </div>
@@ -372,7 +371,7 @@ function getFieldsForType(type: string) {
       size="sm"
       :title="$t('config.notification_set.add_provider')"
     >
-      <div space-y-16>
+      <div class="space-y-16">
         <ab-field :label="$t('config.notification_set.type')">
           <NSelect
             v-model:value="newProvider.type"
@@ -421,8 +420,11 @@ function getFieldsForType(type: string) {
           :disabled="testingIndex === -999"
           @click="testNewProvider"
         >
-          <div v-if="testingIndex === -999" i-carbon-circle-dash animate-spin />
-          <div v-else i-carbon-play />
+          <div
+            v-if="testingIndex === -999"
+            class="i-carbon-circle-dash animate-spin"
+          />
+          <div v-else class="i-carbon-play" />
           {{ $t('config.notification_set.test') }}
         </ab-button>
         <ab-button size="sm" @click="showAddDialog = false">
@@ -440,7 +442,7 @@ function getFieldsForType(type: string) {
       size="sm"
       :title="$t('config.notification_set.edit_provider')"
     >
-      <div space-y-16>
+      <div class="space-y-16">
         <ab-field :label="$t('config.notification_set.type')">
           <NSelect
             v-model:value="newProvider.type"
@@ -490,8 +492,11 @@ function getFieldsForType(type: string) {
           :disabled="testingIndex === -999"
           @click="testNewProvider"
         >
-          <div v-if="testingIndex === -999" i-carbon-circle-dash animate-spin />
-          <div v-else i-carbon-play />
+          <div
+            v-if="testingIndex === -999"
+            class="i-carbon-circle-dash animate-spin"
+          />
+          <div v-else class="i-carbon-play" />
           {{ $t('config.notification_set.test') }}
         </ab-button>
         <ab-button size="sm" @click="showEditDialog = false">

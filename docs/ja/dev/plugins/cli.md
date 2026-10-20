@@ -3,8 +3,8 @@
 `ab-plugin` は `autobangumi-sdk` の wheel と一緒にインストールされます。依存は `ab_sdk` だけで、AutoBangumi 本体のインストールは不要です。
 
 ```bash
-uv tool install ./autobangumi_sdk-0.5.0-py3-none-any.whl
-# プロジェクト内の場合：uv add ./autobangumi_sdk-0.5.0-py3-none-any.whl
+uv tool install ./autobangumi_sdk-0.6.0-py3-none-any.whl
+# プロジェクト内の場合：uv add ./autobangumi_sdk-0.6.0-py3-none-any.whl
 ```
 
 wheel は 4.0 beta / 正式版の GitHub Release の添付ファイルです。PyPI には公開しません。[SDK の入手](/ja/dev/plugins/sdk) を参照してください。コントラクトテストには pytest が必要です。`new` が作る `pyproject.toml` には `dev` 依存グループに pytest が入っています。自分で作ったプロジェクトでは `uv add --dev pytest`（または `autobangumi-sdk[test]` をインストール）を使います。
@@ -65,7 +65,7 @@ ab-plugin dev [path] [--config-dir config]
 ```bash
 ab-plugin new my-notify --kind notifier
 cd my-notify
-uv add ../autobangumi_sdk-0.5.0-py3-none-any.whl   # 一度だけ
+uv add ../autobangumi_sdk-0.6.0-py3-none-any.whl   # 一度だけ
 uv run pytest            # コントラクトテスト
 ab-plugin dev . --config-dir /path/to/autobangumi/config   # リンクしてホットリロードを有効化。AB を一度再起動
 # コードを変更 → AB が自動でリロード → WebUI で確認

@@ -6,7 +6,7 @@ import shutil
 import threading
 from pathlib import Path
 
-import httpx
+import httpx2
 import pytest
 
 pytestmark = pytest.mark.e2e
@@ -40,7 +40,7 @@ def upstream(fixture_root: Path):
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     host, port = server.server_address[:2]
-    with httpx.Client(base_url=f"http://{host}:{port}", timeout=5.0) as client:
+    with httpx2.Client(base_url=f"http://{host}:{port}", timeout=5.0) as client:
         yield client, fixture_root
     server.shutdown()
     server.server_close()
@@ -48,7 +48,7 @@ def upstream(fixture_root: Path):
     assert not thread.is_alive()
 
 
-def _activate(client: httpx.Client, name: str) -> None:
+def _activate(client: httpx2.Client, name: str) -> None:
     response = client.put(f"/__admin/scenario/{name}")
     assert response.status_code == 200
     assert response.json()["scenario"] == name

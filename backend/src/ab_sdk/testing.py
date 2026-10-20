@@ -171,9 +171,9 @@ class DownloaderContract:
         for capability, methods in self.CAPABILITY_METHODS.items():
             if getattr(client.capabilities, capability):
                 for method in methods:
-                    assert callable(
-                        getattr(client, method, None)
-                    ), f"声明了 {capability}，但缺少 {method}"
+                    assert callable(getattr(client, method, None)), (
+                        f"声明了 {capability}，但缺少 {method}"
+                    )
 
     def test_auth_succeeds_and_logout_is_safe(self) -> None:
         if not self.behavioral:

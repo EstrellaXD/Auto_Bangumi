@@ -2,7 +2,7 @@ import asyncio
 import functools
 import logging
 
-import httpx
+import httpx2
 
 logger = logging.getLogger(__name__)
 _lock = asyncio.Lock()
@@ -22,9 +22,9 @@ def qb_connect_failed_wait(func):
                 ConnectionError,
                 TimeoutError,
                 OSError,
-                httpx.ConnectError,
-                httpx.TimeoutException,
-                httpx.RequestError,
+                httpx2.ConnectError,
+                httpx2.TimeoutException,
+                httpx2.RequestError,
             ) as e:
                 last_error = e
                 delay = _RETRY_DELAYS[times]

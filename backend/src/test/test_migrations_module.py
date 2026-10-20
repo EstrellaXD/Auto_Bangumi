@@ -44,11 +44,7 @@ def _make_v0_engine():
         )
         conn.execute(
             text(
-                "CREATE TABLE rssitem ("
-                "  id INTEGER PRIMARY KEY,"
-                "  name TEXT,"
-                "  url TEXT"
-                ")"
+                "CREATE TABLE rssitem (  id INTEGER PRIMARY KEY,  name TEXT,  url TEXT)"
             )
         )
         conn.execute(
@@ -193,20 +189,13 @@ def _make_v19_auth_engine() -> Engine:
             )
         )
         conn.execute(
-            text(
-                "CREATE INDEX ix_auth_session_expires_at " "ON auth_session(expires_at)"
-            )
+            text("CREATE INDEX ix_auth_session_expires_at ON auth_session(expires_at)")
         )
         conn.execute(
-            text(
-                "CREATE INDEX ix_auth_session_revoked_at " "ON auth_session(revoked_at)"
-            )
+            text("CREATE INDEX ix_auth_session_revoked_at ON auth_session(revoked_at)")
         )
         conn.execute(
-            text(
-                "CREATE UNIQUE INDEX ix_api_token_token_hash "
-                "ON api_token(token_hash)"
-            )
+            text("CREATE UNIQUE INDEX ix_api_token_token_hash ON api_token(token_hash)")
         )
         conn.execute(text("CREATE INDEX ix_api_token_user_id ON api_token(user_id)"))
         conn.execute(text("CREATE INDEX ix_api_token_scope ON api_token(scope)"))
@@ -264,7 +253,8 @@ def _make_v18_movie_engine(monkeypatch: pytest.MonkeyPatch) -> Engine:
     engine = _make_v0_engine()
     _run_through_version(engine, 17, monkeypatch)
     with engine.begin() as conn:
-        conn.execute(text("""CREATE TABLE movie (
+        conn.execute(
+            text("""CREATE TABLE movie (
                     id INTEGER PRIMARY KEY,
                     official_title VARCHAR NOT NULL,
                     title_raw VARCHAR,
@@ -280,7 +270,8 @@ def _make_v18_movie_engine(monkeypatch: pytest.MonkeyPatch) -> Engine:
                     save_path VARCHAR,
                     rule_name VARCHAR,
                     filter VARCHAR NOT NULL DEFAULT ''
-                )"""))
+                )""")
+        )
         conn.execute(text("CREATE INDEX ix_movie_title_raw ON movie(title_raw)"))
         conn.execute(text("CREATE INDEX ix_movie_deleted ON movie(deleted)"))
         conn.execute(
@@ -304,9 +295,9 @@ class TestMigrationTable:
     def test_every_migration_has_an_already_applied_guard(self):
         """No migration may rely on the old hardcoded if-ladder."""
         for migration in MIGRATIONS:
-            assert callable(
-                migration.already_applied
-            ), f"migration v{migration.version} has no already_applied guard"
+            assert callable(migration.already_applied), (
+                f"migration v{migration.version} has no already_applied guard"
+            )
 
     def test_versions_are_consecutive_from_one(self):
         versions = [m.version for m in MIGRATIONS]

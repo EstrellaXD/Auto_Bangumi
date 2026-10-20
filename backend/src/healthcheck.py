@@ -19,7 +19,7 @@ def webui_port(config_path: Path = CONFIG_PATH) -> int:
     try:
         config = json.loads(config_path.read_text(encoding="utf-8"))
         return int(config["program"]["webui_port"])
-    except (OSError, ValueError, KeyError, TypeError):
+    except OSError, ValueError, KeyError, TypeError:
         return DEFAULT_PORT
 
 

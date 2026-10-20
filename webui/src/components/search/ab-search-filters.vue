@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { CloseSmall } from '@icon-park/vue-next';
+import { X } from '@lucide/vue';
 import type { FilterOptions, SearchFilters } from '@/store/search';
 
 const props = defineProps<{
@@ -76,7 +76,7 @@ function getOverflowCount(options: string[]) {
         class="clear-btn"
         @click="emit('clear-filters')"
       >
-        <CloseSmall :size="14" />
+        <X :size="14" />
         {{ $t('search.filter.clear') }}
       </button>
       <span class="results-count">

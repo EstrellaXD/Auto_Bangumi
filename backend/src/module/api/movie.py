@@ -6,13 +6,14 @@ from module.models import APIResponse, Movie
 from module.models.movie import MovieUpdate
 from module.security.api import get_current_user
 
-router = APIRouter(prefix="/movie", tags=["movie"])
+router = APIRouter(
+    prefix="/movie", tags=["movie"], dependencies=[Depends(get_current_user)]
+)
 
 
 @router.get(
     "/get/all",
     response_model=list[Movie],
-    dependencies=[Depends(get_current_user)],
 )
 async def get_all_movies(db: Database = Depends(get_db)):
     return await db.movie.search_all()
@@ -21,7 +22,6 @@ async def get_all_movies(db: Database = Depends(get_db)):
 @router.get(
     "/get/{movie_id}",
     response_model=Movie,
-    dependencies=[Depends(get_current_user)],
 )
 async def get_movie(movie_id: int, db: Database = Depends(get_db)):
     movie = await db.movie.search_id(movie_id)
@@ -39,7 +39,6 @@ async def get_movie(movie_id: int, db: Database = Depends(get_db)):
 @router.patch(
     "/update/{movie_id}",
     response_model=APIResponse,
-    dependencies=[Depends(get_current_user)],
 )
 async def update_movie(
     movie_id: int,
@@ -64,7 +63,6 @@ async def update_movie(
 @router.delete(
     "/delete/{movie_id}",
     response_model=APIResponse,
-    dependencies=[Depends(get_current_user)],
 )
 async def delete_movie(movie_id: int, db: Database = Depends(get_db)):
     await db.movie.delete_one(movie_id)
@@ -77,7 +75,6 @@ async def delete_movie(movie_id: int, db: Database = Depends(get_db)):
 @router.delete(
     "/disable/{movie_id}",
     response_model=APIResponse,
-    dependencies=[Depends(get_current_user)],
 )
 async def disable_movie(movie_id: int, db: Database = Depends(get_db)):
     await db.movie.disable_rule(movie_id)
@@ -90,7 +87,6 @@ async def disable_movie(movie_id: int, db: Database = Depends(get_db)):
 @router.get(
     "/enable/{movie_id}",
     response_model=APIResponse,
-    dependencies=[Depends(get_current_user)],
 )
 async def enable_movie(movie_id: int, db: Database = Depends(get_db)):
     await db.movie.enable_rule(movie_id)

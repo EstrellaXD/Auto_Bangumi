@@ -1,128 +1,82 @@
-"""MCP resource definitions and handlers for AutoBangumi.
+"""内置 MCP 资源：静态资源与 ``autobangumi://anime/{id}`` 模板，内容均为 JSON 文本。
 
-``RESOURCES`` lists static resources; ``RESOURCE_TEMPLATES`` lists URI
-templates for parameterised lookups. ``handle_resource`` resolves a URI
-to its JSON payload.
+插件提供的资源（``autobangumi://plugins/<plugin-id>/<id>``）由
+``AutoBangumiMCP.read_resource`` 分发。
 """
 
 import json
-import logging
 
-from mcp import types
-from pydantic import AnyUrl
-
-from module.conf import VERSION
 from module.database import Database
 from module.manager import TorrentManager
 from module.models import Bangumi
-from module.rss import RSSEngine
 
-from .plugins import list_plugin_resources, read_plugin_resource
-from .runtime import get_context
-from .tools import _bangumi_to_dict
+from .server import mcp
+from .tools import _bangumi_to_dict, get_program_status
 
-logger = logging.getLogger(__name__)
-
-RESOURCES = [
-    types.Resource(
-        uri=AnyUrl("autobangumi://anime/list"),
-        name="All tracked anime",
-        description="List of all anime subscriptions being tracked by AutoBangumi",
-        mimeType="application/json",
-    ),
-    types.Resource(
-        uri=AnyUrl("autobangumi://status"),
-        name="Program status",
-        description="Current AutoBangumi program status, version, and state",
-        mimeType="application/json",
-    ),
-    types.Resource(
-        uri=AnyUrl("autobangumi://rss/feeds"),
-        name="RSS feeds",
-        description="All configured RSS feeds with health status",
-        mimeType="application/json",
-    ),
-]
-
-RESOURCE_TEMPLATES = [
-    types.ResourceTemplate(
-        uriTemplate="autobangumi://anime/{id}",
-        name="Anime details",
-        description="Detailed information about a specific tracked anime by ID",
-        mimeType="application/json",
-    ),
-]
+JSON = "application/json"
 
 
-def all_resources() -> list[types.Resource]:
-    """内置资源 + 当前已启用插件提供的资源（``autobangumi://plugins/<id>/...``）。"""
-    return RESOURCES + list_plugin_resources()
+@mcp.resource(
+    "autobangumi://anime/list",
+    name="All tracked anime",
+    description="List of all anime subscriptions being tracked by AutoBangumi",
+    mime_type=JSON,
+)
+async def anime_list() -> str:
+    async with Database() as db:
+        items = await db.bangumi.search_all()
+    return json.dumps([_bangumi_to_dict(b) for b in items], ensure_ascii=False)
 
 
-async def handle_resource(uri: str) -> str:
-    """Return a JSON string for the given MCP resource URI.
+@mcp.resource(
+    "autobangumi://status",
+    name="Program status",
+    description="Current AutoBangumi program status, version, and state",
+    mime_type=JSON,
+)
+def program_status() -> str:
+    return json.dumps(get_program_status())
 
-    Supported URIs:
-    - ``autobangumi://anime/list`` - all tracked anime
-    - ``autobangumi://status`` - program version and running state
-    - ``autobangumi://rss/feeds`` - configured RSS feeds
-    - ``autobangumi://anime/{id}`` - single anime by integer ID
-    - ``autobangumi://plugins/<plugin-id>/<id>`` - 插件提供的资源
-    """
-    if uri == "autobangumi://anime/list":
-        async with Database() as db:
-            items = await db.bangumi.search_all()
-        return json.dumps([_bangumi_to_dict(b) for b in items], ensure_ascii=False)
 
-    elif uri == "autobangumi://status":
-        ctx = get_context()
-        return json.dumps(
+@mcp.resource(
+    "autobangumi://rss/feeds",
+    name="RSS feeds",
+    description="All configured RSS feeds with health status",
+    mime_type=JSON,
+)
+async def rss_feeds() -> str:
+    async with Database() as db:
+        feeds = await db.rss.search_all()
+    return json.dumps(
+        [
             {
-                "version": VERSION,
-                "running": ctx.is_running if ctx is not None else False,
-                "first_run": ctx.first_run if ctx is not None else True,
+                "id": f.id,
+                "name": f.name,
+                "url": f.url,
+                "enabled": f.enabled,
+                "connection_status": f.connection_status,
+                "last_checked_at": f.last_checked_at,
             }
-        )
+            for f in feeds
+        ],
+        ensure_ascii=False,
+    )
 
-    elif uri == "autobangumi://rss/feeds":
-        async with Database() as db:
-            feeds = await db.rss.search_all()
-        return json.dumps(
-            [
-                {
-                    "id": f.id,
-                    "name": f.name,
-                    "url": f.url,
-                    "enabled": f.enabled,
-                    "connection_status": f.connection_status,
-                    "last_checked_at": f.last_checked_at,
-                }
-                for f in feeds
-            ],
-            ensure_ascii=False,
-        )
 
-    elif uri.startswith("autobangumi://anime/"):
-        anime_id_str = uri.split("/")[-1]
-        try:
-            anime_id = int(anime_id_str)
-        except ValueError:
-            return json.dumps({"error": f"Invalid anime ID: {anime_id_str}"})
-        async with Database() as db:
-            manager = TorrentManager(db)
-            result = await manager.search_one(anime_id)
-        if isinstance(result, Bangumi):
-            return json.dumps(_bangumi_to_dict(result), ensure_ascii=False)
-        return json.dumps({"error": result.msg_en})
-
+@mcp.resource(
+    "autobangumi://anime/{id}",
+    name="Anime details",
+    description="Detailed information about a specific tracked anime by ID",
+    mime_type=JSON,
+)
+async def anime_detail(id: str) -> str:
     try:
-        handled, content = await read_plugin_resource(uri)
-    except Exception as e:
-        logger.warning("Plugin resource %s failed: %s", uri, e)
-        return json.dumps({"error": str(e)}, ensure_ascii=False)
-    if handled:
-        if isinstance(content, str):
-            return content
-        return json.dumps(content, ensure_ascii=False, default=str)
-
-    return json.dumps({"error": f"Unknown resource: {uri}"})
+        anime_id = int(id)
+    except ValueError:
+        return json.dumps({"error": f"Invalid anime ID: {id}"})
+    async with Database() as db:
+        manager = TorrentManager(db)
+        result = await manager.search_one(anime_id)
+    if isinstance(result, Bangumi):
+        return json.dumps(_bangumi_to_dict(result), ensure_ascii=False)
+    return json.dumps({"error": result.msg_en})

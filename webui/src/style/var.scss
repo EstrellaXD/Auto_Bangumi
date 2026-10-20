@@ -1,6 +1,8 @@
 // Design System Variables
 // Light theme (default) + Dark theme (.dark class on html)
 
+@use 'mixin' as *;
+
 :root {
   // --- Colors ---
   --color-primary: #6C4AB6;

@@ -749,7 +749,6 @@ class TestDeliverText:
 
 
 class TestConfigMigration:
-
     def test_new_config_no_migration(self):
         """New format with providers doesn't trigger migration."""
         from module.models.config import Notification as NotificationConfig

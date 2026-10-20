@@ -38,7 +38,7 @@ class Aria2RenameIntent:
             return None
         try:
             data = json.loads(raw)
-        except (json.JSONDecodeError, TypeError):
+        except json.JSONDecodeError, TypeError:
             return None
         if not isinstance(data, dict) or data.get("version") != 1:
             return None

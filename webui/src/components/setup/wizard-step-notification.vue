@@ -59,7 +59,9 @@ const canTest = computed(() => {
 <template>
   <ab-container :title="t('setup.notification.title')" class="wizard-step">
     <div class="step-content">
-      <p class="step-subtitle">{{ t('setup.notification.subtitle') }}</p>
+      <p class="step-subtitle">
+        {{ t('setup.notification.subtitle') }}
+      </p>
 
       <div class="form-fields">
         <ab-field :label="t('config.notification_set.type')">
@@ -78,7 +80,7 @@ const canTest = computed(() => {
             :aria-label="t('config.notification_set.token')"
             autocomplete="off"
             class="setup-input setup-input-wide"
-          />
+          >
         </ab-field>
 
         <ab-field :label="t('config.notification_set.chat_id')">
@@ -87,7 +89,7 @@ const canTest = computed(() => {
             type="text"
             :aria-label="t('config.notification_set.chat_id')"
             class="setup-input"
-          />
+          >
         </ab-field>
       </div>
 

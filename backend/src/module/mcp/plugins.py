@@ -17,6 +17,7 @@ import re
 from collections.abc import Callable
 from typing import Any
 
+import jsonschema
 from mcp import types
 from pydantic import AnyUrl
 
@@ -78,7 +79,7 @@ def _tool_spec(entry: ProviderEntry, tool: McpTool) -> types.Tool:
     return types.Tool(
         name=tool_name(entry.plugin_id, entry.id),
         description=tool.description,
-        inputSchema=tool.input_schema,
+        input_schema=tool.input_schema,
     )
 
 
@@ -105,7 +106,7 @@ def list_plugin_tools() -> list[types.Tool]:
 async def call_plugin_tool(name: str, arguments: dict) -> tuple[bool, Any]:
     """调用插件工具；``name`` 不是插件工具时返回 ``(False, None)``。
 
-    插件处理函数的异常会继续抛出（由 ``handle_tool`` 统一转成错误 JSON），
+    插件处理函数的异常会继续抛出（由 ``AutoBangumiMCP.call_tool`` 统一转成错误结果），
     在此之前计入熔断。
     """
     if TOOL_SEPARATOR not in name:
@@ -114,6 +115,15 @@ async def call_plugin_tool(name: str, arguments: dict) -> tuple[bool, Any]:
     if found is None:
         return False, None
     entry, tool, _ = found
+    # mcp 2 的服务端不再按 inputSchema 校验参数；参数不合法是客户端的错，不计入熔断
+    try:
+        jsonschema.validate(arguments, tool.input_schema)
+    except jsonschema.ValidationError as e:
+        raise ValueError(f"Input validation error: {e.message}") from None
+    except jsonschema.SchemaError as e:
+        # input_schema 本身不合法是插件的错，计入熔断
+        _record(entry.plugin_id, f"MCP 工具 {entry.id}: input_schema 无效: {e.message}")
+        raise
     try:
         result = await asyncio.wait_for(tool.handler(arguments), tool.timeout)
     except Exception as e:
@@ -137,10 +147,10 @@ def resource_uri(plugin_id: str, resource_id: str) -> str:
 
 def _resource_spec(entry: ProviderEntry, resource: McpResource) -> types.Resource:
     return types.Resource(
-        uri=AnyUrl(resource_uri(entry.plugin_id, entry.id)),
+        uri=str(AnyUrl(resource_uri(entry.plugin_id, entry.id))),
         name=resource.name,
         description=resource.description or None,
-        mimeType=resource.mime_type,
+        mime_type=resource.mime_type,
     )
 
 
@@ -148,7 +158,7 @@ def _plugin_resources() -> dict[str, tuple[ProviderEntry, McpResource, types.Res
     # 以 AnyUrl 规范化后的 URI 为键：含空格或非 ASCII 字符的 id 会被百分号编码，
     # 客户端读取时传回的正是列表里的编码形式
     return {
-        str(spec.uri): (entry, resource, spec)
+        spec.uri: (entry, resource, spec)
         for entry, resource, spec in _resolve(
             points.MCP_RESOURCE, McpResource, _resource_spec
         )

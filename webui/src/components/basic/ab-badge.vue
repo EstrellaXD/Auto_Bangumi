@@ -1,22 +1,15 @@
 <script lang="ts" setup>
 // 计数/圆点徽标（通知中心等）：溢出显示 max+，count 为 0 时隐藏。
-const props = withDefaults(
-  defineProps<{
-    count?: number;
-    /** 只显示小圆点（不显示数字） */
-    dot?: boolean;
-    max?: number;
-  }>(),
-  {
-    count: 0,
-    dot: false,
-    max: 99,
-  }
-);
+const { count = 0, dot = false, max = 99 } = defineProps<{
+  count?: number;
+  /** 只显示小圆点（不显示数字） */
+  dot?: boolean;
+  max?: number;
+}>();
 
-const visible = computed(() => props.dot || props.count > 0);
+const visible = computed(() => dot || count > 0);
 const text = computed(() =>
-  props.count > props.max ? `${props.max}+` : String(props.count)
+  count > max ? `${max}+` : String(count)
 );
 </script>
 

@@ -10,11 +10,11 @@
 
 /** 前端挂载点。 */
 export type UiSlot =
-  | 'settings.section'
-  | 'bangumi.detail.tab'
-  | 'bangumi.card.action'
-  | 'page'
-  | 'dashboard.widget';
+  | 'settings.section' |
+  'bangumi.detail.tab' |
+  'bangumi.card.action' |
+  'page' |
+  'dashboard.widget';
 
 /** `GET /api/v1/plugins/ui` 的一项：已启用插件声明的挂载点。 */
 export interface PluginUiSlot {
@@ -43,10 +43,10 @@ export interface AbSlotContext {
  * 返回响应体（JSON 已解析），非 2xx 时 reject。
  */
 export interface AbHostApi {
-  get<T = unknown>(path: string, params?: Record<string, unknown>): Promise<T>;
-  post<T = unknown>(path: string, body?: unknown): Promise<T>;
-  put<T = unknown>(path: string, body?: unknown): Promise<T>;
-  delete<T = unknown>(path: string): Promise<T>;
+  get: <T = unknown>(path: string, params?: Record<string, unknown>) => Promise<T>;
+  post: <T = unknown>(path: string, body?: unknown) => Promise<T>;
+  put: <T = unknown>(path: string, body?: unknown) => Promise<T>;
+  delete: <T = unknown>(path: string) => Promise<T>;
 }
 
 export interface AbHost {
@@ -56,21 +56,21 @@ export interface AbHost {
     /** 当前语言，如 `zh-CN`、`en-US` */
     locale: string;
     /** 宿主文案；找不到时返回 key 本身 */
-    t(key: string, params?: Record<string, unknown>): string;
+    t: (key: string, params?: Record<string, unknown>) => string;
   };
   theme: {
     mode: 'light' | 'dark';
     /** `--ab-*` 变量的当前值（见 tokens.css） */
     tokens: Record<string, string>;
   };
-  toast(message: string, kind?: 'info' | 'error'): void;
+  toast: (message: string, kind?: 'info' | 'error') => void;
   events: {
     /**
      * 订阅宿主事件总线（SSE 的 `bus` 帧）上的事件 `kind`，回调收到事件的
      * 字段（dataclass 展开成对象，不含 `kind`）。返回取消订阅函数；组件
      * 卸载时宿主也会取消它的全部订阅。
      */
-    on(kind: string, callback: (payload: unknown) => void): () => void;
+    on: (kind: string, callback: (payload: unknown) => void) => () => void;
   };
 }
 

@@ -1,14 +1,14 @@
 import type { JsonSchema, JsonSchemaProperty } from '#/plugins';
 
 export type SchemaFieldKind =
-  | 'text'
-  | 'password'
-  | 'number'
-  | 'switch'
-  | 'select'
-  | 'tags'
-  | 'objects'
-  | 'unsupported';
+  | 'text' |
+  'password' |
+  'number' |
+  'switch' |
+  'select' |
+  'tags' |
+  'objects' |
+  'unsupported';
 
 export interface SchemaField {
   key: string;

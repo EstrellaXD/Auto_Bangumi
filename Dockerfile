@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM ghcr.io/astral-sh/uv:0.5-python3.13-alpine AS builder
+FROM ghcr.io/astral-sh/uv:0.13-python3.14-alpine AS builder
 
 WORKDIR /app
 ENV UV_LINK_MODE=copy
@@ -13,7 +13,7 @@ RUN uv sync --frozen --no-dev
 COPY backend/src ./src
 
 
-FROM python:3.13-alpine AS runtime
+FROM python:3.14-alpine AS runtime
 
 RUN apk add --no-cache \
     bash \

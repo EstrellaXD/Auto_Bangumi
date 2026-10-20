@@ -4,7 +4,7 @@ import asyncio
 import logging
 from types import SimpleNamespace
 
-import httpx
+import httpx2
 import pytest
 
 from ab_sdk.events import OrganizedFile, TorrentOrganized
@@ -33,14 +33,14 @@ def make_plugin(options, handler=None):
     plugin, _ = create_plugin(
         load_candidate().load(), options, plugin_id="media-server-refresh"
     )
-    requests: list[httpx.Request] = []
+    requests: list[httpx2.Request] = []
 
-    def record(request: httpx.Request) -> httpx.Response:
+    def record(request: httpx2.Request) -> httpx2.Response:
         requests.append(request)
-        return handler(request) if handler else httpx.Response(204)
+        return handler(request) if handler else httpx2.Response(204)
 
-    plugin.client_factory = lambda: httpx.AsyncClient(
-        transport=httpx.MockTransport(record)
+    plugin.client_factory = lambda: httpx2.AsyncClient(
+        transport=httpx2.MockTransport(record)
     )
     return plugin, requests
 
@@ -107,7 +107,7 @@ async def test_on_organized_burst_coalesces_into_one_refresh(
 
 async def test_refresh_http_error_returns_false():
     plugin, requests = make_plugin(
-        {"url": "http://srv", "api_key": "k"}, handler=lambda r: httpx.Response(401)
+        {"url": "http://srv", "api_key": "k"}, handler=lambda r: httpx2.Response(401)
     )
     assert await plugin.refresh() is False
     assert len(requests) == 1
@@ -115,7 +115,7 @@ async def test_refresh_http_error_returns_false():
 
 async def test_on_organized_connection_error_logged_without_secret(caplog):
     def explode(request):
-        raise httpx.ConnectError("refused")
+        raise httpx2.ConnectError("refused")
 
     plugin, _ = make_plugin(
         {"url": "http://srv", "api_key": "s3cr3t-key", "delay": 0}, handler=explode
@@ -140,17 +140,17 @@ async def test_teardown_pending_refresh_cancelled():
 
 async def test_on_organized_during_refresh_request_refreshes_again():
     plugin, _ = make_plugin({"url": "http://srv", "api_key": "k", "delay": 0})
-    requests: list[httpx.Request] = []
+    requests: list[httpx2.Request] = []
 
-    async def handler(request: httpx.Request) -> httpx.Response:
+    async def handler(request: httpx2.Request) -> httpx2.Response:
         requests.append(request)
         if len(requests) == 1:
             # 刷新请求已发出、尚未返回时又有种子整理完成
             await plugin.on_organized(organized(2))
-        return httpx.Response(204)
+        return httpx2.Response(204)
 
-    plugin.client_factory = lambda: httpx.AsyncClient(
-        transport=httpx.MockTransport(handler)
+    plugin.client_factory = lambda: httpx2.AsyncClient(
+        transport=httpx2.MockTransport(handler)
     )
     await plugin.on_organized(organized(1))
     assert plugin._pending is not None

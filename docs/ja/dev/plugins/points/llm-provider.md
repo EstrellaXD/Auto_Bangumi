@@ -27,6 +27,7 @@ class MyPlugin(Plugin):
 ## 要点
 
 - `ProviderInfo` がフロントエンドのフォームとプロバイダー一覧を決めます。`auth_kind` は `api_key`、`oauth`、`device_code` のいずれかです。
-- アダプターは `AdapterContext` から、モデル名、キー、`base_url`、タイムアウト、プロキシ対応の httpx クライアントのファクトリを受け取ります。グローバル設定は読みません。
+- アダプターは `AdapterContext` から、モデル名、キー、`base_url`、タイムアウト、プロキシ対応の httpx2 クライアントのファクトリを受け取ります。グローバル設定は読みません。
+- ファクトリは `httpx2.AsyncClient` を返します（SDK 0.6 から。以前は `httpx`）。ネットワークエラーを捕捉するには `httpx2.HTTPError` などのクラスを使います。`httpx` の例外クラスではこのエラーを捕捉できません。
 - サブスクリプション型のプロバイダー（`oauth` / `device_code`）は、認証フローのフック（`AuthChallenge`、`TokenSet`）を実装します。認証情報が無効になり、更新にも失敗したときは `AuthExpiredError` を送出します。AB はこのプロバイダーのブレーカーを作動させ、`llm_auth_failure` イベントを送ります。
 - `plugin.json` 形式の既存の LLM プラグイン（`llm-plugins` として公開）は引き続き使えます。新しいプラグインは `plugin.toml` とこの拡張ポイントを使います。

@@ -1,26 +1,21 @@
 <script lang="ts" setup>
 // 列表上方的操作行：搜索 / 筛选 / 动作三个插槽，一处定义响应式换行。
-withDefaults(
-  defineProps<{
-    /** 吸顶（长列表页） */
-    sticky?: boolean;
-  }>(),
-  {
-    sticky: false,
-  }
-);
+const { sticky = false } = defineProps<{
+  /** 吸顶（长列表页） */
+  sticky?: boolean;
+}>();
 </script>
 
 <template>
   <div class="ab-toolbar" :class="{ 'ab-toolbar--sticky': sticky }">
     <div v-if="$slots.search" class="ab-toolbar-search">
-      <slot name="search"></slot>
+      <slot name="search" />
     </div>
     <div v-if="$slots.filters" class="ab-toolbar-filters">
-      <slot name="filters"></slot>
+      <slot name="filters" />
     </div>
     <div v-if="$slots.actions" class="ab-toolbar-actions">
-      <slot name="actions"></slot>
+      <slot name="actions" />
     </div>
   </div>
 </template>

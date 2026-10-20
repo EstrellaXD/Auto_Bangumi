@@ -360,7 +360,7 @@ class TestRuleOnAnotherInstance:
                 make_bangumi(save_path="/a/Bangumi/Test Anime (2024)/Season 1")
             )
             await db.torrent.add(
-                Torrent(name="Old", url="u-old", bangumi_id=1, downloader_id="a")
+                Torrent(name="Old", url="u-old", refer_id=1, downloader_id="a")
             )
         return 1
 
@@ -437,7 +437,7 @@ class TestRuleOnAnotherInstance:
                 make_bangumi(save_path="/a/Bangumi/Test Anime (2024)/Season 1")
             )
             await db.torrent.add(
-                Torrent(name="B", url="u-b", bangumi_id=1, downloader_id="b")
+                Torrent(name="B", url="u-b", refer_id=1, downloader_id="b")
             )
             old = await db.bangumi.search_id(1)
             assert old is not None
@@ -461,7 +461,7 @@ class TestRuleOnAnotherInstance:
         _mock("b").auth = AsyncMock(return_value=False)  # type: ignore[method-assign]
         async with Database() as db:
             await db.torrent.add(
-                Torrent(name="B", url="u-b", bangumi_id=1, downloader_id="b")
+                Torrent(name="B", url="u-b", refer_id=1, downloader_id="b")
             )
             old = await db.bangumi.search_id(bangumi_id)
             assert old is not None
@@ -500,7 +500,7 @@ class TestRuleOnAnotherInstance:
         _mock("a").auth = AsyncMock(return_value=False)  # type: ignore[method-assign]
         async with Database() as db:
             await db.torrent.add(
-                Torrent(name="New", url="u-new", bangumi_id=1, downloader_id="b")
+                Torrent(name="New", url="u-new", refer_id=1, downloader_id="b")
             )
             resp = await TorrentManager(db).delete_rule(bangumi_id, file=True)
             assert _mock("b")._torrents == {}

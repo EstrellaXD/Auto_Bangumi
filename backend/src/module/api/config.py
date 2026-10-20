@@ -16,7 +16,10 @@ from module.security.api import UNAUTHORIZED, get_current_user
 
 from .deps import get_context
 
-router = APIRouter(prefix="/config", tags=["config"])
+router = APIRouter(
+    prefix="/config", tags=["config"], dependencies=[Depends(get_current_user)]
+)
+
 logger = logging.getLogger(__name__)
 
 _SENSITIVE_KEYS = ("password", "api_key", "token", "secret")
@@ -161,10 +164,10 @@ def _plugin_schemas(ctx: AppContext) -> dict[str, dict | None]:
     return {status.id: status.config_schema for status in ctx.plugins.statuses()}
 
 
-@router.get("/get", dependencies=[Depends(get_current_user)])
+@router.get("/get")
 async def get_config(ctx: AppContext = Depends(get_context)):
     """Return the current configuration with sensitive fields masked."""
-    config = settings.dict()
+    config = settings.model_dump()
     schemas = _plugin_schemas(ctx)
     options = config["plugins"]["options"]
     for plugin_id, plugin_options in options.items():
@@ -176,14 +179,12 @@ async def get_config(ctx: AppContext = Depends(get_context)):
     return _sanitize_dict(config)
 
 
-@router.patch(
-    "/update", response_model=APIResponse, dependencies=[Depends(get_current_user)]
-)
+@router.patch("/update", response_model=APIResponse)
 async def update_config(config: Config, ctx: AppContext = Depends(get_context)):
     """Persist and reload configuration from the supplied payload."""
     try:
-        config_dict = config.dict()
-        current = settings.dict()
+        config_dict = config.model_dump()
+        current = settings.model_dump()
         schemas = _plugin_schemas(ctx)
         current_options = current.get("plugins", {}).get("options", {})
         options = config_dict["plugins"]["options"]
@@ -242,7 +243,6 @@ class LLMModelsResponse(BaseModel):
 @router.post(
     "/llm/models",
     response_model=LLMModelsResponse,
-    dependencies=[Depends(get_current_user)],
 )
 async def list_llm_models(req: LLMModelsRequest):
     """拉取所选 LLM 提供商的可用模型列表。

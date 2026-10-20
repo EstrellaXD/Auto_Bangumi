@@ -13,7 +13,7 @@ export interface LogEntry {
 // 旧日志文件："LEVEL::module.path:message"（QueueHandler 默认格式化的遗留行）
 // 新格式："module.path: message"（要求带点号，避免把 "Error:" 之类误判为模块）
 const LEGACY_MODULE_PREFIX = /^(?:INFO|WARNING|ERROR|DEBUG)::([\w.]+):/;
-const MODULE_PREFIX = /^([A-Za-z_]\w*(?:\.\w+)+): /;
+const MODULE_PREFIX = /^([A-Z_]\w*(?:\.\w+)+): /i;
 
 export type LogLevelCounts = Record<LogLevel, number>;
 
@@ -29,7 +29,7 @@ export function parseLogLines(raw: string, maxLines = 1000): LogEntry[] {
     .slice(startIndex === -1 ? 0 : startIndex)
     .slice(-maxLines)
     .map((i, index) => {
-      const date = i.match(/\[\d+-\d+-\d+\ \d+:\d+:\d+\]/)?.[0] || '';
+      const date = i.match(/\[\d+-\d+-\d+ \d+:\d+:\d+\]/)?.[0] || '';
       const type = i.match(/(INFO)|(WARNING)|(ERROR)|(DEBUG)/)?.[0] || '';
       let content = i.replace(date, '').replace(`${type}:`, '').trim();
 

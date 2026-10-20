@@ -39,7 +39,7 @@ class TestGetLatestParsedEpisode:
                     Torrent(
                         name=f"[TestGroup] Signal Anime Raw - {ep:02d} [1080p].mkv",
                         url=f"https://example.com/{ep}",
-                        bangumi_id=bangumi.id,
+                        refer_id=bangumi.id,
                     )
                 )
 
@@ -55,7 +55,7 @@ class TestGetLatestParsedEpisode:
                 Torrent(
                     name="this has no episode markers at all",
                     url="https://example.com/unparseable",
-                    bangumi_id=bangumi.id,
+                    refer_id=bangumi.id,
                 )
             )
 
@@ -70,7 +70,7 @@ class TestGetLatestParsedEpisode:
                 Torrent(
                     name=ISSUE_1072_TITLE,
                     url="https://example.com/issue-1072",
-                    bangumi_id=bangumi.id,
+                    refer_id=bangumi.id,
                 )
             )
 
@@ -85,7 +85,7 @@ class TestGetLatestParsedEpisode:
                 Torrent(
                     name="[SubsPlease] CRC Only Anime (1080p) [E931DD98].mkv",
                     url="https://example.com/crc-only",
-                    bangumi_id=bangumi.id,
+                    refer_id=bangumi.id,
                 )
             )
 
@@ -135,7 +135,7 @@ class TestGetLatestParsedEpisode:
                 Torrent(
                     name=resource_name,
                     url="https://example.com/non-weekly",
-                    bangumi_id=bangumi.id,
+                    refer_id=bangumi.id,
                 )
             )
 
@@ -150,7 +150,7 @@ class TestGetLatestParsedEpisode:
                 Torrent(
                     name="[TestGroup] Signal Anime EP01 ~ EP02 [1080p].mkv",
                     url="https://example.com/configured-range",
-                    bangumi_id=bangumi.id,
+                    refer_id=bangumi.id,
                 )
             )
 
@@ -189,7 +189,7 @@ class TestGetLatestParsedEpisode:
                     Torrent(
                         name=resource_name,
                         url=f"https://example.com/mixed/{index}",
-                        bangumi_id=bangumi.id,
+                        refer_id=bangumi.id,
                     )
                 )
 
@@ -204,7 +204,7 @@ class TestGetLatestParsedEpisode:
                 Torrent(
                     name="[TestGroup] Signal Anime - 12v2 [1080p].mkv",
                     url="https://example.com/versioned",
-                    bangumi_id=bangumi.id,
+                    refer_id=bangumi.id,
                 )
             )
 
@@ -271,7 +271,7 @@ class TestCheckBangumiUsesRealSignal:
                 Torrent(
                     name="[TestGroup] Signal Anime Raw 2 - 25 [1080p].mkv",
                     url="https://example.com/25",
-                    bangumi_id=bangumi.id,
+                    refer_id=bangumi.id,
                 )
             )
 
@@ -309,7 +309,7 @@ class TestCheckBangumiUsesRealSignal:
                 Torrent(
                     name=ISSUE_1072_TITLE,
                     url="https://example.com/issue-1072-review",
-                    bangumi_id=bangumi.id,
+                    refer_id=bangumi.id,
                 )
             )
 
@@ -341,7 +341,7 @@ class TestCheckBangumiUsesRealSignal:
                 Torrent(
                     name="[SubsPlease] Episode Overflow Anime E13 [1080p].mkv",
                     url="https://example.com/episode-13",
-                    bangumi_id=bangumi.id,
+                    refer_id=bangumi.id,
                 )
             )
 

@@ -3,7 +3,7 @@ import hashlib
 import hmac
 import json
 
-import httpx
+import httpx2
 import pytest
 from webhook_on_event import WebhookOnEvent
 
@@ -20,14 +20,14 @@ ORGANIZED = TorrentOrganized(
 def deliver(options: dict, status: int = 200):
     """返回 (收到的请求, 发送函数)。"""
     plugin, _ = create_plugin(WebhookOnEvent, options)
-    seen: list[httpx.Request] = []
+    seen: list[httpx2.Request] = []
 
-    def handler(request: httpx.Request) -> httpx.Response:
+    def handler(request: httpx2.Request) -> httpx2.Response:
         seen.append(request)
-        return httpx.Response(status)
+        return httpx2.Response(status)
 
-    plugin.client_factory = lambda: httpx.AsyncClient(  # type: ignore[method-assign]
-        transport=httpx.MockTransport(handler)
+    plugin.client_factory = lambda: httpx2.AsyncClient(  # type: ignore[method-assign]
+        transport=httpx2.MockTransport(handler)
     )
     return seen, lambda: asyncio.run(plugin.on_event(ORGANIZED))
 

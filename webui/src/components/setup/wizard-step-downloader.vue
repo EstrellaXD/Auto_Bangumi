@@ -79,7 +79,9 @@ const canProceed = computed(() => Boolean(downloaderData.value.host));
 <template>
   <ab-container :title="t('setup.downloader.title')" class="wizard-step">
     <div class="step-content">
-      <p class="step-subtitle">{{ t('setup.downloader.subtitle') }}</p>
+      <p class="step-subtitle">
+        {{ t('setup.downloader.subtitle') }}
+      </p>
 
       <div class="form-fields">
         <ab-field :label="t('config.downloader_set.type')">
@@ -102,7 +104,7 @@ const canProceed = computed(() => Boolean(downloaderData.value.host));
             :aria-label="t('config.downloader_set.host')"
             placeholder="172.17.0.1:8080"
             class="setup-input"
-          />
+          >
         </ab-field>
 
         <ab-field :label="t('config.downloader_set.username')">
@@ -113,7 +115,7 @@ const canProceed = computed(() => Boolean(downloaderData.value.host));
             autocomplete="username"
             placeholder="admin"
             class="setup-input"
-          />
+          >
         </ab-field>
 
         <ab-field :label="t('config.downloader_set.password')">
@@ -123,7 +125,7 @@ const canProceed = computed(() => Boolean(downloaderData.value.host));
             :aria-label="t('config.downloader_set.password')"
             autocomplete="current-password"
             class="setup-input"
-          />
+          >
         </ab-field>
 
         <ab-field :label="t('config.downloader_set.path')">
@@ -133,7 +135,7 @@ const canProceed = computed(() => Boolean(downloaderData.value.host));
             :aria-label="t('config.downloader_set.path')"
             placeholder="/downloads/Bangumi"
             class="setup-input"
-          />
+          >
         </ab-field>
 
         <ab-field :label="t('config.downloader_set.ssl')">

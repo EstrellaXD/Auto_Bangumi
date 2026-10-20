@@ -7,16 +7,16 @@
 | `autobangumi_sdk-<SDK 版本>-py3-none-any.whl` | `ab_sdk` 包与 `ab-plugin` 命令行 |
 | `autobangumi-plugin-skill-<AB 版本>.zip` | 给 AI 编码助手使用的插件开发 skill |
 
-轮子文件名里是 SDK 版本（`ab_sdk.SDK_VERSION`，如 `0.5.0`），不是 AB 的版本号。请从目标 AB 版本的 Release 下载轮子，两者的 SDK 版本一致。插件清单里的 `sdk` 范围（如 `">=0.5,<1"`）必须包含这个版本。
+轮子文件名里是 SDK 版本（`ab_sdk.SDK_VERSION`，如 `0.6.0`），不是 AB 的版本号。请从目标 AB 版本的 Release 下载轮子，两者的 SDK 版本一致。插件清单里的 `sdk` 范围（如 `">=0.5,<1"`）必须包含这个版本。
 
 ## 安装轮子
 
-轮子要求 Python 3.13 或更高，依赖 `pydantic`、`httpx` 与 `packaging`，不需要安装 AutoBangumi。
+轮子要求 Python 3.14 或更高，依赖 `pydantic`、`httpx2` 与 `packaging`，不需要安装 AutoBangumi。
 
 只用命令行时，装成全局工具：
 
 ```bash
-uv tool install ./autobangumi_sdk-0.5.0-py3-none-any.whl
+uv tool install ./autobangumi_sdk-0.6.0-py3-none-any.whl
 ab-plugin --help
 ```
 
@@ -24,7 +24,7 @@ ab-plugin --help
 
 ```bash
 cd my-plugin
-uv add ../autobangumi_sdk-0.5.0-py3-none-any.whl
+uv add ../autobangumi_sdk-0.6.0-py3-none-any.whl
 uv run pytest
 ```
 

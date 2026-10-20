@@ -1,23 +1,22 @@
 <script lang="ts" setup>
 // Soft Ink 空状态：左对齐的说明文字 + 一个下一步动作 —
 // 教用户界面怎么用，而不是居中图标块 + “暂无数据”。
-withDefaults(
-  defineProps<{
-    title: string;
-    description?: string;
-  }>(),
-  {
-    description: '',
-  }
-);
+const { description = '' } = defineProps<{
+  title: string;
+  description?: string;
+}>();
 </script>
 
 <template>
   <div class="ab-empty">
-    <p class="ab-empty-title">{{ title }}</p>
-    <p v-if="description" class="ab-empty-description">{{ description }}</p>
+    <p class="ab-empty-title">
+      {{ title }}
+    </p>
+    <p v-if="description" class="ab-empty-description">
+      {{ description }}
+    </p>
     <div v-if="$slots.action" class="ab-empty-action">
-      <slot name="action"></slot>
+      <slot name="action" />
     </div>
   </div>
 </template>

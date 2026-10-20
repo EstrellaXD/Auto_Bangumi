@@ -3,15 +3,15 @@ import { NInput, NModal } from 'naive-ui';
 import type { LLMAuthChallenge } from '@/api/llm';
 
 const props = defineProps<{
-  show: boolean;
   providerId: string;
   displayName: string;
 }>();
 
 const emit = defineEmits<{
-  (e: 'update:show', value: boolean): void;
   (e: 'connected'): void;
 }>();
+
+const show = defineModel<boolean>('show', { required: true });
 
 const { t } = useMyI18n();
 const message = useMessage();
@@ -32,7 +32,7 @@ function close() {
   stopPolling();
   challenge.value = null;
   pastedCode.value = '';
-  emit('update:show', false);
+  show.value = false;
 }
 
 async function begin() {
@@ -88,13 +88,10 @@ async function submitCode() {
   }
 }
 
-watch(
-  () => props.show,
-  (show) => {
-    if (show) begin();
-    else stopPolling();
-  }
-);
+watch(show, (visible) => {
+  if (visible) begin();
+  else stopPolling();
+});
 
 onUnmounted(stopPolling);
 </script>
@@ -109,29 +106,35 @@ onUnmounted(stopPolling);
   >
     <div v-if="challenge" class="auth-body">
       <template v-if="challenge.method === 'device_code'">
-        <p class="auth-step">{{ t('config.llm_set.auth_device_hint') }}</p>
+        <p class="auth-step">
+          {{ t('config.llm_set.auth_device_hint') }}
+        </p>
         <a
           v-if="challenge.verification_uri"
           :href="challenge.verification_uri"
           target="_blank"
           rel="noopener"
           class="auth-link"
-          >{{ challenge.verification_uri }}</a
-        >
-        <div class="auth-code">{{ challenge.user_code }}</div>
-        <p class="auth-pending">{{ t('config.llm_set.auth_pending') }}</p>
+        >{{ challenge.verification_uri }}</a>
+        <div class="auth-code">
+          {{ challenge.user_code }}
+        </div>
+        <p class="auth-pending">
+          {{ t('config.llm_set.auth_pending') }}
+        </p>
       </template>
 
       <template v-else>
-        <p class="auth-step">{{ t('config.llm_set.auth_open_link') }}</p>
+        <p class="auth-step">
+          {{ t('config.llm_set.auth_open_link') }}
+        </p>
         <a
           v-if="challenge.authorize_url"
           :href="challenge.authorize_url"
           target="_blank"
           rel="noopener"
           class="auth-link"
-          >{{ challenge.authorize_url }}</a
-        >
+        >{{ challenge.authorize_url }}</a>
         <NInput
           v-model:value="pastedCode"
           type="textarea"
@@ -143,8 +146,9 @@ onUnmounted(stopPolling);
           :loading="loading"
           :disabled="!pastedCode.trim()"
           @click="submitCode"
-          >{{ t('config.llm_set.connect') }}</ab-button
         >
+          {{ t('config.llm_set.connect') }}
+        </ab-button>
       </template>
     </div>
     <div v-else class="auth-body auth-loading">

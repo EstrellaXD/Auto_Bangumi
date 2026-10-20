@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { CheckOne, Copy } from '@icon-park/vue-next';
+import { CircleCheck, Copy } from '@lucide/vue';
 
 const props = defineProps<{
   link: string;
@@ -23,8 +23,8 @@ const emit = defineEmits<{
         :label="$t('common.copy')"
         @click="emit('copy')"
       >
-        <CheckOne v-if="props.copied" theme="outline" size="14" />
-        <Copy v-else theme="outline" size="14" />
+        <CircleCheck v-if="props.copied" :size="14" />
+        <Copy v-else :size="14" />
       </ab-icon-button>
     </div>
   </div>

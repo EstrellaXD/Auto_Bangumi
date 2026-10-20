@@ -1,7 +1,7 @@
 """在线自动更新测试：check / apply / rollback、boot_overlay 覆盖层、以及三个
 端点的 path+verb+鉴权契约。
 
-网络与文件系统全部 mock：GitHub Release API 与下载走 httpx.MockTransport，
+网络与文件系统全部 mock：GitHub Release API 与下载走 httpx2.MockTransport，
 覆盖层落地走 tmp_path，进程退出被打桩以确保测试不会真的退出。
 """
 
@@ -15,7 +15,7 @@ import zipfile
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import httpx
+import httpx2
 import pytest
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
@@ -123,8 +123,8 @@ def _releases_payload(bundle_bytes: bytes, sha_text: str) -> list[dict]:
     ]
 
 
-def _make_client(handler) -> httpx.AsyncClient:
-    return httpx.AsyncClient(transport=httpx.MockTransport(handler))
+def _make_client(handler) -> httpx2.AsyncClient:
+    return httpx2.AsyncClient(transport=httpx2.MockTransport(handler))
 
 
 def _seed_schema_db(path: Path, version: int) -> None:
@@ -153,21 +153,21 @@ def _default_handler(bundle_bytes: bytes, sha_hex: str, sig_b64: str | None = No
     """路由 GitHub API 与下载 URL 到对应的响应。"""
     signature = sig_b64 if sig_b64 is not None else _sign_bytes(bundle_bytes)
 
-    def handler(request: httpx.Request) -> httpx.Response:
+    def handler(request: httpx2.Request) -> httpx2.Response:
         url = str(request.url)
         if "api.github.com" in url and "/releases" in url:
-            return httpx.Response(200, json=_releases_payload(bundle_bytes, sha_hex))
+            return httpx2.Response(200, json=_releases_payload(bundle_bytes, sha_hex))
         if url.endswith("bundle.zip"):
-            return httpx.Response(
+            return httpx2.Response(
                 200,
                 content=bundle_bytes,
                 headers={"content-length": str(len(bundle_bytes))},
             )
         if url.endswith("bundle.sha256"):
-            return httpx.Response(200, text=sha_hex + "\n")
+            return httpx2.Response(200, text=sha_hex + "\n")
         if url.endswith("bundle.sig"):
-            return httpx.Response(200, text=signature + "\n")
-        return httpx.Response(404)
+            return httpx2.Response(200, text=signature + "\n")
+        return httpx2.Response(404)
 
     return handler
 
@@ -253,7 +253,7 @@ class TestCheckUpdate:
     @pytest.mark.asyncio
     async def test_network_error_is_graceful(self, tmp_path):
         def handler(request):
-            raise httpx.ConnectError("boom")
+            raise httpx2.ConnectError("boom")
 
         up = Updater(
             root=tmp_path / "u",

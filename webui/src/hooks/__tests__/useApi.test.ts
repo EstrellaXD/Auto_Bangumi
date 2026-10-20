@@ -15,8 +15,8 @@ interface Options<T = unknown> {
 }
 
 type ApiExecuteResult<TData> =
-  | { ok: true; data: TData }
-  | { ok: false; error: unknown };
+  | { ok: true; data: TData } |
+  { ok: false; error: unknown };
 
 type AnyAsyncFunction = (...args: any[]) => Promise<any>;
 

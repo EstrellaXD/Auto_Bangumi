@@ -59,7 +59,7 @@ def mock_first_run():
         patch("module.api.setup.settings") as mock_settings,
     ):
         mock_sentinel.exists.return_value = False
-        mock_settings.dict.side_effect = lambda: Config().dict()
+        mock_settings.model_dump.side_effect = lambda: Config().model_dump()
         yield mock_settings
 
 
@@ -96,8 +96,8 @@ class TestSetupStatus:
             ),  # Non-dev version to test config check
         ):
             mock_sentinel.exists.return_value = False
-            mock_settings.dict.return_value = {"test": "changed"}
-            mock_config.return_value.dict.return_value = {"test": "default"}
+            mock_settings.model_dump.return_value = {"test": "changed"}
+            mock_config.return_value.model_dump.return_value = {"test": "default"}
             response = client.get("/api/v1/setup/status")
             assert response.status_code == 200
             data = response.json()
@@ -158,11 +158,11 @@ class TestSetupGuard:
 class TestTestDownloader:
     def test_private_ip_accepted(self, client, mock_first_run):
         """Issue #1001: Private IPs must not be rejected for downloader test."""
-        import httpx
+        import httpx2
 
-        with patch("module.api.setup.httpx.AsyncClient") as mock_client_cls:
+        with patch("module.api.setup.httpx2.AsyncClient") as mock_client_cls:
             mock_instance = AsyncMock()
-            mock_instance.get.side_effect = httpx.ConnectError("refused")
+            mock_instance.get.side_effect = httpx2.ConnectError("refused")
             mock_client_cls.return_value.__aenter__ = AsyncMock(
                 return_value=mock_instance
             )
@@ -186,11 +186,11 @@ class TestTestDownloader:
 
     def test_loopback_ip_accepted(self, client, mock_first_run):
         """Issue #1001: Loopback IPs must not be rejected for downloader test."""
-        import httpx
+        import httpx2
 
-        with patch("module.api.setup.httpx.AsyncClient") as mock_client_cls:
+        with patch("module.api.setup.httpx2.AsyncClient") as mock_client_cls:
             mock_instance = AsyncMock()
-            mock_instance.get.side_effect = httpx.ConnectError("refused")
+            mock_instance.get.side_effect = httpx2.ConnectError("refused")
             mock_client_cls.return_value.__aenter__ = AsyncMock(
                 return_value=mock_instance
             )
@@ -211,11 +211,11 @@ class TestTestDownloader:
             assert data["success"] is False
 
     def test_connection_timeout(self, client, mock_first_run):
-        import httpx
+        import httpx2
 
-        with patch("module.api.setup.httpx.AsyncClient") as mock_client_cls:
+        with patch("module.api.setup.httpx2.AsyncClient") as mock_client_cls:
             mock_instance = AsyncMock()
-            mock_instance.get.side_effect = httpx.TimeoutException("timeout")
+            mock_instance.get.side_effect = httpx2.TimeoutException("timeout")
             mock_client_cls.return_value.__aenter__ = AsyncMock(
                 return_value=mock_instance
             )
@@ -236,11 +236,11 @@ class TestTestDownloader:
             assert data["success"] is False
 
     def test_connection_refused(self, client, mock_first_run):
-        import httpx
+        import httpx2
 
-        with patch("module.api.setup.httpx.AsyncClient") as mock_client_cls:
+        with patch("module.api.setup.httpx2.AsyncClient") as mock_client_cls:
             mock_instance = AsyncMock()
-            mock_instance.get.side_effect = httpx.ConnectError("refused")
+            mock_instance.get.side_effect = httpx2.ConnectError("refused")
             mock_client_cls.return_value.__aenter__ = AsyncMock(
                 return_value=mock_instance
             )
@@ -327,7 +327,7 @@ class TestRequestValidation:
 
 class TestSetupComplete:
     """Issue: setup wizard must route config reload through AppContext, not
-    mutate settings.__dict__ directly (the shared httpx client, notifier, and
+    mutate settings.__dict__ directly (the shared httpx2 client, notifier, and
     scheduler must be rebuilt after first-run setup)."""
 
     @staticmethod
@@ -537,7 +537,7 @@ class TestTestDownloaderHardening:
         else:
             mock_instance.get.return_value = get_resp
         mock_instance.post.return_value = login_resp
-        cls_patch = patch("module.api.setup.httpx.AsyncClient")
+        cls_patch = patch("module.api.setup.httpx2.AsyncClient")
         mock_cls = cls_patch.start()
         mock_cls.return_value.__aenter__ = AsyncMock(return_value=mock_instance)
         mock_cls.return_value.__aexit__ = AsyncMock(return_value=False)

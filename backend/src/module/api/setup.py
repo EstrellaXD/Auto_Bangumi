@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Annotated
 from urllib.parse import urlparse
 
-import httpx
+import httpx2
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
@@ -46,7 +46,7 @@ def _require_setup_needed():
     if SENTINEL_PATH.exists():
         raise HTTPException(status_code=403, detail="Setup already completed.")
     # Allow setup in dev mode even if settings differ
-    if VERSION != "DEV_VERSION" and settings.dict() != Config().dict():
+    if VERSION != "DEV_VERSION" and settings.model_dump() != Config().model_dump():
         raise HTTPException(status_code=403, detail="Setup already completed.")
 
 
@@ -137,7 +137,7 @@ class SetupStatusResponse(BaseModel):
 
 
 class TestDownloaderRequest(BaseModel):
-    type: str = Field("qbittorrent")
+    type: str = Field(default="qbittorrent")
     host: str
     username: str
     password: str
@@ -163,13 +163,13 @@ class TestResultResponse(BaseModel):
 
 
 class SetupCompleteRequest(BaseModel):
-    username: str = Field(..., min_length=4, max_length=20)
-    password: str = Field(..., min_length=8)
-    downloader_type: str = Field("qbittorrent")
+    username: str = Field(default=..., min_length=4, max_length=20)
+    password: str = Field(default=..., min_length=8)
+    downloader_type: str = Field(default="qbittorrent")
     downloader_host: str
     downloader_username: str
     downloader_password: str
-    downloader_path: str = Field("/downloads/Bangumi")
+    downloader_path: str = Field(default="/downloads/Bangumi")
     downloader_ssl: bool = False
     rss_url: str = ""
     rss_name: str = ""
@@ -189,7 +189,10 @@ async def get_setup_status():
     if VERSION == "DEV_VERSION":
         need_setup = not SENTINEL_PATH.exists()
     else:
-        need_setup = not SENTINEL_PATH.exists() and settings.dict() == Config().dict()
+        need_setup = (
+            not SENTINEL_PATH.exists()
+            and settings.model_dump() == Config().model_dump()
+        )
     return SetupStatusResponse(need_setup=need_setup, version=VERSION)
 
 
@@ -213,7 +216,7 @@ async def test_downloader(req: TestDownloaderRequest):
     _validate_scheme(host)
 
     try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
+        async with httpx2.AsyncClient(timeout=5.0) as client:
             if req.type == "aria2":
                 # aria2 走 JSON-RPC：getVersion 一次验证可达性与 RPC secret
                 params = [f"token:{req.password}"] if req.password else []
@@ -288,13 +291,13 @@ async def test_downloader(req: TestDownloaderRequest):
                     message_en="Authentication failed: incorrect username or password.",
                     message_zh="认证失败：用户名或密码错误。",
                 )
-    except httpx.TimeoutException:
+    except httpx2.TimeoutException:
         return TestResultResponse(
             success=False,
             message_en="Connection timed out.",
             message_zh="连接超时。",
         )
-    except httpx.ConnectError:
+    except httpx2.ConnectError:
         return TestResultResponse(
             success=False,
             message_en="Cannot connect to the host.",
@@ -410,7 +413,7 @@ async def complete_setup(
         response.delete_cookie(key="token", httponly=True, samesite="strict")
 
         # 2. Update configuration
-        config_dict = settings.dict()
+        config_dict = settings.model_dump()
         # 向导填写的下载器写入默认实例（slots.downloader 指向的实例）
         plugins = config_dict["plugins"]
         default = next(
@@ -438,7 +441,7 @@ async def complete_setup(
 
         # settings.save() does synchronous file I/O; keep it off the event loop.
         await asyncio.to_thread(settings.save, config_dict)
-        # Route through the AppContext reload path so the shared httpx client,
+        # Route through the AppContext reload path so the shared httpx2 client,
         # notifier, and scheduler are rebuilt against the new config too — not
         # just the in-memory settings dict.
         await ctx.reload_settings()

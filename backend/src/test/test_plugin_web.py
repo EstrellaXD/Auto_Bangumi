@@ -136,7 +136,7 @@ class TestApi:
     @pytest.mark.parametrize(
         "url",
         [
-            # httpx 会把字面的 ../ 规范化掉，用百分号编码让它原样到达路由
+            # httpx2 会把字面的 ../ 规范化掉，用百分号编码让它原样到达路由
             "/api/v1/plugins/demo/web/%2e%2e%2fplugin.toml",
             # 绝对路径会让 root / path 直接变成该路径
             "/api/v1/plugins/demo/web//etc/hosts",
@@ -155,15 +155,57 @@ class TestApi:
         assert client.get("/api/v1/plugins/ui").status_code == 401
 
 
+HTML = {"accept": "text/html"}
+CSP = "script-src 'self'"
+
+
 class TestSpaCsp:
-    @pytest.mark.parametrize("path", ["", "bangumi", "sw.js"])
-    def test_spa_responses_carry_csp(self, tmp_path, path):
-        for name in ("assets", "images"):
-            (tmp_path / name).mkdir()
-        (tmp_path / "index.html").write_text("<html></html>")
-        (tmp_path / "sw.js").write_text("")
-        app = FastAPI()
-        main.mount_webui(app, tmp_path)
-        resp = TestClient(app).get(f"/{path}")
+    @pytest.fixture
+    def spa(self, tmp_path, monkeypatch):
+        dist = tmp_path / "dist"
+        (dist / "assets").mkdir(parents=True)
+        (dist / "index.html").write_text("<html>spa</html>")
+        (dist / "sw.js").write_text("// sw")
+        (dist / "assets" / "app.js").write_text("export {};")
+        posters = tmp_path / "posters"
+        posters.mkdir()
+        (posters / "a.jpg").write_bytes(b"jpg")
+        monkeypatch.setattr(main, "_POSTERS_BASE", posters)
+        # 与 main 模块的装配一致：/api、/mcp 来自 create_app，/posters 另行注册
+        app = main.create_app()
+        app.get("/posters/{path:path}")(main.posters)
+        main.mount_webui(app, dist)
+        return TestClient(app)
+
+    @pytest.mark.parametrize(
+        ("path", "body"),
+        [
+            ("", "<html>spa</html>"),
+            ("bangumi/1", "<html>spa</html>"),
+            ("sw.js", "// sw"),
+            ("assets/app.js", "export {};"),
+        ],
+    )
+    def test_frontend_files_carry_csp(self, spa, path, body):
+        resp = spa.get(f"/{path}", headers=HTML)
         assert resp.status_code == 200
-        assert resp.headers["content-security-policy"] == "script-src 'self'"
+        assert resp.text == body
+        assert resp.headers["content-security-policy"] == CSP
+
+    def test_unknown_api_path_is_404(self, spa):
+        assert spa.get("/api/v1/nope").status_code == 404
+
+    def test_docs_has_no_csp(self, spa):
+        resp = spa.get("/docs", headers=HTML)
+        assert resp.status_code == 200
+        assert "content-security-policy" not in resp.headers
+
+    def test_mcp_route_wins_over_fallback(self, spa):
+        resp = spa.get("/mcp", headers=HTML)
+        assert resp.status_code != 200
+        assert "content-security-policy" not in resp.headers
+
+    def test_posters_route_wins_over_fallback(self, spa):
+        resp = spa.get("/posters/a.jpg", headers=HTML)
+        assert resp.content == b"jpg"
+        assert "content-security-policy" not in resp.headers

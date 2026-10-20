@@ -1,30 +1,26 @@
 <script lang="ts" setup>
-withDefaults(
-  defineProps<{
-    title: string;
-    /** 去掉 body 内边距（内容自带布局时，如列表/表格贴边） */
-    flush?: boolean;
-  }>(),
-  {
-    title: 'title',
-    flush: false,
-  }
-);
+const { title = 'title', flush = false } = defineProps<{
+  title: string;
+  /** 去掉 body 内边距（内容自带布局时，如列表/表格贴边） */
+  flush?: boolean;
+}>();
 </script>
 
 <template>
   <div class="container-card">
     <div class="container-header">
-      <div class="container-title">{{ title }}</div>
-      <slot name="title-right"></slot>
+      <div class="container-title">
+        {{ title }}
+      </div>
+      <slot name="title-right" />
     </div>
 
     <div class="container-body" :class="{ 'container-body--flush': flush }">
-      <slot></slot>
+      <slot />
     </div>
 
     <div v-if="$slots.footer" class="container-footer">
-      <slot name="footer"></slot>
+      <slot name="footer" />
     </div>
   </div>
 </template>

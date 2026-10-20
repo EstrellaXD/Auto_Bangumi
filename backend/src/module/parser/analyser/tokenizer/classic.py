@@ -817,7 +817,9 @@ def _split_mixed_title(text: str) -> list[str]:
             language = (
                 "en"
                 if _LATIN.match(char)
-                else "cjk" if (_HAN.match(char) or _KANA.match(char)) else None
+                else "cjk"
+                if (_HAN.match(char) or _KANA.match(char))
+                else None
             )
             if language is not None and (not runs or runs[-1][0] != language):
                 runs.append((language, index))

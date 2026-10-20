@@ -18,9 +18,10 @@ import dataclasses
 import json
 import logging
 from collections import deque
+from collections.abc import AsyncIterator
 
 from fastapi import APIRouter, Depends, Request
-from sse_starlette.sse import EventSourceResponse
+from fastapi.sse import EventSourceResponse, ServerSentEvent
 
 from ab_sdk import Event
 from module.api.deps import get_context
@@ -37,7 +38,10 @@ from module.update.updater import get_update_progress
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/events", tags=["events"])
+router = APIRouter(
+    prefix="/events", tags=["events"], dependencies=[Depends(get_current_user)]
+)
+
 
 # tick 节拍（秒）及各事件相对节拍的推送倍数，与原轮询间隔一一对应：
 # status 3s、downloader 5s、log 10s。
@@ -221,8 +225,12 @@ async def _event_generator(request: Request, ctx: AppContext):
         inbox.close()
 
 
-@router.get("/stream", dependencies=[Depends(get_current_user)])
-async def event_stream(request: Request, ctx: AppContext = Depends(get_context)):
+@router.get("/stream", response_class=EventSourceResponse)
+async def event_stream(
+    request: Request, ctx: AppContext = Depends(get_context)
+) -> AsyncIterator[ServerSentEvent]:
     """单一 SSE 连接，按各自节拍推送 status/downloader/log 事件，
     通知中心有变化时推送 notification 事件。"""
-    return EventSourceResponse(_event_generator(request, ctx))
+    # 帧数据已是编码好的字符串（log 为原始文本），用 raw_data 避免再做一次 JSON 编码
+    async for frame in _event_generator(request, ctx):
+        yield ServerSentEvent(event=frame["event"], raw_data=frame["data"])

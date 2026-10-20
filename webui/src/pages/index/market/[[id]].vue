@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { Left } from '@icon-park/vue-next';
+import { ChevronLeft } from '@lucide/vue';
 import MarketConfirm from '@/components/market/market-confirm.vue';
 import type { ApiError } from '#/api';
 import type { CatalogEntry, PluginInfo } from '#/plugins';
@@ -236,7 +236,7 @@ function permissionLabel(id: string) {
     <!-- 手机：详情是单独一屏，顶部返回 -->
     <header v-if="showDetail" class="market__bar">
       <ab-icon-button :label="$t('market.back')" @click="back">
-        <Left :size="20" />
+        <ChevronLeft :size="20" />
       </ab-icon-button>
       <h1 class="market__bar-title">
         {{ selected ? selected.name || selected.id : $t('market.title') }}
@@ -246,17 +246,17 @@ function permissionLabel(id: string) {
     <template v-else>
       <!-- 桌面：搜索 | 状态 | 目录状态；手机：标题 | 目录状态，下一行搜索 | 状态 -->
       <header class="market__top">
-        <h1 v-if="isMobile" class="market__title">{{ $t('market.title') }}</h1>
+        <h1 v-if="isMobile" class="market__title">
+          {{ $t('market.title') }}
+        </h1>
         <div class="market__meta">
           <span
             v-if="catalog && !stale"
             class="market__verified"
             :title="$t('market.catalog_verified')"
           >
-            <span class="mark mark--installed" aria-hidden="true"></span>
-            <span class="market__verified-text"
-              >{{ $t('market.catalog_verified') }} ·</span
-            >
+            <span class="mark mark--installed" aria-hidden="true" />
+            <span class="market__verified-text">{{ $t('market.catalog_verified') }} ·</span>
             <span class="market__time">{{
               $t('market.updated', { time: updatedText })
             }}</span>
@@ -313,7 +313,9 @@ function permissionLabel(id: string) {
       :description="$t('market.load_failed_hint')"
     >
       <template #action>
-        <p v-if="error" class="market__error">{{ error }}</p>
+        <p v-if="error" class="market__error">
+          {{ error }}
+        </p>
         <ab-button size="sm" :loading="loading" @click="loadCatalog">
           {{ $t('market.retry') }}
         </ab-button>
@@ -344,7 +346,7 @@ function permissionLabel(id: string) {
               class="mark"
               :class="`mark--${entryState(entry)}`"
               aria-hidden="true"
-            ></span>
+            />
             {{ stateLabel(entry) }}
           </span>
           <span class="row__author">{{ entry.authors.join(', ') }}</span>
@@ -413,9 +415,9 @@ function permissionLabel(id: string) {
               {{
                 selected.sdk
                   ? $t('market.version_sdk', {
-                      version: selected.version,
-                      sdk: selected.sdk,
-                    })
+                    version: selected.version,
+                    sdk: selected.sdk,
+                  })
                   : selected.version
               }}
             </dd>
@@ -433,9 +435,8 @@ function permissionLabel(id: string) {
                   :href="sourceUrl(selected)"
                   target="_blank"
                   rel="noopener noreferrer"
-                  >{{ selected.repo }}@{{ selected.commit.slice(0, 7) }}
-                  <span aria-hidden="true">↗</span></a
-                >
+                >{{ selected.repo }}@{{ selected.commit.slice(0, 7) }}
+                  <span aria-hidden="true">↗</span></a>
               </dd>
             </template>
 
@@ -473,7 +474,7 @@ function permissionLabel(id: string) {
 
           <!-- renderMarkdown 先转义全部 HTML，只输出白名单标签与 http(s) 链接 -->
           <!-- eslint-disable-next-line vue/no-v-html -->
-          <article v-if="readme" class="readme" v-html="readme"></article>
+          <article v-if="readme" class="readme" v-html="readme" />
 
           <div v-if="isMobile" class="detail__sticky">
             <ab-button

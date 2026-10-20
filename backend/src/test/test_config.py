@@ -137,9 +137,9 @@ class TestPluginInstances:
 
 class TestConfigSerialization:
     def test_dict_uses_alias(self):
-        """Config.dict() uses field aliases (by_alias=True)."""
+        """Config.model_dump() uses field aliases (by_alias=True)."""
         config = Config()
-        d = config.dict()
+        d = config.model_dump()
         # 下载器实例的 options 用别名 host 而不是 host_
         options = d["plugins"]["instances"][0]["options"]
         assert "host" in options
@@ -148,7 +148,7 @@ class TestConfigSerialization:
     def test_roundtrip_json(self, tmp_path):
         """Config can be serialized to JSON and loaded back."""
         config = Config()
-        config_dict = config.dict()
+        config_dict = config.model_dump()
         json_path = tmp_path / "config.json"
         with open(json_path, "w") as f:
             json.dump(config_dict, f)
@@ -168,7 +168,6 @@ class TestConfigSerialization:
 
 
 class TestMigrateOldConfig:
-
     def test_no_migration_needed(self):
         """Already-current config passes through unchanged."""
         current_config = {
@@ -188,7 +187,7 @@ class TestMigrateOldConfig:
 class TestSettingsLoad:
     def test_load_from_json_file(self, tmp_path):
         """Settings loads config from a JSON file when it exists."""
-        config_data = Config().dict()
+        config_data = Config().model_dump()
         config_data["program"]["rss_time"] = 1200  # Custom value
         config_file = tmp_path / "config.json"
         with open(config_file, "w") as f:
@@ -204,7 +203,7 @@ class TestSettingsLoad:
 
     def test_load_legacy_config_defaults_parser_engine_to_classic(self, tmp_path):
         """A config written before engine existed keeps Classic behaviour."""
-        config_data = Config().dict()
+        config_data = Config().model_dump()
         config_data["rss_parser"].pop("engine", None)
         config_file = tmp_path / "config.json"
         with open(config_file, "w") as f:
@@ -238,7 +237,7 @@ class TestSettingsLoad:
 
     def test_removed_legacy_sections_are_dropped_on_save(self, tmp_path):
         """3.3 遗留的 experimental_openai / 通知旧字段不再进入运行时，也不会被写回。"""
-        config_data = Config().dict()
+        config_data = Config().model_dump()
         config_data["experimental_openai"] = {"enable": True, "api_key": "sk-old"}
         config_data["notification"].update({"type": "telegram", "token": "t"})
         config_file = tmp_path / "config.json"

@@ -1,23 +1,23 @@
 export type QbTorrentState =
-  | 'error'
-  | 'missingFiles'
-  | 'uploading'
-  | 'pausedUP'
-  | 'queuedUP'
-  | 'stalledUP'
-  | 'checkingUP'
-  | 'forcedUP'
-  | 'allocating'
-  | 'downloading'
-  | 'metaDL'
-  | 'pausedDL'
-  | 'queuedDL'
-  | 'stalledDL'
-  | 'checkingDL'
-  | 'forcedDL'
-  | 'checkingResumeData'
-  | 'moving'
-  | 'unknown';
+  | 'error' |
+  'missingFiles' |
+  'uploading' |
+  'pausedUP' |
+  'queuedUP' |
+  'stalledUP' |
+  'checkingUP' |
+  'forcedUP' |
+  'allocating' |
+  'downloading' |
+  'metaDL' |
+  'pausedDL' |
+  'queuedDL' |
+  'stalledDL' |
+  'checkingDL' |
+  'forcedDL' |
+  'checkingResumeData' |
+  'moving' |
+  'unknown';
 
 export interface QbTorrentInfo {
   hash: string;
