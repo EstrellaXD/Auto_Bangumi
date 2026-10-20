@@ -50,7 +50,11 @@ class TorrentDatabase:
     async def check_new(
         self, torrents_list: list[Torrent], rss_id: int | None = None
     ) -> list[Torrent]:
-        """返回库中没有记录的种子；给出 ``rss_id`` 时只看该订阅的记录。"""
+        """返回库中没有记录的种子。
+
+        给出 ``rss_id`` 时只看该订阅已匹配（``bangumi_id`` 非空）的记录：
+        未匹配的孤儿每轮仍要重新分析，新番或上次分析失败的种子才能生成规则。
+        """
         if not torrents_list:
             return []
         urls = [t.url for t in torrents_list]
@@ -58,7 +62,10 @@ class TorrentDatabase:
         # 无法识别 .in_()/.is_() 等查询方法（无官方 mypy 插件支持）。
         statement = select(Torrent.url).where(Torrent.url.in_(urls))  # type: ignore[attr-defined]
         if rss_id is not None:
-            statement = statement.where(Torrent.rss_id == rss_id)
+            statement = statement.where(
+                Torrent.rss_id == rss_id,
+                Torrent.bangumi_id.is_not(None),  # type: ignore[union-attr]
+            )
         result = await self.session.execute(statement)
         existing_urls = set(result.scalars().all())
         return [t for t in torrents_list if t.url not in existing_urls]

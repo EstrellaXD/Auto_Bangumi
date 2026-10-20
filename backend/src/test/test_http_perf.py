@@ -31,19 +31,27 @@ def app(tmp_path):
 
 
 class TestSpaCacheControl:
+    @pytest.mark.parametrize("root_path", ["", "/ab"])
     @pytest.mark.parametrize(
         ("path", "cache_control"),
         [
             ("assets/app-abc.js", IMMUTABLE),
             ("", "no-cache"),
             ("index.html", "no-cache"),
+            # 前端路由深链接回落到 index.html
+            ("bangumi", "no-cache"),
+            ("bangumi/detail/3", "no-cache"),
+            # assets/ 下不存在的路径同样回落到 index.html，不能永久缓存
+            ("assets/missing", "no-cache"),
             ("fonts/a.woff2", None),
             ("images/a.svg", None),
             ("theme-init.js", None),
         ],
     )
-    def test_cache_control_by_path(self, app, path, cache_control):
-        resp = TestClient(app).get(f"/{path}", headers=HTML)
+    def test_cache_control_by_path(self, app, root_path, path, cache_control):
+        resp = TestClient(app, root_path=root_path).get(
+            f"{root_path}/{path}", headers=HTML
+        )
         assert resp.status_code == 200
         assert resp.headers.get("cache-control") == cache_control
 

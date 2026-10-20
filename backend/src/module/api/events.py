@@ -31,6 +31,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.sse import EventSourceResponse, ServerSentEvent
 
 from ab_sdk import Event
+from module.api import log as log_api
 from module.api.deps import get_context
 from module.api.log import _read_log_tail
 from module.conf import LOG_PATH, VERSION
@@ -128,21 +129,25 @@ _torrents = _TorrentCache()
 class _LogCursor:
     """一个 SSE 连接的日志读取位置。
 
-    首帧及日志被轮转（inode 变化）、截断（大小小于已读偏移）或 mtime 回退时
-    推整段尾部 ``log``；否则只推偏移之后新增的完整行 ``log_append``。增量
-    截到最后一个换行：不切断多字节字符，且每帧都是完整行，前端可直接追加。
+    首帧及日志被轮转（inode 变化）、截断（大小小于已读偏移）、mtime 回退或
+    经 /log/clear 清空（清空计数变化）时推整段尾部 ``log``；否则只推偏移
+    之后新增的完整行 ``log_append``。增量截到最后一个换行：不切断多字节
+    字符，且每帧都是完整行，前端可直接追加。
     """
 
     def __init__(self) -> None:
         self._ino: int | None = None
         self._mtime_ns = 0
         self._offset = 0
+        self._generation = -1
 
     def _read(self) -> dict | None:
         try:
             st = os.stat(LOG_PATH)
+            generation = log_api._clear_generation
             if (
-                st.st_ino == self._ino
+                generation == self._generation
+                and st.st_ino == self._ino
                 and st.st_size >= self._offset
                 and st.st_mtime_ns >= self._mtime_ns
             ):
@@ -163,10 +168,11 @@ class _LogCursor:
                     # EventSource 不派发 data 为空的事件：保持「待全量」状态，
                     # 等有内容时再推整段，别的标签页清空后才不会残留旧日志
                     return None
-                self._ino, self._mtime_ns, self._offset = (
+                self._ino, self._mtime_ns, self._offset, self._generation = (
                     st.st_ino,
                     st.st_mtime_ns,
                     offset,
+                    generation,
                 )
                 event = "log"
         except FileNotFoundError:

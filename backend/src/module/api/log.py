@@ -75,11 +75,18 @@ async def get_log():
         return Response("Log file not found", status_code=404)
 
 
+# 日志清空次数。原地截断后若在 SSE 下次读取前又长过旧偏移，大小比较发现不了；
+# SSE 的读取游标比对这个计数，变化时重推整段
+_clear_generation = 0
+
+
 def _clear_log_files() -> None:
     """清空日志并删除轮转备份，否则拼接读取会把旧内容带回来。"""
+    global _clear_generation
     LOG_PATH.write_text("")
     for backup in LOG_PATH.parent.glob(f"{LOG_PATH.name}.*"):
         backup.unlink(missing_ok=True)
+    _clear_generation += 1
 
 
 @router.post("/clear", response_model=APIResponse)

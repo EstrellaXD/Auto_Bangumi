@@ -448,7 +448,12 @@ class RSSEngine:
             tuple[RSSItem, list[Torrent], Optional[str], list[Optional[Bangumi]]]
         ] = []
         for rss_item, (torrents, error) in item_results:
-            new_torrents = await self.db.torrent.check_new(torrents)
+            try:
+                new_torrents = await self.db.torrent.check_new(torrents)
+            except Exception as e:
+                # 查库出错只算该订阅失败，其余订阅照常处理
+                logger.warning(f"Failed to dedup RSS {rss_item.name}: {e}")
+                new_torrents, error = [], str(e)
             matches = [self.match_torrent(t, bangumi_list) for t in new_torrents]
             matches = await self._apply_plugin_filters(new_torrents, matches)
             item_matches.append((rss_item, new_torrents, error, matches))

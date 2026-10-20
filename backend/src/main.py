@@ -160,13 +160,16 @@ def posters(path: str):
 # 都被拒绝。只加在前端静态文件上，/docs 的 Swagger 页面依赖内联脚本与 CDN。
 def _spa_headers(request: Request, response: Response) -> None:
     response.headers["Content-Security-Policy"] = "script-src 'self'"
-    # /assets/ 下的文件名带内容哈希，可永久缓存；入口 HTML 必须每次校验，
-    # 否则会引用已不存在的旧哈希文件。fonts/、images/ 等不带哈希，不设置。
+    # 入口 HTML（含回落到 index.html 的前端路由深链接，即末段无扩展名的路径）
+    # 必须每次校验，否则会引用已不存在的旧哈希文件；assets/ 下的文件名带内容
+    # 哈希，可永久缓存。fonts/、images/ 等不带哈希，不设置。只看路径段，
+    # 带 root_path 前缀时同样适用。
     path = request.url.path
-    if path.startswith("/assets/"):
-        response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
-    elif path in ("/", "/index.html"):
+    last = path.rsplit("/", 1)[-1]
+    if "." not in last or last.endswith(".html"):
         response.headers["Cache-Control"] = "no-cache"
+    elif "/assets/" in path:
+        response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
 
 
 def mount_webui(app: FastAPI, dist: Path) -> None:

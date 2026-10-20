@@ -361,3 +361,42 @@ async def test_tmdb_parser_cache_hit_refreshes_lru_order(mocker):
         "A:zh:True:False",
         "C:zh:True:False",
     ]
+
+
+async def test_tmdb_parser_request_failure_is_not_cached(mocker):
+    """请求失败（get_json 返回 None）不当作「无匹配」缓存，下次照常请求。"""
+    requests: list[str] = []
+
+    async def fake_get_json(url: str) -> dict | None:
+        requests.append(url)
+        return None
+
+    mocker.patch.object(
+        tmdb_parser_module.RequestContent, "get_json", side_effect=fake_get_json
+    )
+    tmdb_parser_module._tmdb_cache.clear()
+
+    assert await tmdb_parser("海盗战记", "zh", test=True) is None
+    assert tmdb_parser_module._tmdb_cache == {}
+    first = len(requests)
+    assert await tmdb_parser("海盗战记", "zh", test=True) is None
+    assert len(requests) == 2 * first
+
+
+async def test_tmdb_parser_failed_animation_check_does_not_cache_movie(mocker):
+    """判断动画的请求失败时不回退成电影，也不缓存。"""
+
+    async def fake_get_json(url: str) -> dict | None:
+        if "/search/tv" in url:
+            return {"results": [{"id": 82684}]}
+        if "/search/movie" in url:
+            return _MOVIE_SEARCH_RESULT
+        return None
+
+    mocker.patch.object(
+        tmdb_parser_module.RequestContent, "get_json", side_effect=fake_get_json
+    )
+    tmdb_parser_module._tmdb_cache.clear()
+
+    assert await tmdb_parser("海盗战记", "zh", test=True) is None
+    assert tmdb_parser_module._tmdb_cache == {}

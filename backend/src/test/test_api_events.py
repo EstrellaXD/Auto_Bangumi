@@ -18,6 +18,7 @@ from module.api.events import (
     _status_payload,
     _TorrentCache,
 )
+from module.api.log import _clear_log_files
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -294,6 +295,21 @@ class TestLogCursor:
             f.write("fresh\n")
 
         assert await cursor.frame() == {"event": "log", "data": "fresh\n"}
+
+    async def test_clear_then_regrow_past_offset_sends_full_frame(self, log_file):
+        """清空后、下一次读取前日志已长过旧偏移：仍推整段，而不是从旧偏移增量。"""
+        log_file.write_text("old line\n")
+        cursor = _LogCursor()
+        await cursor.frame()
+
+        _clear_log_files()
+        with log_file.open("a") as f:
+            f.write("fresh line after clear\n")
+
+        assert await cursor.frame() == {
+            "event": "log",
+            "data": "fresh line after clear\n",
+        }
 
     @pytest.mark.parametrize(
         ("change", "expected"),

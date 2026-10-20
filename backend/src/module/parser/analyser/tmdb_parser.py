@@ -4,6 +4,7 @@ import re
 import time
 from collections import OrderedDict
 from dataclasses import dataclass
+from typing import Any
 from urllib.parse import urlencode
 
 from module.conf import TMDB_API, settings
@@ -68,6 +69,18 @@ class TMDBInfo:
 LANGUAGE = {"zh": "zh-CN", "jp": "ja-JP", "en": "en-US"}
 
 
+class _TMDBRequestFailed(Exception):
+    """TMDB 请求失败（网络错误、5xx、重试耗尽的 429 等），区别于「无匹配」。"""
+
+
+async def _get_json(req: RequestContent, url: str) -> Any:
+    """get_json 返回 None 表示请求失败：抛出，让本次查询整体作废且不缓存。"""
+    contents = await req.get_json(url)
+    if contents is None:
+        raise _TMDBRequestFailed(url)
+    return contents
+
+
 def search_url(e, key="zh"):
     query = urlencode(
         {
@@ -104,7 +117,7 @@ def season_url(tv_id, season_number, key):
 
 async def is_animation(tv_id, language, req: RequestContent) -> bool:
     url_info = info_url(tv_id, language)
-    type_id = await req.get_json(url_info)
+    type_id = await _get_json(req, url_info)
     if type_id:
         for type in type_id.get("genres", []):
             if type.get("id") == 16:
@@ -204,12 +217,12 @@ async def _search_movie(
     电影没有季度概念，因此不复用剧集的季度/集数聚合逻辑，仅返回标题、原名、
     年份与海报等基本信息。"""
     url = search_movie_url(title, language)
-    contents = await req.get_json(url)
-    results = (contents or {}).get("results") or []
+    contents = await _get_json(req, url)
+    results = contents.get("results") or []
     if not results:
         url = search_movie_url(title.replace(" ", ""), language)
-        contents = await req.get_json(url)
-        results = (contents or {}).get("results") or []
+        contents = await _get_json(req, url)
+        results = contents.get("results") or []
     if not results:
         return None
     movie = results[0]
@@ -245,7 +258,12 @@ async def tmdb_parser(
             return hit[1]
         del _tmdb_cache[cache_key]
 
-    result = await _tmdb_lookup(title, language, test, is_movie)
+    try:
+        result = await _tmdb_lookup(title, language, test, is_movie)
+    except _TMDBRequestFailed as e:
+        # 临时故障不写缓存，下次照常查询
+        logger.warning("TMDB request failed for %s: %s", title, e)
+        return None
     # 剧集结果的 season 非空；None 与电影回退（season=[]）都按否定结果限时缓存
     expires = (
         time.monotonic() + _TMDB_NEGATIVE_TTL
@@ -265,16 +283,16 @@ async def _tmdb_lookup(title, language, test: bool, is_movie: bool) -> TMDBInfo 
             # 已知是电影/剧场版，直接查询 search/movie，跳过剧集搜索
             return await _search_movie(title, language, req)
         url = search_url(title, language)
-        contents = await req.get_json(url)
+        contents = await _get_json(req, url)
         if not contents:
             return await _search_movie(title, language, req)
-        contents = (contents or {}).get("results") or []
+        contents = contents.get("results") or []
         if not contents:
             url = search_url(title.replace(" ", ""), language)
-            contents_resp = await req.get_json(url)
+            contents_resp = await _get_json(req, url)
             if not contents_resp:
                 return await _search_movie(title, language, req)
-            contents = (contents_resp or {}).get("results") or []
+            contents = contents_resp.get("results") or []
             if not contents:
                 # search/tv 无结果：回退到 search/movie (剧场版等)
                 return await _search_movie(title, language, req)
@@ -290,7 +308,7 @@ async def _tmdb_lookup(title, language, test: bool, is_movie: bool) -> TMDBInfo 
                 # search/tv 有结果但都不是动画：回退到 search/movie (剧场版等)
                 return await _search_movie(title, language, req)
             url_info = info_url(matched_id, language)
-            info_content = await req.get_json(url_info)
+            info_content = await _get_json(req, url_info)
             season = [
                 {
                     "season": s.get("name"),

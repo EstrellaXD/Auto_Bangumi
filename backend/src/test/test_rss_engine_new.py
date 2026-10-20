@@ -5,11 +5,13 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 import pytest_asyncio
+from sqlalchemy.exc import OperationalError
 
 from module.conf import settings
 from module.database import Database
 from module.database.bangumi import BangumiDatabase
 from module.database.movie import MovieDatabase
+from module.database.torrent import TorrentDatabase
 from module.downloader import AddResult
 from module.models import Torrent
 from module.network import RequestContent
@@ -58,12 +60,15 @@ async def _tick_with_feeds(
 
 
 class TestAggregateAnalysis:
-    async def test_item_known_for_same_feed_skips_matching(self, rss_engine):
-        """本订阅已记录的种子不再匹配，也不会生成新规则。"""
+    async def test_item_matched_for_same_feed_skips_matching(self, rss_engine):
+        """本订阅已匹配入库的种子不再匹配，也不会生成新规则。"""
         await rss_engine.db.rss.add(make_rss_item(url=FEED_A))
         await rss_engine.db.torrent.add(
             make_torrent(
-                name="[Sub] Dungeon Meshi - 01 [1080p].mkv", url=KNOWN_URL, rss_id=1
+                name="[Sub] Dungeon Meshi - 01 [1080p].mkv",
+                url=KNOWN_URL,
+                rss_id=1,
+                bangumi_id=1,
             )
         )
         known = Torrent(name="[Sub] Dungeon Meshi - 01 [1080p].mkv", url=KNOWN_URL)
@@ -81,6 +86,21 @@ class TestAggregateAnalysis:
         bangumi_match.assert_not_awaited()
         movie_match.assert_not_awaited()
         assert await rss_engine.db.bangumi.search_all() == []
+
+    async def test_orphan_for_same_feed_is_analysed_again(self, rss_engine):
+        """本订阅记录的未匹配种子（孤儿）每轮仍参与分析，新番能生成规则。"""
+        await rss_engine.db.rss.add(make_rss_item(url=FEED_A))
+        name = "[Sub] Dungeon Meshi - 01 [1080p].mkv"
+        await rss_engine.db.torrent.add(
+            make_torrent(name=name, url=KNOWN_URL, rss_id=1)
+        )
+
+        await _tick_with_feeds(
+            rss_engine, {FEED_A: [Torrent(name=name, url=KNOWN_URL)]}
+        )
+
+        rules = await rss_engine.db.bangumi.search_all()
+        assert [b.title_raw for b in rules] == ["Dungeon Meshi"]
 
     async def test_known_torrent_in_second_feed_appends_rss_link(self, rss_engine):
         """其他订阅已知的种子出现在新聚合订阅里：仍把新订阅追加到 rss_link（#1053）。"""
@@ -913,6 +933,40 @@ class TestRefreshRssPerHostThrottle:
         for rss_id in (1, 2):
             item = await rss_engine.db.rss.search_id(rss_id)
             assert item.connection_status == "healthy"
+
+    async def test_dedup_error_marks_only_that_feed_failed(self, rss_engine):
+        """某订阅去重查库出错只把该订阅标为失败，其余订阅照常下载。"""
+        await rss_engine.db.rss.add(make_rss_item(url=FEED_A, aggregate=False))
+        await rss_engine.db.rss.add(make_rss_item(url=FEED_B, aggregate=False))
+        await rss_engine.db.bangumi.add(
+            make_bangumi(title_raw="Mushoku Tensei", filter="", rss_link=FEED_B)
+        )
+        items = {
+            FEED_A: [Torrent(name="[Sub] Mushoku Tensei - 12 [1080p].mkv", url="a")],
+            FEED_B: [Torrent(name="[Sub] Mushoku Tensei - 13 [1080p].mkv", url="b")],
+        }
+        check_new = TorrentDatabase.check_new
+
+        async def flaky_check_new(self, torrents, rss_id=None):
+            if any(t.url == "a" for t in torrents):
+                raise OperationalError("SELECT", {}, Exception("disk I/O error"))
+            return await check_new(self, torrents, rss_id)
+
+        client = AsyncMock()
+        client.add_torrent = AsyncMock(return_value=AddResult.ADDED)
+        get = AsyncMock(side_effect=lambda url, *_a, **_k: items[url])
+        with (
+            patch.object(RequestContent, "get_torrents", get),
+            patch.object(TorrentDatabase, "check_new", flaky_check_new),
+            patch("module.rss.engine.RSS_PER_HOST_DELAY", 0),
+        ):
+            await rss_engine.refresh_rss(SingleClientPool(client))
+
+        feed_a = await rss_engine.db.rss.search_id(1)
+        feed_b = await rss_engine.db.rss.search_id(2)
+        assert feed_a.connection_status == "error"
+        assert feed_b.connection_status == "healthy"
+        assert [c.args[0].url for c in client.add_torrent.await_args_list] == ["b"]
 
 
 # ---------------------------------------------------------------------------
