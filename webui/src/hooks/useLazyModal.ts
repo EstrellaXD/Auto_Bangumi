@@ -16,7 +16,20 @@ export function useLazyModal(
     open,
     async (val) => {
       if (val && !comp.value) {
-        comp.value = (await load()).default;
+        try {
+          comp.value = (await load()).default;
+        } catch {
+          // 升级后旧的分包 404：整页刷新一次拿新入口，sessionStorage 标记防止循环刷新
+          try {
+            if (!sessionStorage.getItem('lazy-modal-reload')) {
+              sessionStorage.setItem('lazy-modal-reload', '1');
+              location.reload();
+            }
+          } catch {
+            // sessionStorage 不可用时不刷新，避免无限循环
+          }
+          return;
+        }
         await nextTick();
       }
       shown.value = open.value;

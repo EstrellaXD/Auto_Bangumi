@@ -30,9 +30,13 @@ export async function loadLocale(locale: Languages) {
 
 /** 首次渲染前预载已保存的语言，避免先闪出英文 */
 export function loadSavedLocale() {
-  return loadLocale(
-    normalizeLocale(localStorage.getItem('lang') ?? navigator.language)
-  );
+  let saved: string | null = null;
+  try {
+    saved = localStorage.getItem('lang');
+  } catch {
+    // 隐私模式等场景下读取会抛错，回退到浏览器语言
+  }
+  return loadLocale(normalizeLocale(saved ?? navigator.language));
 }
 
 export const useMyI18n = createSharedComposable(() => {
@@ -46,7 +50,8 @@ export const useMyI18n = createSharedComposable(() => {
   // 先加载语言包再切换，切换期间沿用旧语言
   watch(lang, async (val) => {
     await loadLocale(val);
-    i18n.global.locale.value = val;
+    // 慢的导入返回时用户可能已切到别的语言，只应用最新一次
+    if (lang.value === val) i18n.global.locale.value = val;
   });
 
   function changeLocale() {

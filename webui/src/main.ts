@@ -14,4 +14,7 @@ app.use(router);
 app.use(pinia);
 app.use(i18n);
 // 已保存的语言包加载完再渲染，避免先闪出英文
-loadSavedLocale().then(() => app.mount('#app'));
+// 加载失败也要挂载，回退到默认语言
+loadSavedLocale()
+  .catch(() => {})
+  .then(() => app.mount('#app'));
