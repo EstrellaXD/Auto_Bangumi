@@ -119,8 +119,9 @@ class DownloaderStack:
 
         state = wait_until(
             probe,
-            lambda value: value["status_code"] == 200
-            and value["payload"].get("db_ok") is True,
+            lambda value: (
+                value["status_code"] == 200 and value["payload"].get("db_ok") is True
+            ),
             timeout=45,
             description="downloader-profile app health after restart",
             interval=0.1,

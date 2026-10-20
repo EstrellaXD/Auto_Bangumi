@@ -942,14 +942,16 @@ class TestManager:
         write_plugin(
             tmp_path / "builtin",
             "demo",
-            {"demo.py": """
+            {
+                "demo.py": """
                 from ab_sdk import Plugin, hook
 
                 class DemoPlugin(Plugin):
                     @hook("torrent.filter")
                     def check(self, size):
                         return size > 1
-                """},
+                """
+            },
         )
         settings_obj = SimpleNamespace(plugins=Plugins())
         manager = PluginManager(

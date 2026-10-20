@@ -159,9 +159,9 @@ class RequestURL:
         return base_headers
 
     async def get_url(self, url, retry=3):
-        assert (
-            self._client is not None
-        ), "RequestURL must be used as an async context manager"
+        assert self._client is not None, (
+            "RequestURL must be used as an async context manager"
+        )
         try_time = 0
         headers = await _apply_http_hooks(url, self._get_headers(url))
         while True:
@@ -210,9 +210,9 @@ class RequestURL:
         return None
 
     async def post_url(self, url: str, data: dict, retry=3):
-        assert (
-            self._client is not None
-        ), "RequestURL must be used as an async context manager"
+        assert self._client is not None, (
+            "RequestURL must be used as an async context manager"
+        )
         try_time = 0
         while True:
             try:
@@ -246,9 +246,9 @@ class RequestURL:
         return None
 
     async def post_form(self, url: str, data: dict, files):
-        assert (
-            self._client is not None
-        ), "RequestURL must be used as an async context manager"
+        assert self._client is not None, (
+            "RequestURL must be used as an async context manager"
+        )
         try:
             req = await self._client.post(
                 url=url, headers=self.header, data=data, files=files
@@ -275,16 +275,16 @@ class RequestURL:
         Used by JSON-body notification providers (Discord, Webhook, Gotify,
         Bark) that reject form-encoded requests.
         """
-        assert (
-            self._client is not None
-        ), "RequestURL must be used as an async context manager"
+        assert self._client is not None, (
+            "RequestURL must be used as an async context manager"
+        )
         try:
             req = await self._client.post(
                 url=url, headers=headers or self.header, json=json_data
             )
             req.raise_for_status()
             return req
-        except (httpx2.RequestError, httpx2.HTTPStatusError):
+        except httpx2.RequestError, httpx2.HTTPStatusError:
             logger.warning(f"Cannot connect to {url}.")
             return None
 

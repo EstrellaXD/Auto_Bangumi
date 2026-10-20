@@ -21,16 +21,12 @@ router = APIRouter(
 PARSER_TYPES = {"mikan", "tmdb", "parser"}
 
 
-@router.get(
-    path="", response_model=list[RSSItem]
-)
+@router.get(path="", response_model=list[RSSItem])
 async def get_rss(db: Database = Depends(get_db)):
     return await db.rss.search_all()
 
 
-@router.post(
-    path="/add", response_model=APIResponse
-)
+@router.post(path="/add", response_model=APIResponse)
 async def add_rss(rss: RSSItem, db: Database = Depends(get_db)):
     engine = RSSEngine(db)
     result = await engine.add_rss(
@@ -191,9 +187,7 @@ async def analysis(rss: RSSItem):
     return u_response(data)
 
 
-@router.post(
-    "/collect", response_model=APIResponse
-)
+@router.post("/collect", response_model=APIResponse)
 async def download_collection(data: Bangumi):
     async with DownloadClient(resolve_downloader_id(data.downloader_id)) as client:
         collector = SeasonCollector(client)
@@ -201,9 +195,7 @@ async def download_collection(data: Bangumi):
         return u_response(resp)
 
 
-@router.post(
-    "/subscribe", response_model=APIResponse
-)
+@router.post("/subscribe", response_model=APIResponse)
 async def subscribe(data: Bangumi, rss: RSSItem):
     # 搜索订阅时前端传来的是站点名（nyaa/dmhy），而分析器只认识解析器类型
     # mikan/tmdb（见 rss/analyser.py），站点名会静默跳过 TMDB 补全（#1053）。

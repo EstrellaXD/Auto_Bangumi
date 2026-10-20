@@ -11,8 +11,7 @@ ISSUE_1072_TITLE = (
     "(1080p) [E931DD98].mkv"
 )
 OVERFLOW_TITLE = (
-    "[SubsPlease] Haibara-kun no Tsuyokute Seishun New Game - 13 "
-    "(1080p) [ABCDEF12].mkv"
+    "[SubsPlease] Haibara-kun no Tsuyokute Seishun New Game - 13 (1080p) [ABCDEF12].mkv"
 )
 CRC_ONLY_TITLE = "[SubsPlease] CRC Only Anime (1080p) [E931DD98].mkv"
 

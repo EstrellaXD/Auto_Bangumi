@@ -179,9 +179,7 @@ async def get_config(ctx: AppContext = Depends(get_context)):
     return _sanitize_dict(config)
 
 
-@router.patch(
-    "/update", response_model=APIResponse
-)
+@router.patch("/update", response_model=APIResponse)
 async def update_config(config: Config, ctx: AppContext = Depends(get_context)):
     """Persist and reload configuration from the supplied payload."""
     try:

@@ -41,7 +41,9 @@ BACKFILL_SUFFIXES = frozenset({".mp4", ".mkv", ".ass", ".srt"})
 class PathMap(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
-    downloader: str = Field(default="default", title="下载器", description="下载器实例 id")
+    downloader: str = Field(
+        default="default", title="下载器", description="下载器实例 id"
+    )
     from_: str = Field(
         alias="from", title="下载器路径", description="下载器看到的路径前缀"
     )

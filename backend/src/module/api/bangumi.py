@@ -67,10 +67,7 @@ router = APIRouter(
 )
 
 
-
-@router.get(
-    "/get/all", response_model=list[Bangumi]
-)
+@router.get("/get/all", response_model=list[Bangumi])
 async def get_all_data(db: Database = Depends(get_db)):
     return await db.bangumi.search_all()
 
@@ -219,9 +216,7 @@ async def refresh_calendar(db: Database = Depends(get_db)):
     return u_response(resp)
 
 
-@router.post(
-    "/reset/all", response_model=APIResponse
-)
+@router.post("/reset/all", response_model=APIResponse)
 async def reset_all(db: Database = Depends(get_db)):
     await db.bangumi.delete_all()
     return JSONResponse(

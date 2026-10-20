@@ -19,7 +19,8 @@ class TestDatabaseMigration:
         """Create a database matching the 3.1.x schema (no air_weekday column)."""
         with engine.connect() as conn:
             # Create bangumi table WITHOUT air_weekday (3.1.x schema)
-            conn.execute(text("""
+            conn.execute(
+                text("""
                 CREATE TABLE bangumi (
                     id INTEGER PRIMARY KEY,
                     official_title TEXT NOT NULL DEFAULT 'official_title',
@@ -41,17 +42,21 @@ class TestDatabaseMigration:
                     save_path TEXT,
                     deleted BOOLEAN NOT NULL DEFAULT 0
                 )
-            """))
+            """)
+            )
             # Create user table
-            conn.execute(text("""
+            conn.execute(
+                text("""
                 CREATE TABLE user (
                     id INTEGER PRIMARY KEY,
                     username TEXT NOT NULL DEFAULT 'admin',
                     password TEXT NOT NULL DEFAULT 'adminadmin'
                 )
-            """))
+            """)
+            )
             # Create torrent table
-            conn.execute(text("""
+            conn.execute(
+                text("""
                 CREATE TABLE torrent (
                     id INTEGER PRIMARY KEY,
                     bangumi_id INTEGER REFERENCES bangumi(id),
@@ -61,9 +66,11 @@ class TestDatabaseMigration:
                     homepage TEXT,
                     downloaded BOOLEAN NOT NULL DEFAULT 0
                 )
-            """))
+            """)
+            )
             # Create rssitem table
-            conn.execute(text("""
+            conn.execute(
+                text("""
                 CREATE TABLE rssitem (
                     id INTEGER PRIMARY KEY,
                     name TEXT,
@@ -72,16 +79,20 @@ class TestDatabaseMigration:
                     parser TEXT NOT NULL DEFAULT 'mikan',
                     enabled BOOLEAN NOT NULL DEFAULT 1
                 )
-            """))
+            """)
+            )
             conn.commit()
 
     def _insert_old_data(self, engine):
         """Insert sample 3.1.x data."""
         with engine.connect() as conn:
-            conn.execute(text("""
+            conn.execute(
+                text("""
                 INSERT INTO user (username, password) VALUES ('admin', 'adminadmin')
-            """))
-            conn.execute(text("""
+            """)
+            )
+            conn.execute(
+                text("""
                 INSERT INTO bangumi (
                     official_title, year, title_raw, season, group_name,
                     dpi, source, subtitle, eps_collect, "offset",
@@ -92,8 +103,10 @@ class TestDatabaseMigration:
                     '720,\\d+-\\d+', 'https://mikanani.me/RSS/Bangumi?bangumiId=2353',
                     'https://mikanani.me/images/Bangumi/202101/test.jpg', 1, 0
                 )
-            """))
-            conn.execute(text("""
+            """)
+            )
+            conn.execute(
+                text("""
                 INSERT INTO bangumi (
                     official_title, year, title_raw, season, group_name,
                     dpi, eps_collect, "offset", filter, rss_link, added, deleted
@@ -102,16 +115,21 @@ class TestDatabaseMigration:
                     '1080p', 0, 0, '720', 'https://mikanani.me/RSS/Bangumi?bangumiId=2888',
                     1, 0
                 )
-            """))
-            conn.execute(text("""
+            """)
+            )
+            conn.execute(
+                text("""
                 INSERT INTO rssitem (name, url, aggregate, parser, enabled)
                 VALUES ('Mikan', 'https://mikanani.me/RSS/MyBangumi?token=abc', 1, 'mikan', 1)
-            """))
-            conn.execute(text("""
+            """)
+            )
+            conn.execute(
+                text("""
                 INSERT INTO torrent (bangumi_id, rss_id, name, url, downloaded)
                 VALUES (1, 1, '[Lilith-Raws] Mushoku Tensei - 01.mkv',
                         'https://example.com/torrent1', 1)
-            """))
+            """)
+            )
             conn.commit()
 
     def test_migrate_adds_air_weekday_column(self):

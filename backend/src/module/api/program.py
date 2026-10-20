@@ -17,14 +17,11 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["program"], dependencies=[Depends(get_current_user)])
 
 
-
 # Note: Lifespan events (startup/shutdown) are handled in main.py via the
 # lifespan context manager; the AppContext is injected here per-request.
 
 
-@router.post(
-    "/restart", response_model=APIResponse
-)
+@router.post("/restart", response_model=APIResponse)
 async def restart(ctx: AppContext = Depends(get_context)):
     try:
         resp = await ctx.restart()
@@ -41,9 +38,7 @@ async def restart(ctx: AppContext = Depends(get_context)):
         )
 
 
-@router.post(
-    "/start", response_model=APIResponse
-)
+@router.post("/start", response_model=APIResponse)
 async def start(ctx: AppContext = Depends(get_context)):
     try:
         resp = await ctx.start_tasks()
@@ -60,9 +55,7 @@ async def start(ctx: AppContext = Depends(get_context)):
         )
 
 
-@router.post(
-    "/stop", response_model=APIResponse
-)
+@router.post("/stop", response_model=APIResponse)
 async def stop(ctx: AppContext = Depends(get_context)):
     resp = await ctx.stop()
     return u_response(resp)
@@ -84,9 +77,7 @@ async def program_status(ctx: AppContext = Depends(get_context)):
         }
 
 
-@router.post(
-    "/shutdown", response_model=APIResponse
-)
+@router.post("/shutdown", response_model=APIResponse)
 async def shutdown_program(ctx: AppContext = Depends(get_context)):
     await ctx.stop()
     logger.info("Shutting down program...")

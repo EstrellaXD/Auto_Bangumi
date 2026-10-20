@@ -57,7 +57,7 @@ def _torrent_infohash(data: bytes) -> str | None:
                 return hashlib.sha1(data[i:end]).hexdigest()
             i = end
         return None
-    except (ValueError, IndexError):
+    except ValueError, IndexError:
         return None
 
 
@@ -329,7 +329,9 @@ class QbDownloader:
         urls = (
             torrent_urls
             if isinstance(torrent_urls, list)
-            else [torrent_urls] if torrent_urls else []
+            else [torrent_urls]
+            if torrent_urls
+            else []
         )
         if not urls:
             return False
@@ -374,7 +376,7 @@ class QbDownloader:
             resp = await self._get("torrents/info", params={"hashes": "|".join(hashes)})
             found = {t.get("hash", "").lower() for t in resp.json()}
             return set(hashes) <= found
-        except (httpx2.RequestError, ValueError):
+        except httpx2.RequestError, ValueError:
             return False
 
     @staticmethod
@@ -591,8 +593,7 @@ class QbDownloader:
                 # (#754/#749)。返回 False 由调用方走 _PENDING_RENAME_COOLDOWN 退避。
                 if attempt == 2:
                     logger.debug(
-                        "Rename API returned 200 but %s never appeared "
-                        "(rename of %s)",
+                        "Rename API returned 200 but %s never appeared (rename of %s)",
                         new_path,
                         old_path,
                     )

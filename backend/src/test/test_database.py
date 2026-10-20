@@ -566,7 +566,7 @@ def test_titleless_mixed_collection_does_not_bypass_typed_matching(monkeypatch) 
         season=1,
         episode_type="episode",
     )
-    raw = "[APTX4869][CONAN][名侦探柯南 1045&1046 降下天罚的生日派对]" "[TV+OVA][1080p]"
+    raw = "[APTX4869][CONAN][名侦探柯南 1045&1046 降下天罚的生日派对][TV+OVA][1080p]"
 
     assert match_bangumi_in_list(raw, [bangumi]) is None
 
@@ -863,9 +863,7 @@ class TestDeleteByBangumiId:
         db = TorrentDatabase(db_session)
         await _ensure_bangumi(db_session, 20)
         await _ensure_bangumi(db_session, 30)
-        await db.add(
-            Torrent(name="keep", url="https://example.com/keep", refer_id=20)
-        )
+        await db.add(Torrent(name="keep", url="https://example.com/keep", refer_id=20))
         await db.add(
             Torrent(name="delete", url="https://example.com/delete", refer_id=30)
         )
@@ -879,9 +877,7 @@ class TestDeleteByBangumiId:
     async def test_no_match_returns_zero(self, db_session):
         db = TorrentDatabase(db_session)
         await _ensure_bangumi(db_session, 5)
-        await db.add(
-            Torrent(name="unrelated", url="https://example.com/1", refer_id=5)
-        )
+        await db.add(Torrent(name="unrelated", url="https://example.com/1", refer_id=5))
 
         count = await db.delete_by_bangumi_id(999)
         assert count == 0
@@ -927,12 +923,8 @@ class TestSearchByBangumiId:
     async def test_returns_matching_torrents(self, db_session):
         db = TorrentDatabase(db_session)
         await _ensure_bangumi(db_session, 11)
-        await db.add(
-            Torrent(name="ep01", url="https://example.com/ep01", refer_id=11)
-        )
-        await db.add(
-            Torrent(name="ep02", url="https://example.com/ep02", refer_id=11)
-        )
+        await db.add(Torrent(name="ep01", url="https://example.com/ep01", refer_id=11))
+        await db.add(Torrent(name="ep02", url="https://example.com/ep02", refer_id=11))
 
         torrents = await db.search_by_bangumi_id(11)
         assert {t.name for t in torrents} == {"ep01", "ep02"}
@@ -941,9 +933,7 @@ class TestSearchByBangumiId:
         db = TorrentDatabase(db_session)
         await _ensure_bangumi(db_session, 21)
         await _ensure_bangumi(db_session, 22)
-        await db.add(
-            Torrent(name="keep", url="https://example.com/keep", refer_id=21)
-        )
+        await db.add(Torrent(name="keep", url="https://example.com/keep", refer_id=21))
         await db.add(
             Torrent(name="other", url="https://example.com/other", refer_id=22)
         )
@@ -1278,9 +1268,7 @@ class TestOrphanTorrents:
     async def test_search_orphans_returns_only_unmatched(self, db_session):
         db = TorrentDatabase(db_session)
         await _ensure_bangumi(db_session, 50)
-        await db.add(
-            Torrent(name="matched", url="https://example.com/m", refer_id=50)
-        )
+        await db.add(Torrent(name="matched", url="https://example.com/m", refer_id=50))
         await db.add(
             Torrent(name="orphan_a", url="https://example.com/a", refer_id=None)
         )
@@ -1294,12 +1282,8 @@ class TestOrphanTorrents:
     async def test_count_orphans(self, db_session):
         db = TorrentDatabase(db_session)
         await _ensure_bangumi(db_session, 51)
-        await db.add(
-            Torrent(name="matched", url="https://example.com/m", refer_id=51)
-        )
-        await db.add(
-            Torrent(name="orphan", url="https://example.com/o", refer_id=None)
-        )
+        await db.add(Torrent(name="matched", url="https://example.com/m", refer_id=51))
+        await db.add(Torrent(name="orphan", url="https://example.com/o", refer_id=None))
 
         assert await db.count_orphans() == 1
 
@@ -1310,9 +1294,7 @@ class TestOrphanTorrents:
     async def test_delete_orphans_removes_all_and_returns_count(self, db_session):
         db = TorrentDatabase(db_session)
         await _ensure_bangumi(db_session, 52)
-        await db.add(
-            Torrent(name="matched", url="https://example.com/m", refer_id=52)
-        )
+        await db.add(Torrent(name="matched", url="https://example.com/m", refer_id=52))
         await db.add(
             Torrent(name="orphan_a", url="https://example.com/a", refer_id=None)
         )
@@ -1329,18 +1311,14 @@ class TestOrphanTorrents:
     async def test_delete_orphans_no_match_returns_zero(self, db_session):
         db = TorrentDatabase(db_session)
         await _ensure_bangumi(db_session, 53)
-        await db.add(
-            Torrent(name="matched", url="https://example.com/m", refer_id=53)
-        )
+        await db.add(Torrent(name="matched", url="https://example.com/m", refer_id=53))
 
         assert await db.delete_orphans() == 0
         assert len(await db.search_all()) == 1
 
     async def test_delete_obj_removes_single_torrent(self, db_session):
         db = TorrentDatabase(db_session)
-        await db.add(
-            Torrent(name="orphan", url="https://example.com/o", refer_id=None)
-        )
+        await db.add(Torrent(name="orphan", url="https://example.com/o", refer_id=None))
         torrent = (await db.search_all())[0]
 
         await db.delete_obj(torrent)

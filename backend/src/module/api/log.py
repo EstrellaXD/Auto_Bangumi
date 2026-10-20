@@ -13,7 +13,6 @@ router = APIRouter(
 )
 
 
-
 _TAIL_BYTES = 512 * 1024  # 512 KB
 
 
@@ -78,9 +77,7 @@ def _clear_log_files() -> None:
         backup.unlink(missing_ok=True)
 
 
-@router.post(
-    "/clear", response_model=APIResponse
-)
+@router.post("/clear", response_model=APIResponse)
 async def clear_log():
     if LOG_PATH.exists():
         # 截断 + 删除备份都是文件 I/O，与 get_log 一样放线程池执行

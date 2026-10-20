@@ -94,9 +94,7 @@ class ApplyResult(BaseModel):
 class Progress:
     """在线更新进度，供 SSE 推送给前端。"""
 
-    phase: str = (
-        "idle"  # idle|checking|downloading|verifying|unpacking|promoting|restarting|error|done
-    )
+    phase: str = "idle"  # idle|checking|downloading|verifying|unpacking|promoting|restarting|error|done
     percent: int = 0
     message: str = ""
     version: Optional[str] = None
@@ -110,7 +108,7 @@ class Progress:
 def _parse_semver(value: str) -> Optional[semver.VersionInfo]:
     try:
         return semver.VersionInfo.parse(value.lstrip("v"))
-    except (ValueError, TypeError):
+    except ValueError, TypeError:
         return None
 
 
@@ -289,7 +287,7 @@ class Updater:
         try:
             data = json.loads(applied.read_text(encoding="utf-8"))
             return data.get("version")
-        except (OSError, ValueError):
+        except OSError, ValueError:
             return None
 
     def _local_state(self, result: UpdateCheckResult) -> UpdateCheckResult:
@@ -611,7 +609,7 @@ class Updater:
                 applied_data: dict = {}
                 try:
                     applied_data = json.loads(applied.read_text(encoding="utf-8"))
-                except (OSError, ValueError):
+                except OSError, ValueError:
                     pass
 
                 live_schema = _read_db_schema_version(self.data_db)
@@ -663,7 +661,7 @@ class Updater:
 
                     try:
                         version = _read_manifest(current).get("version")
-                    except (OSError, ValueError):
+                    except OSError, ValueError:
                         version = None
                     # 只有当 schema 自 apply 后确实前进过（旧代码读不了新库）
                     # 才还原快照；schema 没变时保留活库，避免丢掉更新之后
@@ -685,7 +683,7 @@ class Updater:
                         restored_schema = self._restore_database_snapshot(applied_data)
                     else:
                         logger.info(
-                            "Schema unchanged since update; " "keeping live database."
+                            "Schema unchanged since update; keeping live database."
                         )
                     applied.write_text(
                         json.dumps(

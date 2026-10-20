@@ -11,7 +11,6 @@ router = APIRouter(
 )
 
 
-
 @router.get(
     "/get/all",
     response_model=list[Movie],

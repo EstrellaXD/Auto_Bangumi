@@ -166,7 +166,7 @@ def detect_virtual_seasons(episodes: list[dict], gap_months: int = 6) -> list[in
         if days_diff > gap_days:
             virtual_season_starts.append(curr_ep["episode_number"])
             logger.debug(
-                "Detected virtual season break: %s days gap " "between ep%s and ep%s",
+                "Detected virtual season break: %s days gap between ep%s and ep%s",
                 days_diff,
                 prev_ep["episode_number"],
                 curr_ep["episode_number"],

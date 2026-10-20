@@ -109,9 +109,9 @@ class TestQbDownloaderConstructor:
 def test_scheme_selection_matrix(host: str, ssl: bool, expected_prefix: str):
     """Constructor resolves host scheme correctly for all input combinations."""
     qb = QbDownloader(host=host, username="u", password="p", ssl=ssl)
-    assert qb.host.startswith(
-        expected_prefix
-    ), f"host={host!r} ssl={ssl} -> expected prefix {expected_prefix!r}, got {qb.host!r}"
+    assert qb.host.startswith(expected_prefix), (
+        f"host={host!r} ssl={ssl} -> expected prefix {expected_prefix!r}, got {qb.host!r}"
+    )
 
 
 # ---------------------------------------------------------------------------

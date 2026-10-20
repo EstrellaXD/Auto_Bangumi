@@ -12,7 +12,6 @@ router = APIRouter(
 )
 
 
-
 @router.get("/bangumi", response_class=EventSourceResponse)
 async def search_torrents(
     site: str = "mikan", keywords: str = Query(None)
@@ -27,9 +26,7 @@ async def search_torrents(
         yield ServerSentEvent(raw_data=item)
 
 
-@router.get(
-    "/provider", response_model=list[str]
-)
+@router.get("/provider", response_model=list[str])
 async def search_provider():
     return list(available_sites())
 

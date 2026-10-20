@@ -135,7 +135,9 @@ class TestPoolTimeoutRecovery:
         try:
             with (
                 patch("module.network.request_url.asyncio.sleep", new=AsyncMock()),
-                patch("module.network.request_url.httpx2.AsyncClient", return_value=new),
+                patch(
+                    "module.network.request_url.httpx2.AsyncClient", return_value=new
+                ),
             ):
                 async with RequestURL() as req:
                     result = await req.get_url("https://example.com/x", retry=2)

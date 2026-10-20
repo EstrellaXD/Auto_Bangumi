@@ -14,7 +14,9 @@ async def test_multiple_users_and_sessions_survive_client_recreation(app):
         await db.user.create_user("first_user", "first-password")
 
     transport = httpx2.ASGITransport(app=app)
-    async with httpx2.AsyncClient(transport=transport, base_url="http://test") as client:
+    async with httpx2.AsyncClient(
+        transport=transport, base_url="http://test"
+    ) as client:
         login = await client.post(
             "/api/v1/auth/login",
             data={"username": "first_user", "password": "first-password"},
@@ -34,7 +36,9 @@ async def test_multiple_users_and_sessions_survive_client_recreation(app):
             "second_user",
         }
 
-    async with httpx2.AsyncClient(transport=transport, base_url="http://test") as client:
+    async with httpx2.AsyncClient(
+        transport=transport, base_url="http://test"
+    ) as client:
         client.cookies.set("token", persisted_cookie)
         me = await client.get("/api/v1/auth/me")
         assert me.status_code == 200
@@ -49,7 +53,9 @@ async def test_last_enabled_user_conflict_and_session_only_route_matrix(app):
         only = await db.user.create_user("only_user", "only-password")
 
     transport = httpx2.ASGITransport(app=app)
-    async with httpx2.AsyncClient(transport=transport, base_url="http://test") as client:
+    async with httpx2.AsyncClient(
+        transport=transport, base_url="http://test"
+    ) as client:
         assert (
             await client.post(
                 "/api/v1/auth/login",
@@ -72,7 +78,9 @@ async def test_last_enabled_user_conflict_and_session_only_route_matrix(app):
         token_id = listed.json()[0]["id"]
 
     headers = {"Authorization": f"Bearer {raw_token}"}
-    async with httpx2.AsyncClient(transport=transport, base_url="http://test") as client:
+    async with httpx2.AsyncClient(
+        transport=transport, base_url="http://test"
+    ) as client:
         assert (await client.get("/api/v1/auth/me", headers=headers)).status_code == 200
         session_only_requests: list[tuple[str, str, dict[str, Any]]] = [
             ("GET", "/api/v1/users", {}),

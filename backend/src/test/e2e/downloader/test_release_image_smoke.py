@@ -84,12 +84,12 @@ def test_native_image_version_and_config_survive_restart(downloader_stack):
         config["rss_parser"]["enable"] = False
         config["rss_parser"]["language"] = "jp"
         config["bangumi_manage"]["enable"] = False
-        config["network"][
-            "tmdb_base_url"
-        ] = f"{downloader_stack.environment['AB_E2E_MOCK_INTERNAL_URL']}/tmdb"
-        config["network"][
-            "bgm_base_url"
-        ] = f"{downloader_stack.environment['AB_E2E_MOCK_INTERNAL_URL']}/bgm"
+        config["network"]["tmdb_base_url"] = (
+            f"{downloader_stack.environment['AB_E2E_MOCK_INTERNAL_URL']}/tmdb"
+        )
+        config["network"]["bgm_base_url"] = (
+            f"{downloader_stack.environment['AB_E2E_MOCK_INTERNAL_URL']}/bgm"
+        )
         config["update"]["auto_check"] = False
         updated = client.patch("/api/v1/config/update", json=config)
         assert updated.status_code == 200

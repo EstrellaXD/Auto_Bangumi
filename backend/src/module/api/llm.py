@@ -191,7 +191,7 @@ class AuthCompleteRequest(BaseModel):
 def _poll_interval(blob: str) -> int:
     try:
         return max(1, int(json.loads(blob).get("interval", 5)))
-    except (json.JSONDecodeError, TypeError, ValueError):
+    except json.JSONDecodeError, TypeError, ValueError:
         return 5
 
 

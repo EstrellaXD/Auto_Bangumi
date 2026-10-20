@@ -156,6 +156,6 @@ async def enrich_movie(movie: Movie, rss: RSSItem, torrent: Torrent) -> None:
     if result.year:
         try:
             movie.year = int(result.year)
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             pass
     movie.poster_link = result.poster_link

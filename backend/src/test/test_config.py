@@ -168,7 +168,6 @@ class TestConfigSerialization:
 
 
 class TestMigrateOldConfig:
-
     def test_no_migration_needed(self):
         """Already-current config passes through unchanged."""
         current_config = {

@@ -53,7 +53,7 @@ def _get_aliases_list(bangumi: Bangumi) -> list[str]:
         if not isinstance(aliases, list):
             return []
         return [a for a in aliases if a]
-    except (json.JSONDecodeError, TypeError):
+    except json.JSONDecodeError, TypeError:
         return []
 
 
@@ -264,8 +264,7 @@ class BangumiDatabase:
         match = _find_semantic_match(data, candidates)
         if match:
             logger.debug(
-                "Found semantic duplicate: '%s' matches "
-                "existing '%s' (official: %s)",
+                "Found semantic duplicate: '%s' matches existing '%s' (official: %s)",
                 data.title_raw,
                 match.title_raw,
                 data.official_title,
@@ -468,7 +467,7 @@ class BangumiDatabase:
             if semantic_merged > 0:
                 await self.session.commit()
                 logger.debug(
-                    "%s bangumi merged as aliases, " "rest were duplicates.",
+                    "%s bangumi merged as aliases, rest were duplicates.",
                     semantic_merged,
                 )
             else:
@@ -483,7 +482,7 @@ class BangumiDatabase:
         skipped = len(datas) - len(unique_to_add) - semantic_merged
         if skipped > 0 or semantic_merged > 0:
             logger.debug(
-                "Insert %s bangumi, " "skipped %s duplicates, merged %s as aliases.",
+                "Insert %s bangumi, skipped %s duplicates, merged %s as aliases.",
                 len(unique_to_add),
                 skipped,
                 semantic_merged,

@@ -920,9 +920,7 @@ def run_migrations_conn(conn: Connection) -> None:
                 for stmt in pending:
                     conn.execute(text(stmt))
                 savepoint.commit()
-                logger.info(
-                    f"Migration v{migration.version}: " f"{migration.description}"
-                )
+                logger.info(f"Migration v{migration.version}: {migration.description}")
             except Exception as e:
                 savepoint.rollback()
                 logger.error(f"Migration v{migration.version} failed: {e}")

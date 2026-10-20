@@ -189,7 +189,10 @@ async def get_setup_status():
     if VERSION == "DEV_VERSION":
         need_setup = not SENTINEL_PATH.exists()
     else:
-        need_setup = not SENTINEL_PATH.exists() and settings.model_dump() == Config().model_dump()
+        need_setup = (
+            not SENTINEL_PATH.exists()
+            and settings.model_dump() == Config().model_dump()
+        )
     return SetupStatusResponse(need_setup=need_setup, version=VERSION)
 
 

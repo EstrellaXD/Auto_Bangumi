@@ -20,15 +20,18 @@ from module.security.api import get_current_user
 
 logger = logging.getLogger(__name__)
 router = APIRouter(
-    prefix="/notification", tags=["notification"], dependencies=[Depends(get_current_user)]
+    prefix="/notification",
+    tags=["notification"],
+    dependencies=[Depends(get_current_user)],
 )
-
 
 
 class TestProviderRequest(BaseModel):
     """Request body for testing a saved provider by index."""
 
-    provider_index: int = Field(default=..., description="Index of the provider to test")
+    provider_index: int = Field(
+        default=..., description="Index of the provider to test"
+    )
 
 
 class TestProviderConfigRequest(BaseModel):
@@ -56,9 +59,7 @@ class TestResponse(BaseModel):
     message_en: str = ""
 
 
-@router.post(
-    "/test", response_model=TestResponse
-)
+@router.post("/test", response_model=TestResponse)
 async def test_provider(request: TestProviderRequest):
     """Test a configured notification provider by its index.
 
@@ -157,7 +158,7 @@ def _to_out(message) -> InboxMessageOut:
     if message.payload:
         try:
             payload = json.loads(message.payload)
-        except (json.JSONDecodeError, TypeError):
+        except json.JSONDecodeError, TypeError:
             payload = None
     return InboxMessageOut(
         id=message.id,

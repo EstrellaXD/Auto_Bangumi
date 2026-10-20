@@ -108,8 +108,9 @@ def _wait_for_health(client: httpx2.Client) -> dict[str, Any]:
 
     state = wait_until(
         probe,
-        lambda value: value["status_code"] == 200
-        and value["payload"].get("db_ok") is True,
+        lambda value: (
+            value["status_code"] == 200 and value["payload"].get("db_ok") is True
+        ),
         timeout=45,
         description="packaged app health and SQLite readiness after restart",
         interval=0.1,
@@ -187,12 +188,12 @@ def test_packaged_image_version_and_config_survive_container_restart():
         config["rss_parser"]["enable"] = False
         config["rss_parser"]["language"] = "jp"
         config["bangumi_manage"]["enable"] = False
-        config["network"][
-            "tmdb_base_url"
-        ] = f"{environment['AB_E2E_MOCK_INTERNAL_URL']}/tmdb"
-        config["network"][
-            "bgm_base_url"
-        ] = f"{environment['AB_E2E_MOCK_INTERNAL_URL']}/bgm"
+        config["network"]["tmdb_base_url"] = (
+            f"{environment['AB_E2E_MOCK_INTERNAL_URL']}/tmdb"
+        )
+        config["network"]["bgm_base_url"] = (
+            f"{environment['AB_E2E_MOCK_INTERNAL_URL']}/bgm"
+        )
         config["update"]["auto_check"] = False
         updated = client.patch("/api/v1/config/update", json=config)
         assert updated.status_code == 200

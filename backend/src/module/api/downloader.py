@@ -27,7 +27,6 @@ router = APIRouter(
 )
 
 
-
 class TorrentHashesRequest(BaseModel):
     hashes: list[str]
     # 种子所在的下载器实例；为空时为默认实例
