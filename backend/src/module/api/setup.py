@@ -137,7 +137,7 @@ class SetupStatusResponse(BaseModel):
 
 
 class TestDownloaderRequest(BaseModel):
-    type: str = Field("qbittorrent")
+    type: str = Field(default="qbittorrent")
     host: str
     username: str
     password: str
@@ -163,13 +163,13 @@ class TestResultResponse(BaseModel):
 
 
 class SetupCompleteRequest(BaseModel):
-    username: str = Field(..., min_length=4, max_length=20)
-    password: str = Field(..., min_length=8)
-    downloader_type: str = Field("qbittorrent")
+    username: str = Field(default=..., min_length=4, max_length=20)
+    password: str = Field(default=..., min_length=8)
+    downloader_type: str = Field(default="qbittorrent")
     downloader_host: str
     downloader_username: str
     downloader_password: str
-    downloader_path: str = Field("/downloads/Bangumi")
+    downloader_path: str = Field(default="/downloads/Bangumi")
     downloader_ssl: bool = False
     rss_url: str = ""
     rss_name: str = ""

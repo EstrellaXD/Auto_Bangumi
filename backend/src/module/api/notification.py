@@ -28,23 +28,23 @@ router = APIRouter(
 class TestProviderRequest(BaseModel):
     """Request body for testing a saved provider by index."""
 
-    provider_index: int = Field(..., description="Index of the provider to test")
+    provider_index: int = Field(default=..., description="Index of the provider to test")
 
 
 class TestProviderConfigRequest(BaseModel):
     """Request body for testing an unsaved provider configuration."""
 
-    type: str = Field(..., description="Provider type")
-    enabled: bool = Field(True, description="Whether provider is enabled")
-    token: Optional[str] = Field(None, description="Auth token")
-    chat_id: Optional[str] = Field(None, description="Chat/channel ID")
-    webhook_url: Optional[str] = Field(None, description="Webhook URL")
-    server_url: Optional[str] = Field(None, description="Server URL")
-    device_key: Optional[str] = Field(None, description="Device key")
-    user_key: Optional[str] = Field(None, description="User key")
-    api_token: Optional[str] = Field(None, description="API token")
-    template: Optional[str] = Field(None, description="Custom template")
-    url: Optional[str] = Field(None, description="URL for generic webhook")
+    type: str = Field(default=..., description="Provider type")
+    enabled: bool = Field(default=True, description="Whether provider is enabled")
+    token: Optional[str] = Field(default=None, description="Auth token")
+    chat_id: Optional[str] = Field(default=None, description="Chat/channel ID")
+    webhook_url: Optional[str] = Field(default=None, description="Webhook URL")
+    server_url: Optional[str] = Field(default=None, description="Server URL")
+    device_key: Optional[str] = Field(default=None, description="Device key")
+    user_key: Optional[str] = Field(default=None, description="User key")
+    api_token: Optional[str] = Field(default=None, description="API token")
+    template: Optional[str] = Field(default=None, description="Custom template")
+    url: Optional[str] = Field(default=None, description="URL for generic webhook")
 
 
 class TestResponse(BaseModel):

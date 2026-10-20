@@ -22,9 +22,9 @@ ServerType = Literal["jellyfin", "emby", "plex"]
 
 
 class Options(BaseModel):
-    server: ServerType = Field("jellyfin", title="服务器类型")
+    server: ServerType = Field(default="jellyfin", title="服务器类型")
     url: str = Field(
-        "",
+        default="",
         title="服务器地址",
         description="如 http://192.168.1.10:8096（Plex 默认端口 32400）；留空则不刷新",
     )
@@ -33,7 +33,7 @@ class Options(BaseModel):
         description="Jellyfin / Emby 的 API Key，或 Plex 的 X-Plex-Token",
     )
     delay: float = Field(
-        30,
+        default=30,
         ge=0,
         le=3600,
         title="延迟（秒）",

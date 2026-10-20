@@ -105,7 +105,7 @@ class PluginManifest(BaseModel):
         description="提供的扩展点（仅供签名目录展示，宿主以实际登记为准）",
     )
     default_enabled: bool = Field(
-        True, description="未设置启用开关时是否默认启用；只对内置插件生效"
+        default=True, description="未设置启用开关时是否默认启用；只对内置插件生效"
     )
     ui: list[PluginUi] = Field(default_factory=list)
 

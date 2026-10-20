@@ -16,10 +16,10 @@ def utcnow_iso() -> str:
 
 class LLMCredential(SQLModel, table=True):
     id: int = Field(default=None, primary_key=True)
-    provider_id: str = Field("", index=True, unique=True)
-    access_token: str = Field("")
-    refresh_token: str = Field("")
-    expires_at: Optional[float] = Field(None)  # epoch 秒
-    account_label: str = Field("")
-    extra: Optional[str] = Field(None)  # JSON 字符串（provider 自定义）
+    provider_id: str = Field(default="", index=True, unique=True)
+    access_token: str = Field(default="")
+    refresh_token: str = Field(default="")
+    expires_at: Optional[float] = Field(default=None)  # epoch 秒
+    account_label: str = Field(default="")
+    extra: Optional[str] = Field(default=None)  # JSON 字符串（provider 自定义）
     updated_at: str = Field(default_factory=utcnow_iso)

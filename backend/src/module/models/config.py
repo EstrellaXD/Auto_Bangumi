@@ -144,7 +144,7 @@ class NotificationProvider(BaseModel):
     # 保留未知字段以免保存配置时被丢弃
     model_config = ConfigDict(extra="allow")
 
-    type: str = Field(..., description="Provider type (telegram, discord, bark, etc.)")
+    type: str = Field(default=..., description="Provider type (telegram, discord, bark, etc.)")
     enabled: bool = Field(default=True, description="Whether this provider is enabled")
 
     # Common fields (with env var expansion)

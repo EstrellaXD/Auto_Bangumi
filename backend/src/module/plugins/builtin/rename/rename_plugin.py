@@ -102,7 +102,7 @@ def compile_template(source: str) -> TemplateRename:
 
 class Options(BaseModel):
     template: str = Field(
-        DEFAULT_TEMPLATE,
+        default=DEFAULT_TEMPLATE,
         title="文件名模板",
         description=(
             "重命名方式选择 template 时使用的 Jinja2 模板，渲染文件名主体（不含"

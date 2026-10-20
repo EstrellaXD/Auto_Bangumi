@@ -41,7 +41,7 @@ BACKFILL_SUFFIXES = frozenset({".mp4", ".mkv", ".ass", ".srt"})
 class PathMap(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
-    downloader: str = Field("default", title="下载器", description="下载器实例 id")
+    downloader: str = Field(default="default", title="下载器", description="下载器实例 id")
     from_: str = Field(
         alias="from", title="下载器路径", description="下载器看到的路径前缀"
     )
@@ -65,7 +65,7 @@ class Options(BaseModel):
         description="链接放在这里；硬链接要求与下载根目录在同一个文件系统",
     )
     cross_device: Literal["copy", "symlink", "skip"] = Field(
-        "copy",
+        default="copy",
         title="跨文件系统时",
         description="copy 复制文件，symlink 创建软链接，skip 跳过并通知",
     )

@@ -1748,7 +1748,7 @@ class TestLookupOffsets:
         torrent = Torrent(
             name="Test Torrent",
             url="https://example.com/torrent",
-            bangumi_id=bangumi.id,
+            refer_id=bangumi.id,
             qb_hash="abc123hash",
         )
         await torrent_db.add(torrent)
