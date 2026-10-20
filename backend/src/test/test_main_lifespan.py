@@ -64,3 +64,59 @@ class TestLifespan:
                     pass
         # 迁移失败时插件不应启动（插件 KV 表由迁移创建）
         ctx.plugins.start.assert_not_called()
+
+
+class TestMcpEndpoint:
+    """MCP 走 Streamable HTTP，端点就是 /mcp；会话管理器由应用 lifespan 启动。"""
+
+    HEADERS = {
+        "Authorization": "Bearer mcp-token",
+        "Accept": "application/json, text/event-stream",
+    }
+
+    def test_streamable_http_initialize_and_list_tools(self):
+        service = MagicMock()
+        service.authenticate_api_token = AsyncMock(return_value=MagicMock())
+        with (
+            patch("main.AppContext.build", return_value=_lifespan_ctx()),
+            patch("module.mcp.security.auth_service", service),
+        ):
+            app = main.create_app()
+            with TestClient(app, follow_redirects=False) as client:
+                init = client.post(
+                    "/mcp",
+                    headers=self.HEADERS,
+                    json={
+                        "jsonrpc": "2.0",
+                        "id": 1,
+                        "method": "initialize",
+                        "params": {
+                            "protocolVersion": "2025-06-18",
+                            "capabilities": {},
+                            "clientInfo": {"name": "test", "version": "0"},
+                        },
+                    },
+                )
+                assert init.status_code == 200
+                session = {"mcp-session-id": init.headers["mcp-session-id"]}
+                client.post(
+                    "/mcp",
+                    headers=self.HEADERS | session,
+                    json={"jsonrpc": "2.0", "method": "notifications/initialized"},
+                )
+                listed = client.post(
+                    "/mcp",
+                    headers=self.HEADERS | session,
+                    json={"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
+                )
+                assert listed.status_code == 200
+                assert '"list_anime"' in listed.text
+                # 旧的 SSE 端点已删除
+                assert client.get("/mcp/sse", headers=self.HEADERS).status_code == 404
+
+    def test_rejected_without_token_or_whitelisted_ip(self):
+        with patch("main.AppContext.build", return_value=_lifespan_ctx()):
+            app = main.create_app()
+            with TestClient(app) as client:
+                resp = client.post("/mcp", json={})
+        assert resp.status_code == 403

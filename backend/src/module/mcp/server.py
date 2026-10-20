@@ -1,99 +1,115 @@
 """MCP server assembly for AutoBangumi.
 
-Wires together the MCP ``Server``, SSE transport, tool/resource handlers,
-and local-network middleware into a single Starlette ASGI application.
+``mcp`` 是 :class:`AutoBangumiMCP`（``MCPServer`` 子类）的单例：内置工具与资源
+在 ``tools.py`` / ``resources.py`` 中用 ``@mcp.tool()`` / ``@mcp.resource()``
+注册，插件提供的工具与资源在本类的 list / call / read 中追加与分发。
 
-Mount the app returned by ``create_mcp_starlette_app`` at a path prefix
-(e.g. ``/mcp``) in the parent FastAPI application to expose the MCP
-endpoint at ``/mcp/sse``.
+``create_mcp_starlette_app`` 返回 Streamable HTTP 传输的 Starlette 应用，
+由 ``main.py`` 以 ``/mcp`` 路由挂载。
 """
 
+import json
 import logging
+from collections.abc import Iterable
+from typing import Any
 
 from mcp import types
-from mcp.server import Server
-from mcp.server.sse import SseServerTransport
+from mcp.server.lowlevel.helper_types import ReadResourceContents
+from mcp.server.mcpserver import Context, MCPServer
+from mcp.server.mcpserver.exceptions import ResourceError
+from mcp.server.transport_security import TransportSecuritySettings
 from pydantic import AnyUrl
 from starlette.applications import Starlette
-from starlette.routing import Mount, Route
-from starlette.types import Receive, Scope, Send
 
-from .resources import RESOURCE_TEMPLATES, all_resources, handle_resource
+from .plugins import (
+    call_plugin_tool,
+    list_plugin_resources,
+    list_plugin_tools,
+    read_plugin_resource,
+)
 from .runtime import set_context
 from .security import McpAccessMiddleware
-from .tools import all_tools, handle_tool
 
 logger = logging.getLogger(__name__)
 
-server = Server("autobangumi")
-sse = SseServerTransport("/messages/")
+
+def _text(value: Any) -> types.TextContent:
+    return types.TextContent(
+        type="text", text=json.dumps(value, ensure_ascii=False, default=str)
+    )
 
 
-@server.list_tools()
-async def list_tools() -> list[types.Tool]:
-    return all_tools()
+class AutoBangumiMCP(MCPServer):
+    """内置工具与资源走 MCPServer 的注册表，插件的从扩展注册表现取。"""
 
+    async def list_tools(self) -> list[types.Tool]:
+        return await super().list_tools() + list_plugin_tools()
 
-@server.call_tool()
-async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
-    logger.debug("Tool called: %s", name)
-    return await handle_tool(name, arguments)
-
-
-@server.list_resources()
-async def list_resources() -> list[types.Resource]:
-    return all_resources()
-
-
-@server.list_resource_templates()
-async def list_resource_templates() -> list[types.ResourceTemplate]:
-    return RESOURCE_TEMPLATES
-
-
-@server.read_resource()
-async def read_resource(uri: AnyUrl) -> str:
-    logger.debug("Resource read: %s", uri)
-    # 底层 read_resource 传入的是 pydantic AnyUrl，handle_resource 按字符串匹配
-    return await handle_resource(str(uri))
-
-
-class _SseEndpoint:
-    """``GET /sse`` 的裸 ASGI 端点：建立 SSE 连接并运行 MCP 会话直到客户端断开。
-
-    ``connect_sse`` 自己经 ``send`` 写出整个 HTTP 响应，所以这里不能是返回
-    ``Response`` 的普通 endpoint 函数——Starlette 会在 SSE 结束后再发一次
-    ``http.response.start``，每次断开都触发 ``AssertionError``。
-    """
-
-    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        async with sse.connect_sse(scope, receive, send) as streams:
-            await server.run(
-                streams[0],
-                streams[1],
-                server.create_initialization_options(),
+    async def call_tool(
+        self,
+        name: str,
+        arguments: dict[str, Any],
+        context: Context | None = None,
+    ) -> types.CallToolResult:
+        # 结果统一序列化为一段 JSON 文本；内置工具注册时关闭 structured_output，
+        # 不声明 outputSchema
+        logger.debug("Tool called: %s", name)
+        try:
+            handled, result = await call_plugin_tool(name, arguments)
+            if not handled:
+                result = await self._tool_manager.call_tool(
+                    name, arguments, context or Context(mcp_server=self)
+                )
+        except Exception as e:
+            logger.exception("Tool %s failed", name)
+            # MCPServer 把工具抛出的异常包成 ToolError，原始异常在 __cause__
+            error = e.__cause__ or e
+            return types.CallToolResult(
+                content=[_text({"error": str(error)})], is_error=True
             )
+        return types.CallToolResult(content=[_text(result)])
+
+    async def list_resources(self) -> list[types.Resource]:
+        return await super().list_resources() + list_plugin_resources()
+
+    async def read_resource(
+        self, uri: AnyUrl | str, context: Context | None = None
+    ) -> Iterable[ReadResourceContents] | types.InputRequiredResult:
+        logger.debug("Resource read: %s", uri)
+        try:
+            handled, content = await read_plugin_resource(str(uri))
+        except Exception as e:
+            logger.warning("Plugin resource %s failed: %s", uri, e)
+            raise ResourceError(str(e) or type(e).__name__) from e
+        if not handled:
+            return await super().read_resource(uri, context)
+        if not isinstance(content, str):
+            content = json.dumps(content, ensure_ascii=False, default=str)
+        return [ReadResourceContents(content=content, mime_type=None)]
 
 
-handle_sse = _SseEndpoint()
+mcp = AutoBangumiMCP("autobangumi")
 
 
 def create_mcp_starlette_app(ctx=None) -> Starlette:
     """Build and return the MCP Starlette sub-application.
 
-    Routes:
-    - ``GET /sse`` - SSE stream for MCP clients
-    - ``POST /messages/`` - client-to-server message posting
+    只有一个 Streamable HTTP 端点 ``/mcp``（GET / POST / DELETE）。每次调用都
+    新建会话管理器，调用方须在应用 lifespan 中运行 ``mcp.session_manager.run()``。
 
     ``ctx`` is the application :class:`AppContext`; it is stored so status
     tools/resources can report live program state. ``McpAccessMiddleware`` is
     applied to enforce configurable IP whitelist and bearer token access control.
     """
     set_context(ctx)
-    app = Starlette(
-        routes=[
-            Route("/sse", endpoint=handle_sse),
-            Mount("/messages", app=sse.handle_post_message),
-        ],
+    app = mcp.streamable_http_app(
+        streamable_http_path="/mcp",
+        # 默认 host=127.0.0.1 会开启 DNS rebinding 防护并只放行 localhost 的
+        # Host 头，局域网地址与反向代理域名都会被拒（421）。访问控制由
+        # McpAccessMiddleware 的 IP 白名单与令牌负责，与原 SSE 端点一致
+        transport_security=TransportSecuritySettings(
+            enable_dns_rebinding_protection=False
+        ),
     )
     app.add_middleware(McpAccessMiddleware)
     return app

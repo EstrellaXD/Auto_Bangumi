@@ -7,12 +7,13 @@ import uvicorn
 from fastapi import APIRouter, Depends, FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from starlette.routing import Route
 
 from module.api import v1
 from module.api.health import router as health_router
 from module.conf import VERSION, settings, setup_logger
 from module.core import AppContext
-from module.mcp import create_mcp_app
+from module.mcp import create_mcp_app, mcp
 
 setup_logger(reset=True)
 logger = logging.getLogger(__name__)
@@ -45,7 +46,9 @@ async def lifespan(app: FastAPI):
         # supervised background task and returns immediately (CONTRACT #5),
         # so this does not block server startup.
         await ctx.start_tasks()
-    yield
+    # 子应用不会运行自己的 lifespan，MCP 会话管理器在这里启动
+    async with app.state.mcp_sessions.run():
+        yield
     # Shutdown
     await ctx.stop()
     await ctx.plugins.stop()
@@ -71,8 +74,11 @@ def create_app() -> FastAPI:
     # it stays reachable without auth for container/orchestrator health checks
     app.include_router(health_router)
 
-    # mount MCP server (SSE transport for LLM tool integration)
-    app.mount("/mcp", create_mcp_app(ctx))
+    # MCP 服务（Streamable HTTP）：用路由而不是 mount，端点才是 /mcp 本身
+    # （mount 只匹配 /mcp/...，/mcp 会被 307 重定向到 /mcp/）
+    app.router.routes.append(Route("/mcp", endpoint=create_mcp_app(ctx)))
+    # 每次 create_mcp_app 都新建会话管理器，记下本应用的这一个供 lifespan 运行
+    app.state.mcp_sessions = mcp.session_manager
 
     return app
 

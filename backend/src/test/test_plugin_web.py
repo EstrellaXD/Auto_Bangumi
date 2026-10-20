@@ -200,8 +200,8 @@ class TestSpaCsp:
         assert resp.status_code == 200
         assert "content-security-policy" not in resp.headers
 
-    def test_mcp_mount_wins_over_fallback(self, spa):
-        resp = spa.get("/mcp/sse", headers=HTML)
+    def test_mcp_route_wins_over_fallback(self, spa):
+        resp = spa.get("/mcp", headers=HTML)
         assert resp.status_code != 200
         assert "content-security-policy" not in resp.headers
 

@@ -208,7 +208,7 @@ curl -N -H "Authorization: Bearer $AB_TOKEN" http://your-host:7892/api/v1/events
 
 ## MCP
 
-AB はルートパスの `/mcp` 以下で MCP サーバー（SSE トランスポート）を提供します。クライアントは `GET /mcp/sse` に接続し、`POST /mcp/messages/` にメッセージを送ります。
+AB はルートパスの `/mcp` で MCP サーバー（Streamable HTTP トランスポート）を提供します。MCP クライアントにはサーバーの URL として `http://<AB のアドレス>:7892/mcp` を設定します。3.x と 4.0.0-beta.2 以前の SSE エンドポイント `/mcp/sse` は削除されました。
 
 - アクセス制御は REST API とは別です。クライアントの IP が `security.mcp_whitelist` に含まれるか、リクエストに `scope=mcp` のトークン（`Authorization: Bearer <トークン>`）が必要です。`mcp_whitelist` が空の場合、IP によるアクセスはすべて拒否されます。トークンは引き続き使えます。
 - 組み込みツール：`list_anime`、`get_anime`、`search_anime`、`subscribe_anime`、`unsubscribe_anime`、`list_downloads`、`list_rss_feeds`、`get_program_status`、`refresh_feeds`、`update_anime`。
