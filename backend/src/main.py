@@ -4,8 +4,9 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 import uvicorn
-from fastapi import APIRouter, Depends, FastAPI, Response
+from fastapi import APIRouter, Depends, FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from starlette.routing import Route
 
@@ -67,6 +68,9 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    # SSE（text/event-stream）由中间件默认排除，不会被压缩缓冲
+    app.add_middleware(GZipMiddleware, minimum_size=1000)
+
     # mount routers
     app.include_router(v1, prefix="/api")
 
@@ -99,14 +103,21 @@ def posters(path: str):
 
 # 前端插件组件与宿主同源（第 3.8 节），只允许加载本站脚本：远程脚本与内联脚本
 # 都被拒绝。只加在前端静态文件上，/docs 的 Swagger 页面依赖内联脚本与 CDN。
-def _spa_csp(response: Response) -> None:
+def _spa_headers(request: Request, response: Response) -> None:
     response.headers["Content-Security-Policy"] = "script-src 'self'"
+    # /assets/ 下的文件名带内容哈希，可永久缓存；入口 HTML 必须每次校验，
+    # 否则会引用已不存在的旧哈希文件。fonts/、images/ 等不带哈希，不设置。
+    path = request.url.path
+    if path.startswith("/assets/"):
+        response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+    elif path in ("/", "/index.html"):
+        response.headers["Cache-Control"] = "no-cache"
 
 
 def mount_webui(app: FastAPI, dist: Path) -> None:
     # 前端路由优先级最低，只在没有路径操作或挂载匹配时生效；浏览器导航
     # （Accept: text/html）到不存在的路径时回落到 index.html，其它请求返回 404
-    web = APIRouter(dependencies=[Depends(_spa_csp)])
+    web = APIRouter(dependencies=[Depends(_spa_headers)])
     web.frontend("/", directory=dist)
     app.include_router(web)
 

@@ -26,7 +26,11 @@ def _api_key() -> str:
 
 # In-memory cache for TMDB lookups to avoid repeated API calls
 _TMDB_CACHE_MAX = 512
-_tmdb_cache: OrderedDict[str, "TMDBInfo | None"] = OrderedDict()
+# 否定/回退结果（无匹配、回退到电影）的存活时间：既避免对同一个查不到的标题
+# 反复请求 TMDB，又不让一次临时故障把标题永久毒化
+_TMDB_NEGATIVE_TTL = 6 * 3600.0
+# 值为 (过期的 monotonic 时刻, 结果)；inf 表示不过期
+_tmdb_cache: OrderedDict[str, "tuple[float, TMDBInfo | None]"] = OrderedDict()
 
 
 def reset_cache() -> None:
@@ -234,15 +238,32 @@ async def tmdb_parser(
     # URL instead of a locally-saved one, so mixing the two would poison
     # whichever caller queries second.
     cache_key = f"{title}:{language}:{test}:{is_movie}"
-    if cache_key in _tmdb_cache:
-        return _tmdb_cache[cache_key]
+    hit = _tmdb_cache.get(cache_key)
+    if hit is not None:
+        if hit[0] > time.monotonic():
+            _tmdb_cache.move_to_end(cache_key)
+            return hit[1]
+        del _tmdb_cache[cache_key]
 
+    result = await _tmdb_lookup(title, language, test, is_movie)
+    # 剧集结果的 season 非空；None 与电影回退（season=[]）都按否定结果限时缓存
+    expires = (
+        time.monotonic() + _TMDB_NEGATIVE_TTL
+        if result is None or not result.season
+        else float("inf")
+    )
+    _tmdb_cache[cache_key] = (expires, result)
+    _tmdb_cache.move_to_end(cache_key)
+    if len(_tmdb_cache) > _TMDB_CACHE_MAX:
+        _tmdb_cache.popitem(last=False)
+    return result
+
+
+async def _tmdb_lookup(title, language, test: bool, is_movie: bool) -> TMDBInfo | None:
     async with RequestContent() as req:
         if is_movie:
             # 已知是电影/剧场版，直接查询 search/movie，跳过剧集搜索
-            result = await _search_movie(title, language, req)
-            _tmdb_cache[cache_key] = result
-            return result
+            return await _search_movie(title, language, req)
         url = search_url(title, language)
         contents = await req.get_json(url)
         if not contents:
@@ -266,9 +287,7 @@ async def tmdb_parser(
                     matched_id = cid
                     break
             if matched_id is None:
-                # search/tv 有结果但都不是动画：回退到 search/movie (剧场版等)。
-                # Don't cache the negative result permanently — a temporary
-                # TMDB hiccup shouldn't poison this title for the process lifetime.
+                # search/tv 有结果但都不是动画：回退到 search/movie (剧场版等)
                 return await _search_movie(title, language, req)
             url_info = info_url(matched_id, language)
             info_content = await req.get_json(url_info)
@@ -355,13 +374,8 @@ async def tmdb_parser(
                     virtual_season_starts if virtual_season_starts else None
                 ),
             )
-            if len(_tmdb_cache) >= _TMDB_CACHE_MAX:
-                _tmdb_cache.popitem(last=False)
-            _tmdb_cache[cache_key] = result
             return result
         else:
-            # No results at all — don't cache the negative result permanently,
-            # see the matched_id is None case above.
             return None
 
 

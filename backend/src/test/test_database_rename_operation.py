@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import pytest
+from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
 from module.database import Database
@@ -268,3 +269,28 @@ async def test_database_facade_exposes_rename_operation_repository(db_engine):
         row, created = await db.rename_operation.get_or_create(_operation())
         assert created is True
         assert await db.rename_operation.get(row.id) is not None
+
+
+async def test_get_by_target_active_filter_uses_partial_unique_index(db_session):
+    """state 过滤必须写成 NOT IN ('done')，才能命中同样条件的部分唯一索引。"""
+    repo = RenameOperationDatabase(db_session)
+    captured: list[Any] = []
+    original = db_session.execute
+
+    async def spy(statement, *args, **kwargs):
+        captured.append(statement)
+        return await original(statement, *args, **kwargs)
+
+    db_session.execute = spy  # type: ignore[method-assign]
+    await repo.get_by_target(
+        downloader_type="qbittorrent", save_path="/d", target_path="t.mp4"
+    )
+    db_session.execute = original  # type: ignore[method-assign]
+
+    plan = await db_session.execute(
+        text(
+            "EXPLAIN QUERY PLAN "
+            + str(captured[0].compile(compile_kwargs={"literal_binds": True}))
+        )
+    )
+    assert "ux_rename_operation_active_target" in " ".join(r[3] for r in plan)

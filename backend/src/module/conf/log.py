@@ -86,6 +86,9 @@ def setup_logger(level: int = logging.INFO, reset: bool = False):
     logging.basicConfig(
         level=level,
         handlers=[queue_handler],
+        # 先导入的第三方库（如 mcp）可能已让根日志器带上处理器，
+        # 此时 basicConfig 会静默跳过，日志文件就收不到任何内容
+        force=True,
     )
 
     # 压低 HTTP 请求日志：httpx2 是本项目的客户端；google-genai 与 mcp 仍依赖旧 httpx
