@@ -42,9 +42,10 @@ Webhookテンプレートでは `{{title}}`、`{{season}}`、`{{episode}}`、`{{
 | `token` | Telegram（Bot Token）、Server Chan（SendKey）、WeCom（Key）、Gotify（App Token）で使用 |
 | `chat_id` | Telegram で使用 |
 | `webhook_url` | Discord、WeCom で使用 |
-| `url` | Webhook で使用 |
+| `url` | Webhook で使用。Bark ではタップで開く URL（任意） |
 | `server_url` | Bark（任意）、Gotify で使用 |
 | `device_key` | Bark で使用 |
+| `sound` / `group` / `level` / `icon` | Bark（任意）：通知音、グループ、割り込みレベル（`active`、`timeSensitive`、`passive`、`critical`）、アイコン URL。空の項目は送信しません。`icon` が空のとき、エピソード通知はポスターの URL を使います |
 | `user_key` / `api_token` | Pushover で使用 |
 | `template` | カスタム通知テンプレート |
 

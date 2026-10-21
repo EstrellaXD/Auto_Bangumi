@@ -42,8 +42,10 @@ const providerFields: Record<
   string,
   {
     key: keyof NotificationProviderConfig;
-    label: string;
+    label: string | (() => string);
     placeholder: string;
+    // 有选项时渲染为可清空的下拉框
+    options?: string[];
   }[]
 > = {
   telegram: [
@@ -63,6 +65,32 @@ const providerFields: Record<
       key: 'server_url',
       label: 'Server URL (optional)',
       placeholder: 'https://api.day.app',
+    },
+    {
+      key: 'sound',
+      label: () => t('config.notification_set.bark_sound'),
+      placeholder: 'minuet',
+    },
+    {
+      key: 'group',
+      label: () => t('config.notification_set.bark_group'),
+      placeholder: 'AutoBangumi',
+    },
+    {
+      key: 'level',
+      label: () => t('config.notification_set.bark_level'),
+      placeholder: 'active',
+      options: ['active', 'timeSensitive', 'passive', 'critical'],
+    },
+    {
+      key: 'icon',
+      label: () => t('config.notification_set.bark_icon'),
+      placeholder: 'https://example.com/icon.png',
+    },
+    {
+      key: 'url',
+      label: () => t('config.notification_set.bark_url'),
+      placeholder: 'https://example.com',
     },
   ],
   'server-chan': [{ key: 'token', label: 'SendKey', placeholder: 'sendkey' }],
@@ -385,8 +413,15 @@ function getFieldsForType(type: string) {
           :key="field.key"
           :label="field.label"
         >
+          <NSelect
+            v-if="field.options"
+            v-model:value="(newProvider as any)[field.key]"
+            :options="field.options.map((value) => ({ label: value, value }))"
+            :placeholder="field.placeholder"
+            clearable
+          />
           <ab-input
-            v-if="field.key !== 'template'"
+            v-else-if="field.key !== 'template'"
             v-model="(newProvider as any)[field.key]"
             :placeholder="field.placeholder"
           />
@@ -457,8 +492,15 @@ function getFieldsForType(type: string) {
           :key="field.key"
           :label="field.label"
         >
+          <NSelect
+            v-if="field.options"
+            v-model:value="(newProvider as any)[field.key]"
+            :options="field.options.map((value) => ({ label: value, value }))"
+            :placeholder="field.placeholder"
+            clearable
+          />
           <ab-input
-            v-if="field.key !== 'template'"
+            v-else-if="field.key !== 'template'"
             v-model="(newProvider as any)[field.key]"
             :placeholder="field.placeholder"
           />

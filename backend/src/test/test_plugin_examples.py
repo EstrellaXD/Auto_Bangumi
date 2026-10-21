@@ -122,6 +122,8 @@ async def test_all_examples_load_in_host_with_expected_providers(tmp_path):
             "wpush",
             "onebot",
             "apprise",
+            "slack",
+            "synology-chat",
         }
         assert set(registry.providers(points.SEARCH_SITE)) == {"my-tracker"}
         assert [h.plugin_id for h in registry.hooks(points.HTTP_REQUEST)] == [

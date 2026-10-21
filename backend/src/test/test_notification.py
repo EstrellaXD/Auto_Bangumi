@@ -354,6 +354,67 @@ class TestBarkProvider:
         call_args = mock_post.call_args[0]
         assert "device_key" in call_args[1]
 
+    @pytest.mark.parametrize(
+        ("options", "expected"),
+        [
+            ({}, {}),
+            ({"sound": "", "level": ""}, {}),
+            (
+                {
+                    "sound": "minuet",
+                    "group": "AB",
+                    "level": "timeSensitive",
+                    "url": "https://ab.local",
+                },
+                {
+                    "sound": "minuet",
+                    "group": "AB",
+                    "level": "timeSensitive",
+                    "url": "https://ab.local",
+                },
+            ),
+        ],
+    )
+    async def test_deliver_text_sends_only_set_options(self, options, expected):
+        """#792：sound/group/level/url 只在设置时发送，旧配置的请求体不变。"""
+        config = ProviderConfig(type="bark", device_key="k", **options)
+        provider = BarkProvider(config)
+
+        with patch.object(provider, "_post_json", new_callable=AsyncMock) as mock_post:
+            mock_post.return_value = MagicMock(status_code=200)
+            assert await provider._deliver_text("T", "B") is True
+
+        assert mock_post.call_args[0][1] == {
+            "title": "T",
+            "body": "B",
+            "device_key": "k",
+            **expected,
+        }
+
+    @pytest.mark.parametrize(
+        ("icon", "poster", "expected"),
+        [
+            (None, "https://ab/p.jpg", "https://ab/p.jpg"),
+            ("https://ab/i.png", "https://ab/p.jpg", "https://ab/i.png"),
+            (None, None, None),
+        ],
+    )
+    async def test_send_icon_prefers_configured_icon_over_poster(
+        self, icon, poster, expected
+    ):
+        """配置的 icon 优先；未配置时沿用海报地址；都没有则不发 icon。"""
+        provider = BarkProvider(ProviderConfig(type="bark", device_key="k", icon=icon))
+        notify = Notification(official_title="Test Anime", season=1, episode=5)
+
+        with (
+            patch.object(provider, "_poster_url", return_value=poster),
+            patch.object(provider, "_post_json", new_callable=AsyncMock) as mock_post,
+        ):
+            mock_post.return_value = MagicMock(status_code=200)
+            await provider.send(notify)
+
+        assert mock_post.call_args[0][1].get("icon") == expected
+
 
 class TestWebhookProvider:
     @pytest.fixture

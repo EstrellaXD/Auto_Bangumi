@@ -48,6 +48,10 @@ class TestProviderConfigRequest(BaseModel):
     api_token: Optional[str] = Field(default=None, description="API token")
     template: Optional[str] = Field(default=None, description="Custom template")
     url: Optional[str] = Field(default=None, description="URL for generic webhook")
+    sound: Optional[str] = Field(default=None, description="Bark sound")
+    group: Optional[str] = Field(default=None, description="Bark group")
+    level: Optional[str] = Field(default=None, description="Bark level")
+    icon: Optional[str] = Field(default=None, description="Bark icon URL")
 
 
 class TestResponse(BaseModel):
@@ -108,6 +112,10 @@ async def test_provider_config(request: TestProviderConfigRequest):
             api_token=request.api_token or "",
             template=request.template,
             url=request.url or "",
+            sound=request.sound,
+            group=request.group,
+            level=request.level,
+            icon=request.icon,
         )
 
         success, message = await NotificationManager.test_provider_config(config)
