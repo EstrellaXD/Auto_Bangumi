@@ -24,7 +24,7 @@
 - Telegram：`Bot Token`、`Chat ID`
 - Discord：Webhook URL
 - WeCom：Webhook URL、Key
-- Bark：Device Key，可选 Server URL
+- Bark：Device Key，可选 Server URL、铃声、分组、中断级别、图标地址、点击打开的地址
 - Server Chan：SendKey
 - Gotify：Server URL、App Token
 - Pushover：User Key、API Token
@@ -53,9 +53,10 @@ Webhook 模板可以使用 `{{title}}`、`{{season}}`、`{{episode}}`、`{{poste
 | `token` | Telegram（Bot Token）、Server Chan（SendKey）、WeCom（Key）、Gotify（App Token）使用 |
 | `chat_id` | Telegram 使用 |
 | `webhook_url` | Discord、WeCom 使用 |
-| `url` | Webhook 使用 |
+| `url` | Webhook 使用；Bark 中为点击通知后打开的地址（可选） |
 | `server_url` | Bark（可选）、Gotify 使用 |
 | `device_key` | Bark 使用 |
+| `sound` / `group` / `level` / `icon` | Bark 可选：铃声、分组、中断级别（`active`、`timeSensitive`、`passive`、`critical`）、图标地址。留空则不发送；`icon` 留空时单集通知用海报地址 |
 | `user_key` / `api_token` | Pushover 使用 |
 | `template` | 自定义通知模板 |
 
