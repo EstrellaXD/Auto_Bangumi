@@ -5,6 +5,6 @@ version = "0.1.0"
 sdk = ">=0.5,<1"
 entry = "apprise_notifier:AppriseNotifier"
 description = "通过 Apprise API 服务器（caronc/apprise）转发通知到上百种服务。在「设置 → 通知 → 添加渠道」选择类型 apprise"
-authors = ["AutoBangumi"]
+authors = ["AutoBangumi", "LTSlw"]
 permissions = ["network"]
 extension_points = ["notifier"]
