@@ -1,3 +1,4 @@
 repo = "EstrellaXD/Auto_Bangumi"
 commit = "30b69dd00de047b0a9fd413dcbf1ca0f20e8a68a"
 path = "examples/plugins/apprise-notifier"
+sha256 = "365dfa0a815c252f0e8422fcb073616a5dc75f64b0862f45acde250600f599f3"
