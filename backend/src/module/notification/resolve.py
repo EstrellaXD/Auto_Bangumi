@@ -56,7 +56,16 @@ def build_provider(config: "ProviderConfig") -> NotificationProvider | None:
     if entry.plugin_id == CORE:
         # 内置渠道：impl 是 NotificationProvider 子类，直接接收整条配置
         return impl(config)
-    settings = NotifierSettings(
-        template=config.template, extra=dict(config.model_extra or {})
+    # extra = 未知字段 + 已填写的已声明字段（group、icon 等同时是 Bark 的字段，
+    # 声明后不在 model_extra 里）；type/enabled/template 由宿主处理，不放进去。
+    # 已声明字段按别名取同名属性（token、url 等），与内置渠道一样展开 $VAR
+    unknown = config.model_extra or {}
+    declared = config.model_dump(
+        by_alias=True,
+        exclude_none=True,
+        exclude={"type", "enabled", "template", *unknown},
     )
+    expanded = {k: getattr(config, k) for k in declared}
+    extra = {k: v for k, v in expanded.items() if v != ""} | unknown
+    settings = NotifierSettings(template=config.template, extra=extra)
     return PluginNotifier(config, impl(settings))

@@ -119,7 +119,12 @@
       "test_success": "测试成功",
       "test_failed": "测试失败",
       "plugin_label": "{id}（插件）",
-      "plugin_hint": "此渠道由插件提供，这里没有可填字段。请在插件设置中该插件的配置里填写凭据。"
+      "plugin_hint": "此渠道由插件提供，这里没有可填字段。请在插件设置中该插件的配置里填写凭据。",
+      "bark_sound": "铃声（可选）",
+      "bark_group": "分组（可选）",
+      "bark_level": "中断级别（可选）",
+      "bark_icon": "图标地址（可选，默认用海报）",
+      "bark_url": "点击打开的地址（可选）"
     },
     "parser_set": {
       "enable": "启用",
@@ -245,7 +250,8 @@
       "permission_labels": {
         "fs_write": "写入文件",
         "network": "访问网络",
-        "filesystem": "访问文件系统"
+        "filesystem": "访问文件系统",
+        "subprocess": "运行外部命令"
       },
       "disable": "停用",
       "disable_confirm_title": "停用 {name}？",

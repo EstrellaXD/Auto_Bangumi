@@ -22,30 +22,42 @@ class BarkProvider(NotificationProvider):
         self.device_key = config.device_key
         server_url = config.server_url or self.DEFAULT_SERVER
         self.notification_url = f"{server_url.rstrip('/')}/push"
+        # 可选推送参数：只发送已设置的项，旧配置的请求体不变
+        self.options = {
+            "sound": config.sound,
+            "group": config.group,
+            "level": config.level,
+            "url": config.url,
+        }
+        self.icon = config.icon
+
+    def _payload(self, title: str, body: str, icon: str | None = None) -> dict:
+        data: dict[str, str | None] = {
+            "title": title,
+            "body": body,
+            "device_key": self.device_key,
+        }
+        data.update({k: v for k, v in self.options.items() if v})
+        # 配置的图标优先，其次是调用方给的（单集通知的海报）
+        if self.icon or icon:
+            data["icon"] = self.icon or icon
+        return data
 
     async def send(self, notification: Notification) -> bool:
         """Send notification via Bark."""
         text = self._format_message(notification)
-        data = {
-            "title": notification.official_title,
-            "body": text,
-            "device_key": self.device_key,
-        }
-        poster_url = self._poster_url(notification)
-        if poster_url:
-            data["icon"] = poster_url
-
+        data = self._payload(
+            notification.official_title, text, self._poster_url(notification)
+        )
         resp = await self._post_json(self.notification_url, data)
         logger.debug("Bark notification: %s", resp.status_code)
         return resp.status_code == 200
 
     async def test(self) -> tuple[bool, str]:
         """Test Bark configuration by sending a test notification."""
-        data = {
-            "title": "AutoBangumi",
-            "body": "通知测试成功！\nNotification test successful!",
-            "device_key": self.device_key,
-        }
+        data = self._payload(
+            "AutoBangumi", "通知测试成功！\nNotification test successful!"
+        )
         try:
             resp = await self._post_json(self.notification_url, data)
             if resp.status_code == 200:
@@ -57,6 +69,5 @@ class BarkProvider(NotificationProvider):
 
     async def _deliver_text(self, title: str, body: str) -> bool:
         """Deliver a system event via Bark."""
-        data = {"title": title, "body": body, "device_key": self.device_key}
-        resp = await self._post_json(self.notification_url, data)
+        resp = await self._post_json(self.notification_url, self._payload(title, body))
         return resp.status_code == 200

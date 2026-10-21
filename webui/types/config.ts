@@ -95,6 +95,11 @@ export interface NotificationProviderConfig {
   api_token?: string;
   template?: string;
   url?: string;
+  // Bark 的可选推送参数
+  sound?: string;
+  group?: string;
+  level?: string;
+  icon?: string;
 }
 
 export interface Notification {

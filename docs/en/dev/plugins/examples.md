@@ -9,6 +9,10 @@ The examples are in [`examples/plugins/`](https://github.com/EstrellaXD/Auto_Ban
 | `template-rename` | A `rename_strategy` Provider with a file-name template that has its own filters. `RenameSkipped`. `RenameStrategyContract` |
 | `nfo-writer` | Subscribes to `torrent.organized` and writes an `.nfo` next to each media file. Path mapping. Idempotent |
 | `ntfy-notifier` | A `notifier` Provider. Returns `False` when the backend refuses. `NotifierContract` |
+| `run-command` | Subscribes to `torrent.organized` / `file.renamed` and runs an external command. The argument list does not go through a shell. Environment variables and placeholders. Kill on timeout |
+| `strm-writer` | Subscribes to `torrent.organized` and writes `.strm` files that mirror the media folders. Idempotent |
+| `synology-chat-notifier` | A `notifier` Provider. Sends the form field `payload=<JSON>`. Returns `False` on HTTP 200 with `success: false` |
+| `slack-notifier` | A `notifier` Provider. Escapes mrkdwn. Adds an image block when a poster is available |
 | `manual-pick` | The frontend slot `bangumi.detail.tab`, plugin routes, plugin KV, events |
 
 ## Install an example

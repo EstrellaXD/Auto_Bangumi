@@ -1,0 +1,10 @@
+[plugin]
+id = "onebot-notifier"
+name = "OneBot 通知"
+version = "0.1.0"
+sdk = ">=0.5,<1"
+entry = "onebot_notifier:OneBotNotifier"
+description = "通过 OneBot v11 HTTP API（NapCat、Lagrange 等）把通知发到 QQ 私聊或群。在「设置 → 通知 → 添加渠道」选择类型 onebot"
+authors = ["AutoBangumi"]
+permissions = ["network"]
+extension_points = ["notifier"]

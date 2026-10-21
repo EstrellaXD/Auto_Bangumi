@@ -117,7 +117,14 @@ async def test_all_examples_load_in_host_with_expected_providers(tmp_path):
     try:
         assert {s.id: s.state for s in mgr.statuses()} == dict.fromkeys(ids, "active")
         assert set(registry.providers(points.RENAME_STRATEGY)) == {"mini-template"}
-        assert set(registry.providers(points.NOTIFIER)) == {"ntfy"}
+        assert set(registry.providers(points.NOTIFIER)) == {
+            "ntfy",
+            "wpush",
+            "onebot",
+            "apprise",
+            "slack",
+            "synology-chat",
+        }
         assert set(registry.providers(points.SEARCH_SITE)) == {"my-tracker"}
         assert [h.plugin_id for h in registry.hooks(points.HTTP_REQUEST)] == [
             "custom-rss-site"

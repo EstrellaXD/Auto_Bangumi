@@ -119,7 +119,12 @@
       "test_success": "Test successful",
       "test_failed": "Test failed",
       "plugin_label": "{id} (plugin)",
-      "plugin_hint": "This channel comes from a plugin and has no fields here. Enter its credentials in the plugin's options in the Plugins section."
+      "plugin_hint": "This channel comes from a plugin and has no fields here. Enter its credentials in the plugin's options in the Plugins section.",
+      "bark_sound": "Sound (optional)",
+      "bark_group": "Group (optional)",
+      "bark_level": "Interruption level (optional)",
+      "bark_icon": "Icon URL (optional, defaults to the poster)",
+      "bark_url": "URL to open on tap (optional)"
     },
     "parser_set": {
       "enable": "Enable",
@@ -245,7 +250,8 @@
       "permission_labels": {
         "fs_write": "Write files",
         "network": "Network access",
-        "filesystem": "File system access"
+        "filesystem": "File system access",
+        "subprocess": "Run external commands"
       },
       "disable": "Disable",
       "disable_confirm_title": "Disable {name}?",

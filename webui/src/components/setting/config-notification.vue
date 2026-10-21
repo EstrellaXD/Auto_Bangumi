@@ -56,8 +56,10 @@ const providerFields: Record<
   string,
   {
     key: keyof NotificationProviderConfig;
-    label: string;
+    label: string | (() => string);
     placeholder: string;
+    // 有选项时渲染为可清空的下拉框
+    options?: string[];
   }[]
 > = {
   telegram: [
@@ -77,6 +79,32 @@ const providerFields: Record<
       key: 'server_url',
       label: 'Server URL (optional)',
       placeholder: 'https://api.day.app',
+    },
+    {
+      key: 'sound',
+      label: () => t('config.notification_set.bark_sound'),
+      placeholder: 'minuet',
+    },
+    {
+      key: 'group',
+      label: () => t('config.notification_set.bark_group'),
+      placeholder: 'AutoBangumi',
+    },
+    {
+      key: 'level',
+      label: () => t('config.notification_set.bark_level'),
+      placeholder: 'active',
+      options: ['active', 'timeSensitive', 'passive', 'critical'],
+    },
+    {
+      key: 'icon',
+      label: () => t('config.notification_set.bark_icon'),
+      placeholder: 'https://example.com/icon.png',
+    },
+    {
+      key: 'url',
+      label: () => t('config.notification_set.bark_url'),
+      placeholder: 'https://example.com',
     },
   ],
   'server-chan': [{ key: 'token', label: 'SendKey', placeholder: 'sendkey' }],
@@ -180,6 +208,12 @@ function openAddDialog() {
     enabled: true,
   };
   showAddDialog.value = true;
+}
+
+// 新增时切换类型：清掉上一类型的字段。Bark 也读 url（点击跳转），
+// 残留的 Webhook URL 会被一起发出去
+function changeType(type: NotificationProviderConfig['type']) {
+  newProvider.value = { type, enabled: newProvider.value.enabled };
 }
 
 function openEditDialog(index: number) {
@@ -382,9 +416,10 @@ function getFieldsForType(type: string) {
       <div class="space-y-16">
         <ab-field :label="$t('config.notification_set.type')">
           <NSelect
-            v-model:value="newProvider.type"
+            :value="newProvider.type"
             :options="providerTypes"
             class="provider-type-select"
+            @update:value="changeType"
           />
         </ab-field>
 
@@ -393,8 +428,15 @@ function getFieldsForType(type: string) {
           :key="field.key"
           :label="field.label"
         >
+          <NSelect
+            v-if="field.options"
+            v-model:value="(newProvider as any)[field.key]"
+            :options="field.options.map((value) => ({ label: value, value }))"
+            :placeholder="field.placeholder"
+            clearable
+          />
           <ab-input
-            v-if="field.key !== 'template'"
+            v-else-if="field.key !== 'template'"
             v-model="(newProvider as any)[field.key]"
             :placeholder="field.placeholder"
           />
@@ -462,8 +504,15 @@ function getFieldsForType(type: string) {
           :key="field.key"
           :label="field.label"
         >
+          <NSelect
+            v-if="field.options"
+            v-model:value="(newProvider as any)[field.key]"
+            :options="field.options.map((value) => ({ label: value, value }))"
+            :placeholder="field.placeholder"
+            clearable
+          />
           <ab-input
-            v-if="field.key !== 'template'"
+            v-else-if="field.key !== 'template'"
             v-model="(newProvider as any)[field.key]"
             :placeholder="field.placeholder"
           />

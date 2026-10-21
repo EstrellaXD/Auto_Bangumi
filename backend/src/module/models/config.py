@@ -181,7 +181,19 @@ class NotificationProvider(BaseModel):
         ),
     )
     url_: Optional[str] = Field(
-        default=None, alias="url", description="URL for generic webhook provider"
+        default=None,
+        alias="url",
+        description="URL for generic webhook provider; tap-to-open URL for bark",
+    )
+    # Bark 的可选推送参数，留空则不发送
+    sound: Optional[str] = Field(default=None, description="Bark sound name")
+    group: Optional[str] = Field(default=None, description="Bark message group")
+    level: Optional[str] = Field(
+        default=None,
+        description="Bark interruption level: active/timeSensitive/passive/critical",
+    )
+    icon: Optional[str] = Field(
+        default=None, description="Bark icon URL; defaults to the poster URL"
     )
 
     @property

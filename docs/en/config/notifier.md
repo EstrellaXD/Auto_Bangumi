@@ -24,7 +24,7 @@ Provider-specific fields include:
 - Telegram: `Bot Token`, `Chat ID`
 - Discord: Webhook URL
 - WeCom: Webhook URL and Key
-- Bark: Device Key and optional Server URL
+- Bark: Device Key. Optional: Server URL, sound, group, interruption level, icon URL, and the URL to open on tap
 - Server Chan: SendKey
 - Gotify: Server URL and App Token
 - Pushover: User Key and API Token
@@ -53,9 +53,10 @@ Each object in `providers` usually contains:
 | `token` | Used by Telegram (Bot Token), Server Chan (SendKey), WeCom (Key) and Gotify (App Token) |
 | `chat_id` | Used by Telegram |
 | `webhook_url` | Used by Discord and WeCom |
-| `url` | Used by Webhook |
+| `url` | Used by Webhook. For Bark, the URL to open on tap (optional) |
 | `server_url` | Used by Bark (optional) and Gotify |
 | `device_key` | Used by Bark |
+| `sound` / `group` / `level` / `icon` | Optional for Bark: sound, group, interruption level (`active`, `timeSensitive`, `passive`, `critical`), and icon URL. AB does not send an empty field. When `icon` is empty, episode notifications use the poster URL |
 | `user_key` / `api_token` | Used by Pushover |
 | `template` | Custom message template |
 
