@@ -10,6 +10,7 @@ from module.notification.providers.server_chan import ServerChanProvider
 from module.notification.providers.telegram import TelegramProvider
 from module.notification.providers.webhook import WebhookProvider
 from module.notification.providers.wecom import WecomProvider
+from module.notification.providers.wpush import WPushProvider
 
 if TYPE_CHECKING:
     from module.notification.base import NotificationProvider
@@ -25,6 +26,8 @@ PROVIDER_REGISTRY: dict[str, type["NotificationProvider"]] = {
     "gotify": GotifyProvider,
     "pushover": PushoverProvider,
     "webhook": WebhookProvider,
+    "wpush": WPushProvider,
+    "w-push": WPushProvider,
 }
 
 __all__ = [
@@ -37,4 +40,5 @@ __all__ = [
     "GotifyProvider",
     "PushoverProvider",
     "WebhookProvider",
+    "WPushProvider",
 ]
