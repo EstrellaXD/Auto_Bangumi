@@ -36,9 +36,9 @@ class TestChannel(NotifierContract):
     ("options", "path", "payload"),
     [
         (
-            {"server": "http://ap:8000/", "urls": ["tgram://t/1", "mailto://u"]},
+            {"server": "http://ap:8000/", "urls": "tgram://t/1,\n mailto://u ,"},
             "/notify/",
-            {"title": "标题", "body": "正文", "urls": "tgram://t/1, mailto://u"},
+            {"title": "标题", "body": "正文", "urls": "tgram://t/1,mailto://u"},
         ),
         (
             {"server": "http://ap:8000", "config_key": "ab"},
@@ -64,7 +64,7 @@ def test_missing_urls_and_config_key_fails_without_request():
 
 
 def test_urls_is_secret_in_config_schema():
-    # URL 里带着令牌：宿主的读配置接口按 schema 中的 secret 标记掩码每一项
+    # URL 里带着令牌：宿主的读配置接口按 schema 中的 secret 标记掩码
     urls = Options.model_json_schema()["properties"]["urls"]
     assert urls["secret"] is True
-    assert urls["type"] == "array"
+    assert urls["type"] == "string"

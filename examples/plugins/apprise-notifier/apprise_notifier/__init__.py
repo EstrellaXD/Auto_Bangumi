@@ -23,10 +23,9 @@ class Options(BaseModel):
         "http://apprise:8000", title="服务器", description="Apprise API 服务器地址"
     )
     # URL 里带着令牌，按秘密字段掩码
-    urls: list[str] = secret_field(
-        default_factory=list,
+    urls: str = secret_field(
         title="Apprise URL",
-        description="如 tgram://bottoken/ChatID；填写后忽略配置键",
+        description="多个 Apprise URL 用逗号或换行分隔",
     )
     config_key: str = Field(
         "",
@@ -50,10 +49,12 @@ class Channel:
         opts = self.options
         server = opts.server.rstrip("/")
         payload: dict[str, Any] = {"title": message.title, "body": message.body}
-        if opts.urls:
+        urls = [u.strip() for u in opts.urls.replace("\n", ",").split(",")]
+        urls = [u for u in urls if u]
+        if urls:
             url = f"{server}/notify/"
             # Apprise 接受逗号分隔的 URL 字符串
-            payload["urls"] = ", ".join(opts.urls)
+            payload["urls"] = ",".join(urls)
         elif opts.config_key:
             url = f"{server}/notify/{opts.config_key}"
         else:
