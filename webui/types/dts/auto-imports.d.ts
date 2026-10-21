@@ -11,6 +11,8 @@ declare global {
   const EffectScope: typeof import('vue').EffectScope
   const MARKET_CATEGORIES: typeof import('../../src/utils/plugin-market').MARKET_CATEGORIES
   const MARKET_STATES: typeof import('../../src/utils/plugin-market').MARKET_STATES
+  const SCROLL_ANCHOR_OFFSET: typeof import('../../src/utils/scroll-spy').SCROLL_ANCHOR_OFFSET
+  const SCROLL_BOTTOM_EPSILON: typeof import('../../src/utils/scroll-spy').SCROLL_BOTTOM_EPSILON
   const acceptHMRUpdate: typeof import('pinia').acceptHMRUpdate
   const apiAuth: typeof import('../../src/api/auth').apiAuth
   const apiBangumi: typeof import('../../src/api/bangumi').apiBangumi
@@ -96,6 +98,7 @@ declare global {
   const onWatcherCleanup: typeof import('vue').onWatcherCleanup
   const parseLogLines: typeof import('../../src/utils/log-parse').parseLogLines
   const permissionDiff: typeof import('../../src/utils/plugin-market').permissionDiff
+  const pickActiveSection: typeof import('../../src/utils/scroll-spy').pickActiveSection
   const pluginDescription: typeof import('../../src/utils/plugin-text').pluginDescription
   const pluginName: typeof import('../../src/utils/plugin-text').pluginName
   const pluginReason: typeof import('../../src/utils/plugin-text').pluginReason
@@ -224,4 +227,7 @@ declare global {
   // @ts-ignore
   export type { SchemaFieldKind, SchemaField } from '../../src/utils/plugin-schema'
   import('../../src/utils/plugin-schema')
+  // @ts-ignore
+  export type { SectionTop } from '../../src/utils/scroll-spy'
+  import('../../src/utils/scroll-spy')
 }

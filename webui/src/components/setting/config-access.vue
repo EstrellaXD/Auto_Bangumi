@@ -7,6 +7,7 @@ import {
   ref,
 } from 'vue';
 import { storeToRefs } from 'pinia';
+import { useClipboard } from '@vueuse/core';
 import type {
   ApiTokenPublic,
   ApiTokenStatus,
@@ -137,8 +138,11 @@ async function handleCreateToken(): Promise<void> {
   }
 }
 
+// legacy: 非安全上下文（HTTP）下 navigator.clipboard 不可用，回落到 execCommand
+const { copy } = useClipboard({ legacy: true });
+
 async function copyIssuedToken(): Promise<void> {
-  await navigator.clipboard.writeText(issuedToken.value);
+  await copy(issuedToken.value);
   message.success(t('access.token_copied'));
 }
 

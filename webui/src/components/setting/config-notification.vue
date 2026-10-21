@@ -1,4 +1,18 @@
 <script lang="ts" setup>
+import {
+  Bell,
+  BellRing,
+  Eye,
+  EyeOff,
+  LoaderCircle,
+  Pencil,
+  Play,
+  Plus,
+  Smartphone,
+  Trash2,
+  Webhook,
+} from '@lucide/vue';
+import type { Component } from 'vue';
 import { NSelect } from 'naive-ui';
 import { useConfirm } from '@/hooks/useConfirm';
 import type { NotificationProviderConfig, NotificationType } from '#/config';
@@ -146,19 +160,19 @@ function getProviderLabel(type: string): string {
   return providerTypes.value.find((p) => p.value === type)?.label || type;
 }
 
-function getProviderIcon(type: string): string {
-  const icons: Record<string, string> = {
-    telegram: 'i-simple-icons-telegram',
-    discord: 'i-simple-icons-discord',
-    bark: 'i-carbon-notification',
-    'server-chan': 'i-simple-icons-wechat',
-    wecom: 'i-simple-icons-wechat',
-    gotify: 'i-carbon-notification-filled',
-    pushover: 'i-carbon-mobile',
-    webhook: 'i-carbon-webhook',
-  };
-  return icons[type] || 'i-carbon-notification';
-}
+// 品牌图标走 simple-icons，其余类型用 Lucide，未知（插件）类型回落到 Bell
+const brandIcons: Record<string, string> = {
+  telegram: 'i-simple-icons-telegram',
+  discord: 'i-simple-icons-discord',
+  'server-chan': 'i-simple-icons-wechat',
+  wecom: 'i-simple-icons-wechat',
+};
+const lucideIcons: Record<string, Component> = {
+  bark: Bell,
+  gotify: BellRing,
+  pushover: Smartphone,
+  webhook: Webhook,
+};
 
 function openAddDialog() {
   newProvider.value = {
@@ -291,7 +305,8 @@ function getFieldsForType(type: string) {
         >
           <div class="provider-info">
             <div class="provider-name">
-              <div :class="getProviderIcon(provider.type)" />
+              <div v-if="brandIcons[provider.type]" :class="brandIcons[provider.type]" />
+              <component :is="lucideIcons[provider.type] ?? Bell" v-else :size="16" />
               {{ getProviderLabel(provider.type) }}
               <span v-if="!provider.enabled" class="disabled-badge">
                 {{ $t('config.notification_set.disabled') }}
@@ -305,18 +320,15 @@ function getFieldsForType(type: string) {
               :label="$t('config.notification_set.test')"
               @click="testProvider(index)"
             >
-              <div
-                v-if="testingIndex === index"
-                class="i-carbon-circle-dash animate-spin"
-              />
-              <div v-else class="i-carbon-play" />
+              <LoaderCircle v-if="testingIndex === index" :size="16" class="animate-spin" />
+              <Play v-else :size="16" />
             </ab-icon-button>
             <ab-icon-button
               size="sm"
               :label="$t('config.notification_set.edit')"
               @click="openEditDialog(index)"
             >
-              <div class="i-carbon-edit" />
+              <Pencil :size="16" />
             </ab-icon-button>
             <ab-icon-button
               size="sm"
@@ -327,11 +339,7 @@ function getFieldsForType(type: string) {
               "
               @click="toggleProvider(index)"
             >
-              <div
-                :class="
-                  provider.enabled ? 'i-carbon-view' : 'i-carbon-view-off'
-                "
-              />
+              <component :is="provider.enabled ? Eye : EyeOff" :size="16" />
             </ab-icon-button>
             <ab-icon-button
               size="sm"
@@ -339,7 +347,7 @@ function getFieldsForType(type: string) {
               :label="$t('config.notification_set.remove')"
               @click="onRemoveProvider(index)"
             >
-              <div class="i-carbon-trash-can" />
+              <Trash2 :size="16" />
             </ab-icon-button>
           </div>
         </div>
@@ -358,7 +366,7 @@ function getFieldsForType(type: string) {
         <!-- Add provider button -->
         <div class="flex justify-end">
           <ab-button size="sm" variant="primary" @click="openAddDialog">
-            <div class="i-carbon-add" />
+            <Plus :size="16" />
             {{ $t('config.notification_set.add_provider') }}
           </ab-button>
         </div>
@@ -420,11 +428,8 @@ function getFieldsForType(type: string) {
           :disabled="testingIndex === -999"
           @click="testNewProvider"
         >
-          <div
-            v-if="testingIndex === -999"
-            class="i-carbon-circle-dash animate-spin"
-          />
-          <div v-else class="i-carbon-play" />
+          <LoaderCircle v-if="testingIndex === -999" :size="16" class="animate-spin" />
+          <Play v-else :size="16" />
           {{ $t('config.notification_set.test') }}
         </ab-button>
         <ab-button size="sm" @click="showAddDialog = false">
@@ -492,11 +497,8 @@ function getFieldsForType(type: string) {
           :disabled="testingIndex === -999"
           @click="testNewProvider"
         >
-          <div
-            v-if="testingIndex === -999"
-            class="i-carbon-circle-dash animate-spin"
-          />
-          <div v-else class="i-carbon-play" />
+          <LoaderCircle v-if="testingIndex === -999" :size="16" class="animate-spin" />
+          <Play v-else :size="16" />
           {{ $t('config.notification_set.test') }}
         </ab-button>
         <ab-button size="sm" @click="showEditDialog = false">
