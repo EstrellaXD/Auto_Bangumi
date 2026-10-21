@@ -879,7 +879,7 @@ class Renamer(RevisionSaga):
                     episode_offset=episode_offset,
                     episode_type=episode_type,
                     # 只认本轮实际用的就是选定策略：未登记而回退到 none 时文件
-                    # 保留原名，恢复后还会真正改名并通知，这里再通知就重复了
+                    # 保留原名，不记录也不通知，恢复后那一轮才记录并通知
                     notify_unchanged=final_names,
                 )
                 if report.notification:
@@ -925,7 +925,9 @@ class Renamer(RevisionSaga):
                 logger.warning(f"{torrent_name} has no media file")
         async with Database() as db:
             await db.rename_operation.prune_done(
-                datetime.now(timezone.utc) - timedelta(days=30)
+                datetime.now(timezone.utc) - timedelta(days=30),
+                live_task_ids=set(info_by_hash),
+                downloader_type=instance_key,
             )
         logger.debug("Rename process finished.")
         return renamed_info

@@ -110,7 +110,6 @@ class RevisionSaga:
         bangumi_name: str,
         _hash: str,
         episode_offset: int,
-        notify_unchanged: bool = False,
     ) -> MediaRenameReport:
         if prepared.source_path == prepared.target_path:
             # 文件名已是目标名（重命名方式 none，或已符合命名规则）时不会走真正的
@@ -119,16 +118,12 @@ class RevisionSaga:
             return MediaRenameReport(
                 result=RenameResult(RenameOutcome.ALREADY_APPLIED),
                 prepared=prepared,
-                notification=(
-                    Notification(
-                        official_title=bangumi_name,
-                        season=prepared.episode.season,
-                        episode=self._adjust_episode(
-                            prepared.episode.episode, episode_offset
-                        ),
-                    )
-                    if notify_unchanged
-                    else None
+                notification=Notification(
+                    official_title=bangumi_name,
+                    season=prepared.episode.season,
+                    episode=self._adjust_episode(
+                        prepared.episode.episode, episode_offset
+                    ),
                 ),
             )
         result = await self.client.rename_torrent_file(
@@ -856,6 +851,13 @@ class RevisionSaga:
     ) -> MediaRenameReport:
         """Claim and execute one non-replacement rename exactly once at a time."""
 
+        if prepared.source_path == prepared.target_path and not notify_unchanged:
+            # 选定策略未登记、本轮回退到 none：原名不是最终名，不建操作记录也不
+            # 通知；策略恢复后那一轮再建记录并通知（#1082）
+            return MediaRenameReport(
+                result=RenameResult(RenameOutcome.ALREADY_APPLIED),
+                prepared=prepared,
+            )
         template = self._build_operation(
             info=info,
             prepared=prepared,
@@ -984,7 +986,6 @@ class RevisionSaga:
                 bangumi_name=bangumi_name,
                 _hash=info["hash"],
                 episode_offset=episode_offset,
-                notify_unchanged=notify_unchanged,
             )
             if report.result.succeeded:
                 await self._set_operation_state(claimed, "done")

@@ -170,6 +170,7 @@ Schema migrations are tracked via a `schema_version` table in SQLite. To add a n
 
 1. Append a `Migration(version, "description", (…SQL…), already_applied=column_exists("table", "col"))` entry to the `MIGRATIONS` tuple in `backend/src/module/database/migrations.py` (`CURRENT_SCHEMA_VERSION` is derived from the list — do not edit it by hand)
 2. Provide an `already_applied` guard (`column_exists` / `table_exists`) so a schema created out-of-band is detected and skipped
+   - For a one-time data fix, pass `data_step=<fn(conn: Connection)>` (statements may be empty). It runs after the SQL in the same SAVEPOINT. `schema_version` makes it run once, so its guard may only say "nothing to fix here".
 3. Migrations run automatically on startup via `run_migrations()` (each in a SAVEPOINT, stopping on first failure)
 
 ## Notes

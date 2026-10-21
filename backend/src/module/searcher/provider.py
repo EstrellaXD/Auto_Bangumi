@@ -28,9 +28,13 @@ def available_sites() -> dict[str, ProviderConfig]:
     return sites
 
 
+def encode_keywords(keywords: list[str]) -> str:
+    """把关键词拼成搜索 URL 里的查询串：非单词字符都换成 ``+``。"""
+    return re.sub(r"[\W_ ]", "+", "+".join(keywords))
+
+
 def search_url(site: str, keywords: list[str]) -> RSSItem:
-    keyword = "+".join(keywords)
-    search_str = re.sub(r"[\W_ ]", "+", keyword)
+    search_str = encode_keywords(keywords)
     providers = available_sites()
     if site in providers:
         # str.replace, not re.sub: the template is a literal "%s" placeholder,

@@ -30,6 +30,11 @@ _SEASON_WITH_EPISODE = re.compile(
 )
 
 
+def strip_season_episode(season_raw: str) -> str:
+    """季集合写的 season_raw 只保留季的部分（S03E02 -> S03）。"""
+    return _SEASON_WITH_EPISODE.sub(r"\1", season_raw)
+
+
 # Cache for TMDB preview lookups by official_title. Bounded (LRU-ish,
 # oldest-evicted) like _tmdb_cache/_mikan_cache — was previously a plain dict
 # and grew unbounded for the life of the process. Values are keyed by parser
@@ -112,7 +117,7 @@ class SearchTorrent:
     @staticmethod
     def special_url(data: Bangumi | Movie, site: str) -> RSSItem:
         keywords = [
-            _SEASON_WITH_EPISODE.sub(r"\1", value) if key == "season_raw" else value
+            strip_season_episode(value) if key == "season_raw" else value
             for key in SEARCH_KEY
             if (value := getattr(data, key, None))
         ]
