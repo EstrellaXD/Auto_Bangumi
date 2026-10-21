@@ -1,5 +1,6 @@
 import asyncio
 import json
+from collections.abc import Callable
 
 import httpx2
 import pytest
@@ -12,10 +13,19 @@ BASE = {"url": "http://bot:3000/", "target": 123}
 POSTER = "https://ab.example.com/posters/a.jpg"
 
 
-def channel(status: int, body: dict, options: dict | None = None, seen=None):
+def channel(
+    status: int,
+    body: dict | str | Callable[[dict], httpx2.Response],
+    options: dict | None = None,
+    seen=None,
+):
     def handler(request: httpx2.Request) -> httpx2.Response:
         if seen is not None:
             seen.append(request)
+        if callable(body):
+            return body(json.loads(request.content))
+        if isinstance(body, str):
+            return httpx2.Response(status, text=body)
         return httpx2.Response(status, json=body)
 
     plugin, _ = create_plugin(OneBotNotifier, BASE if options is None else options)
@@ -91,3 +101,38 @@ def test_send_without_target_returns_false_without_request():
     ch = channel(200, {"status": "ok"}, {"url": "http://bot:3000"}, seen)
     assert asyncio.run(ch.send(episode())) is False
     assert seen == []
+
+
+# OneBot 实现取不到海报时拒绝整条消息
+def reject_image(body: dict) -> httpx2.Response:
+    if body["message"][0]["type"] == "image":
+        return httpx2.Response(200, json={"status": "failed", "retcode": 1200})
+    return httpx2.Response(200, json={"status": "ok", "retcode": 0})
+
+
+def test_send_rejected_image_retries_once_with_text_only():
+    seen: list[httpx2.Request] = []
+    ch = channel(200, reject_image, seen=seen)
+    assert asyncio.run(ch.send(episode(POSTER))) is True
+    first, retry = seen
+    assert json.loads(first.content)["message"][0]["type"] == "image"
+    assert json.loads(retry.content)["message"] == [
+        {"type": "text", "data": {"text": "番剧 第1集"}}
+    ]
+
+
+def test_send_text_only_failure_is_not_retried():
+    seen: list[httpx2.Request] = []
+    ch = channel(200, {"status": "failed", "retcode": 100}, seen=seen)
+    assert asyncio.run(ch.send(episode())) is False
+    assert len(seen) == 1
+
+
+@pytest.mark.parametrize(
+    ("status", "body", "expected"),
+    [(502, "<html>Bad Gateway</html>", "HTTP 502"), (200, "<html>", "不是预期的 JSON")],
+)
+def test_test_non_json_response_reports_status(status, body, expected):
+    ok, detail = asyncio.run(channel(status, body).test())
+    assert ok is False
+    assert expected in detail

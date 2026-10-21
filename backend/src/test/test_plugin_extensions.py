@@ -170,6 +170,23 @@ class TestNotifier:
         provider = build_provider(ProviderConfig(type="MyChannel"))
         assert isinstance(provider, PluginNotifier)
 
+    def test_build_provider_plugin_extra_includes_set_declared_fields(self, registry):
+        from module.notification.resolve import build_provider
+
+        created: list[RecordingNotifier] = []
+
+        def factory(conf: NotifierSettings) -> RecordingNotifier:
+            created.append(RecordingNotifier(conf))
+            return created[-1]
+
+        add_plugin_provider(registry, points.NOTIFIER, "chat", factory)
+        # group/icon 是 Bark 声明的字段，不在 model_extra 里；未填写的 sound 不传
+        cfg = ProviderConfig.model_validate(
+            {"type": "chat", "room": "42", "group": "g", "icon": "i", "sound": ""}
+        )
+        build_provider(cfg)
+        assert created[0].conf.extra == {"room": "42", "group": "g", "icon": "i"}
+
     def test_extra_fields_survive_config_roundtrip(self):
         cfg = ProviderConfig.model_validate({"type": "chat", "room": "42"})
         assert cfg.model_dump(by_alias=True)["room"] == "42"

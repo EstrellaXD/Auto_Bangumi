@@ -51,13 +51,19 @@ class Channel:
         try:
             async with self.client_factory() as client:
                 resp = await client.post(API_URL, json=payload)
-            body = resp.json()
-        except (httpx2.HTTPError, ValueError) as e:
+        except httpx2.HTTPError as e:
             return False, f"请求失败：{e}"
+        try:
+            body = resp.json()
+        except ValueError:
+            body = None
         if resp.is_success and isinstance(body, dict) and body.get("code") == 0:
             return True, "ok"
         detail = body.get("message") if isinstance(body, dict) else None
-        return False, f"WPUSH 返回错误：{detail or resp.status_code}"
+        if not resp.is_success:
+            # 网关的错误页不是 JSON，先报 HTTP 状态
+            detail = f"HTTP {resp.status_code}" + (f"，{detail}" if detail else "")
+        return False, f"WPUSH 返回错误：{detail or '响应不是预期的 JSON'}"
 
     async def send(self, message: NotificationMessage) -> bool:
         ok, _ = await self._post(message)

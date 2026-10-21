@@ -1,4 +1,4 @@
-import { flushPromises, mount } from '@vue/test-utils';
+import { type VueWrapper, flushPromises, mount } from '@vue/test-utils';
 import { ref } from 'vue';
 import ConfigNotification from '../config-notification.vue';
 import { apiNotification } from '@/api/notification';
@@ -52,6 +52,7 @@ function mountPage() {
         },
         NSelect: {
           props: ['value'],
+          emits: ['update:value'],
           template: '<select class="type" />',
         },
       },
@@ -120,6 +121,24 @@ describe('config-notification', () => {
     await cancel.trigger('click');
     await flushPromises();
     expect(w.find('.test-result').exists()).toBe(false);
+  });
+
+  // Bark 也读 url（点击跳转）：切换类型后不能带着上一类型的 Webhook URL
+  it('should reset type-specific fields when the type changes in the add dialog', async () => {
+    const w = mountPage();
+    const add = w
+      .findAll('button')
+      .find((b) => b.text() === 'config.notification_set.add_provider')!;
+    await add.trigger('click');
+    const vm = w.vm as any;
+    vm.newProvider.type = 'webhook';
+    vm.newProvider.url = 'https://hook.example.com';
+    vm.newProvider.template = '{"t": 1}';
+    await flushPromises();
+    const select = w.findComponent('.provider-type-select') as VueWrapper;
+    select.vm.$emit('update:value', 'bark');
+    await flushPromises();
+    expect(vm.newProvider).toEqual({ type: 'bark', enabled: true });
   });
 
   it('should show a credentials hint and no Test button for plugin types', async () => {

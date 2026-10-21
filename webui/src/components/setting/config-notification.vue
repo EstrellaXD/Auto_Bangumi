@@ -210,6 +210,12 @@ function openAddDialog() {
   showAddDialog.value = true;
 }
 
+// 新增时切换类型：清掉上一类型的字段。Bark 也读 url（点击跳转），
+// 残留的 Webhook URL 会被一起发出去
+function changeType(type: NotificationProviderConfig['type']) {
+  newProvider.value = { type, enabled: newProvider.value.enabled };
+}
+
 function openEditDialog(index: number) {
   editingIndex.value = index;
   newProvider.value = { ...providers.value[index] };
@@ -410,9 +416,10 @@ function getFieldsForType(type: string) {
       <div class="space-y-16">
         <ab-field :label="$t('config.notification_set.type')">
           <NSelect
-            v-model:value="newProvider.type"
+            :value="newProvider.type"
             :options="providerTypes"
             class="provider-type-select"
+            @update:value="changeType"
           />
         </ab-field>
 

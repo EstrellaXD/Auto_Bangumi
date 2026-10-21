@@ -54,10 +54,17 @@ def test_on_organized_prefix_change_rewrites_strm(tmp_path):
 
 
 @pytest.mark.parametrize(
-    "path", ["/other/A S01E01.mkv", "/downloads/Bangumi/../../etc/x.mkv"]
+    "path",
+    [
+        "/other/A S01E01.mkv",
+        "/downloads/Bangumi/../../etc/x.mkv",
+        # 规范化后是媒体根目录本身，曾写出 STRM 目录之外的 STRM.strm
+        "/downloads/Bangumi/x/..",
+        "/downloads/Bangumi/",
+    ],
 )
 def test_on_organized_path_outside_media_root_is_skipped(tmp_path, caplog, path):
     with caplog.at_level(logging.WARNING):
         run(tmp_path, "http://nas/", OrganizedFile(path, "media"))
-    assert not (tmp_path / "STRM").exists()
+    assert list(tmp_path.iterdir()) == []
     assert "不在媒体根目录" in caplog.text

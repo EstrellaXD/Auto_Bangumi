@@ -2,16 +2,19 @@ import asyncio
 import json
 
 import httpx2
+import pytest
 from wpush_notifier import API_URL, WPushNotifier
 
 from ab_sdk.notify import NotificationMessage, NotifierSettings
 from ab_sdk.testing import NotifierContract, create_plugin
 
 
-def channel(status: int, body: dict, options: dict | None = None, seen=None):
+def channel(status: int, body: dict | str, options: dict | None = None, seen=None):
     def handler(request: httpx2.Request) -> httpx2.Response:
         if seen is not None:
             seen.append(request)
+        if isinstance(body, str):
+            return httpx2.Response(status, text=body)
         return httpx2.Response(status, json=body)
 
     plugin, _ = create_plugin(
@@ -63,3 +66,13 @@ def test_send_without_apikey_returns_false_without_request():
     ch = channel(200, {"code": 0}, {}, seen)
     assert asyncio.run(ch.test()) == (False, "未填写 apikey")
     assert seen == []
+
+
+@pytest.mark.parametrize(
+    ("status", "body", "expected"),
+    [(502, "<html>Bad Gateway</html>", "HTTP 502"), (200, "<html>", "不是预期的 JSON")],
+)
+def test_test_non_json_response_reports_status(status, body, expected):
+    ok, detail = asyncio.run(channel(status, body).test())
+    assert ok is False
+    assert expected in detail

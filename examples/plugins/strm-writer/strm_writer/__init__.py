@@ -39,11 +39,15 @@ class Options(BaseModel):
 
 
 def relative(path: str, media_root: str) -> str | None:
-    """``path`` 不在 ``media_root`` 下时返回 None。"""
+    """``path`` 不在 ``media_root`` 下（或就是 ``media_root`` 本身）时返回 None。"""
     root = media_root.rstrip("/")
     if not root or not path.startswith(root + "/"):
         return None
-    return posixpath.normpath(path[len(root) + 1 :])
+    rel = posixpath.normpath(path[len(root) + 1 :])
+    # "." 会写出 <strm_root>.strm，落在 strm_root 之外
+    if rel in (".", "..") or rel.startswith("../"):
+        return None
+    return rel
 
 
 def strm_target(rel: str, options: Options) -> tuple[Path, str]:
@@ -74,7 +78,7 @@ class StrmWriter(Plugin[Options]):
             if file.kind != "media":
                 continue
             rel = relative(file.path, cfg.media_root)
-            if rel is None or rel.startswith("../"):
+            if rel is None:
                 self.ctx.log.warning(
                     "%s 不在媒体根目录 %s 下", file.path, cfg.media_root
                 )

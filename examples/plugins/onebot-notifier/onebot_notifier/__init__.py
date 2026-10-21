@@ -2,7 +2,8 @@
 
 POST JSON 到 ``{url}/send_private_msg`` 或 ``{url}/send_group_msg``，消息为消息段
 数组：文字，以及（开启海报且宿主给出海报地址时）一张图片。HTTP 2xx 且返回
-``status == "ok"`` 或 ``retcode == 0`` 才算成功。
+``status == "ok"`` 或 ``retcode == 0`` 才算成功。带图片发送失败时（OneBot 实现取不到
+海报会拒绝整条消息），去掉图片只发文字再试一次。
 协议文档：https://github.com/botuniverse/onebot-11
 """
 
@@ -63,20 +64,33 @@ class Channel:
         opts = self.options
         if not opts.url or not opts.target:
             return False, "未填写 API 地址或目标"
+        segments = self._segments(message)
+        try:
+            async with self.client_factory() as client:
+                ok, detail = await self._send(client, segments)
+                if not ok and segments[0]["type"] == "image":
+                    ok, detail = await self._send(client, segments[1:])
+        except httpx2.HTTPError as e:
+            return False, f"请求失败：{e}"
+        return ok, detail
+
+    async def _send(
+        self, client: httpx2.AsyncClient, segments: list[dict[str, Any]]
+    ) -> tuple[bool, str]:
+        opts = self.options
         id_key = "group_id" if opts.message_type == "group" else "user_id"
         headers = {}
         if opts.access_token:
             headers["Authorization"] = f"Bearer {opts.access_token}"
+        resp = await client.post(
+            f"{opts.url.rstrip('/')}/send_{opts.message_type}_msg",
+            json={id_key: opts.target, "message": segments},
+            headers=headers,
+        )
         try:
-            async with self.client_factory() as client:
-                resp = await client.post(
-                    f"{opts.url.rstrip('/')}/send_{opts.message_type}_msg",
-                    json={id_key: opts.target, "message": self._segments(message)},
-                    headers=headers,
-                )
             body = resp.json()
-        except (httpx2.HTTPError, ValueError) as e:
-            return False, f"请求失败：{e}"
+        except ValueError:
+            body = None
         if (
             resp.is_success
             and isinstance(body, dict)
@@ -86,7 +100,10 @@ class Channel:
         detail = (
             (body.get("wording") or body.get("msg")) if isinstance(body, dict) else None
         )
-        return False, f"OneBot 返回错误：{detail or resp.status_code}"
+        if not resp.is_success:
+            # 反向代理的错误页不是 JSON，先报 HTTP 状态
+            detail = f"HTTP {resp.status_code}" + (f"，{detail}" if detail else "")
+        return False, f"OneBot 返回错误：{detail or '响应不是预期的 JSON'}"
 
     async def send(self, message: NotificationMessage) -> bool:
         ok, _ = await self._post(message)

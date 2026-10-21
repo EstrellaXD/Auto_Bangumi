@@ -36,13 +36,27 @@ def run(options: dict, event=ORGANIZED) -> None:
     asyncio.run(plugin.on_event(event))
 
 
-def test_on_event_organized_passes_env_and_placeholders_without_shell(tmp_path):
+def test_on_event_organized_passes_env_and_placeholders_without_shell(
+    tmp_path, monkeypatch
+):
+    # 宿主自己的 AB_* 凭据不传给命令
+    monkeypatch.setenv("AB_DOWNLOADER_PASSWORD", "s3cret")
     out = tmp_path / "out.json"
-    command = [sys.executable, "-c", DUMP, str(out), "{torrent_hash}", "$HOME; {x}"]
+    command = [
+        *(sys.executable, "-c", DUMP, str(out)),
+        *("{torrent_hash}", "$HOME; {x}", "pre-{torrent_hash}", "{files}"),
+    ]
     run({"command": command})
     got = json.loads(out.read_text())
-    # $HOME 与 ; 按字面传入：没有经过 shell；未知占位符原样保留
-    assert got["argv"] == ["abc", "$HOME; {x}"]
+    # $HOME 与 ; 按字面传入：没有经过 shell；未知占位符与夹在参数里的占位符原样保留；
+    # {files} 展开为每个文件一个参数
+    assert got["argv"] == [
+        "abc",
+        "$HOME; {x}",
+        "pre-{torrent_hash}",
+        "/dl/Show/Season 1/Show S01E01.mkv",
+        "/dl/Show/Season 1/Show S01E01.ass",
+    ]
     assert got["env"] == {
         "AB_EVENT": "torrent.organized",
         "AB_BANGUMI_ID": "",
@@ -83,6 +97,17 @@ def test_on_event_timeout_kills_command(caplog):
         asyncio.run(plugin.on_event(ORGANIZED))
     assert time.monotonic() - start < 10
     assert "已终止" in caplog.text
+
+
+def test_on_event_background_child_does_not_delay_success(caplog):
+    # 后台进程继承了 stderr；命令本身已退出，不应等到后台进程结束
+    command = ["sh", "-c", "sleep 5 & exit 0"]
+    plugin, _ = create_plugin(RunCommand, {"command": command, "timeout": 2})
+    start = time.monotonic()
+    with caplog.at_level(logging.INFO):
+        asyncio.run(plugin.on_event(ORGANIZED))
+    assert time.monotonic() - start < 2
+    assert "已完成" in caplog.text and "已终止" not in caplog.text
 
 
 def test_on_event_nonzero_exit_logs_code_and_stderr(caplog):
