@@ -93,3 +93,17 @@ def test_send_text_only_failure_is_not_retried():
     ch = channel(httpx2.Response(400, text="invalid_payload"), seen)
     assert asyncio.run(ch.send(message)) is False
     assert len(seen) == 1
+
+
+@pytest.mark.parametrize(
+    ("status", "text"), [(403, "invalid_token"), (429, "rate_limited")]
+)
+def test_send_with_poster_other_failure_is_not_retried(status, text):
+    # 只有 blocks 被拒才退回纯文字；其它失败重发可能重复投递
+    seen: list[httpx2.Request] = []
+    message = NotificationMessage(
+        kind="episode", title="T", body="b", poster_url="https://p/1.jpg"
+    )
+    ch = channel(httpx2.Response(status, text=text), seen)
+    assert asyncio.run(ch.send(message)) is False
+    assert len(seen) == 1

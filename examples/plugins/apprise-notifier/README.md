@@ -23,7 +23,7 @@ docker run -d --name apprise -p 8000:8000 caronc/apprise:latest
 | 字段 | 说明 |
 | --- | --- |
 | `server` | Apprise API 服务器地址，默认 `http://apprise:8000` |
-| `urls` | 可选：Apprise URL 列表，如 `tgram://bottoken/ChatID`；填写后忽略配置键 |
+| `urls` | 可选：Apprise URL 列表，如 `tgram://bottoken/ChatID`；填写后忽略配置键。URL 含令牌，按秘密字段处理，读取配置时每一项只返回掩码 |
 | `config_key` | 可选：服务器上保存的配置键 |
 
 ## 安装

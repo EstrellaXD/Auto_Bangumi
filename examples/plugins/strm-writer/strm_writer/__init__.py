@@ -40,8 +40,9 @@ class Options(BaseModel):
 
 def relative(path: str, media_root: str) -> str | None:
     """``path`` 不在 ``media_root`` 下（或就是 ``media_root`` 本身）时返回 None。"""
+    # media_root 为 "/" 时 root 为空串，前缀 "/" 照样匹配所有绝对路径
     root = media_root.rstrip("/")
-    if not root or not path.startswith(root + "/"):
+    if not media_root or not path.startswith(root + "/"):
         return None
     rel = posixpath.normpath(path[len(root) + 1 :])
     # "." 会写出 <strm_root>.strm，落在 strm_root 之外

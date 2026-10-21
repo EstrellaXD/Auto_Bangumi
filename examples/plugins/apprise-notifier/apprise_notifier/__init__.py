@@ -14,7 +14,7 @@ from typing import Any
 import httpx2
 from pydantic import BaseModel, Field
 
-from ab_sdk import Plugin, points, provider
+from ab_sdk import Plugin, points, provider, secret_field
 from ab_sdk.notify import NotificationMessage, NotifierFactory, NotifierSettings
 
 
@@ -22,7 +22,8 @@ class Options(BaseModel):
     server: str = Field(
         "http://apprise:8000", title="服务器", description="Apprise API 服务器地址"
     )
-    urls: list[str] = Field(
+    # URL 里带着令牌，按秘密字段掩码
+    urls: list[str] = secret_field(
         default_factory=list,
         title="Apprise URL",
         description="如 tgram://bottoken/ChatID；填写后忽略配置键",

@@ -1,13 +1,14 @@
 """OneBot v11 通知渠道。
 
 POST JSON 到 ``{url}/send_private_msg`` 或 ``{url}/send_group_msg``，消息为消息段
-数组：文字，以及（开启海报且宿主给出海报地址时）一张图片。HTTP 2xx 且返回
-``status == "ok"`` 或 ``retcode == 0`` 才算成功。带图片发送失败时（OneBot 实现取不到
-海报会拒绝整条消息），去掉图片只发文字再试一次。
+数组。先发文字；文字成功且开启海报、宿主给出海报地址时，再单独发一条图片消息。
+HTTP 2xx 且返回 ``status == "ok"`` 或 ``retcode == 0`` 才算成功，发送结果只看文字：
+OneBot 实现取不到海报时只丢图片，文字已经送达，不重发。
 协议文档：https://github.com/botuniverse/onebot-11
 """
 
 from collections.abc import Callable
+from contextlib import suppress
 from typing import Any, Literal
 
 import httpx2
@@ -46,30 +47,27 @@ class Channel:
         self.settings = settings
         self.client_factory = client_factory
 
-    def _segments(self, message: NotificationMessage) -> list[dict[str, Any]]:
+    async def _post(self, message: NotificationMessage) -> tuple[bool, str]:
+        opts = self.options
+        if not opts.url or not opts.target:
+            return False, "未填写 API 地址或目标"
         # 单集通知的正文已含番剧名；系统事件的标题与正文分开，拼在一起发
         text = (
             message.body
             if message.kind == "episode"
             else f"{message.title}\n{message.body}"
         )
-        segments: list[dict[str, Any]] = []
-        # SDK 只给出公开海报 URL（没有本地路径），由 OneBot 实现自行下载
-        if self.options.send_poster and message.poster_url:
-            segments.append({"type": "image", "data": {"file": message.poster_url}})
-        segments.append({"type": "text", "data": {"text": text}})
-        return segments
-
-    async def _post(self, message: NotificationMessage) -> tuple[bool, str]:
-        opts = self.options
-        if not opts.url or not opts.target:
-            return False, "未填写 API 地址或目标"
-        segments = self._segments(message)
         try:
             async with self.client_factory() as client:
-                ok, detail = await self._send(client, segments)
-                if not ok and segments[0]["type"] == "image":
-                    ok, detail = await self._send(client, segments[1:])
+                ok, detail = await self._send(
+                    client, [{"type": "text", "data": {"text": text}}]
+                )
+                # SDK 只给出公开海报 URL（没有本地路径），由 OneBot 实现自行下载；
+                # 图片失败（含请求异常）不影响已送达的文字
+                if ok and opts.send_poster and message.poster_url:
+                    image = {"type": "image", "data": {"file": message.poster_url}}
+                    with suppress(httpx2.HTTPError):
+                        await self._send(client, [image])
         except httpx2.HTTPError as e:
             return False, f"请求失败：{e}"
         return ok, detail

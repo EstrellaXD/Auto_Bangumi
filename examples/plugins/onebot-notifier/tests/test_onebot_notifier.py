@@ -68,18 +68,25 @@ def test_send_posts_to_endpoint_with_target(message_type, path, id_key):
     }
 
 
+TEXT = [{"type": "text", "data": {"text": "番剧 第1集"}}]
+IMAGE = [{"type": "image", "data": {"file": POSTER}}]
+
+
 @pytest.mark.parametrize(
-    ("send_poster", "poster_url", "with_image"),
-    [(True, POSTER, True), (False, POSTER, False), (True, None, False)],
+    ("send_poster", "poster_url", "messages"),
+    [
+        (True, POSTER, [TEXT, IMAGE]),
+        (False, POSTER, [TEXT]),
+        (True, None, [TEXT]),
+    ],
 )
-def test_send_adds_image_segment_only_with_poster(send_poster, poster_url, with_image):
+def test_send_poster_goes_as_separate_message_after_text(
+    send_poster, poster_url, messages
+):
     seen: list[httpx2.Request] = []
     ch = channel(200, {"status": "ok"}, {**BASE, "send_poster": send_poster}, seen)
     assert asyncio.run(ch.send(episode(poster_url))) is True
-    segments = json.loads(seen[0].content)["message"]
-    image = {"type": "image", "data": {"file": POSTER}}
-    assert (segments[0] == image) is with_image
-    assert segments[-1]["type"] == "text"
+    assert [json.loads(r.content)["message"] for r in seen] == messages
 
 
 @pytest.mark.parametrize(("token", "header"), [("t0k", "Bearer t0k"), ("", None)])
@@ -103,28 +110,31 @@ def test_send_without_target_returns_false_without_request():
     assert seen == []
 
 
-# OneBot 实现取不到海报时拒绝整条消息
-def reject_image(body: dict) -> httpx2.Response:
-    if body["message"][0]["type"] == "image":
+# OneBot 实现取不到海报：图片消息返回失败，或请求本身出错
+def image_rejected(body: dict) -> httpx2.Response:
+    if body["message"] == IMAGE:
         return httpx2.Response(200, json={"status": "failed", "retcode": 1200})
     return httpx2.Response(200, json={"status": "ok", "retcode": 0})
 
 
-def test_send_rejected_image_retries_once_with_text_only():
+def image_unreachable(body: dict) -> httpx2.Response:
+    if body["message"] == IMAGE:
+        raise httpx2.ReadTimeout("timeout")
+    return httpx2.Response(200, json={"status": "ok", "retcode": 0})
+
+
+@pytest.mark.parametrize("respond", [image_rejected, image_unreachable])
+def test_send_image_failure_keeps_text_result_without_retry(respond):
     seen: list[httpx2.Request] = []
-    ch = channel(200, reject_image, seen=seen)
+    ch = channel(200, respond, seen=seen)
     assert asyncio.run(ch.send(episode(POSTER))) is True
-    first, retry = seen
-    assert json.loads(first.content)["message"][0]["type"] == "image"
-    assert json.loads(retry.content)["message"] == [
-        {"type": "text", "data": {"text": "番剧 第1集"}}
-    ]
+    assert [json.loads(r.content)["message"] for r in seen] == [TEXT, IMAGE]
 
 
-def test_send_text_only_failure_is_not_retried():
+def test_send_text_failure_skips_image_and_is_not_retried():
     seen: list[httpx2.Request] = []
     ch = channel(200, {"status": "failed", "retcode": 100}, seen=seen)
-    assert asyncio.run(ch.send(episode())) is False
+    assert asyncio.run(ch.send(episode(POSTER))) is False
     assert len(seen) == 1
 
 

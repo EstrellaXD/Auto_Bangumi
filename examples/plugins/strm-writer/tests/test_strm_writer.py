@@ -14,11 +14,16 @@ def organized(*files: OrganizedFile) -> TorrentOrganized:
     return TorrentOrganized(torrent_hash="h", bangumi_id=1, files=files)
 
 
-def run(tmp_path, url_prefix: str, *files: OrganizedFile) -> None:
+def run(
+    tmp_path,
+    url_prefix: str,
+    *files: OrganizedFile,
+    media_root: str = "/downloads/Bangumi/",
+) -> None:
     options = {
         "strm_root": str(tmp_path / "STRM"),
         "url_prefix": url_prefix,
-        "media_root": "/downloads/Bangumi/",
+        "media_root": media_root,
     }
     plugin, _ = create_plugin(StrmWriter, options)
     asyncio.run(plugin.on_organized(organized(*files)))
@@ -44,6 +49,13 @@ def test_on_organized_mirrors_media_path_into_strm(tmp_path, url_prefix, content
     season = tmp_path / "STRM" / "A" / "Season 1"
     assert [p.name for p in season.iterdir()] == ["A S01E01.strm"]
     assert (season / "A S01E01.strm").read_text(encoding="utf-8") == content
+
+
+def test_on_organized_media_root_slash_maps_whole_path(tmp_path):
+    # 根目录 "/" 去掉尾部斜杠后是空串，曾把所有绝对路径都判为不在根目录下
+    run(tmp_path, "/mnt/", OrganizedFile("/dl/A/B.mkv", "media"), media_root="/")
+    strm = tmp_path / "STRM" / "dl" / "A" / "B.strm"
+    assert strm.read_text(encoding="utf-8") == "/mnt/dl/A/B.mkv"
 
 
 def test_on_organized_prefix_change_rewrites_strm(tmp_path):

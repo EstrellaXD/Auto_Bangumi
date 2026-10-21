@@ -3,8 +3,8 @@
 向 Incoming Webhook POST ``{"text": "*标题*\\n正文"}``（Slack 的 mrkdwn）。带海报时
 再加 ``blocks``：一段文字加一张图片，``text`` 留作手机通知里的摘要。Slack 成功时
 返回 HTTP 200 与响应体 ``ok``，失败时返回 4xx 与错误码（如 ``invalid_token``）。
-Slack 取不到海报图片时会拒绝整条消息（400 ``invalid_blocks``），此时去掉 ``blocks``
-只发文字再试一次。
+Slack 取不到海报图片时会拒绝整条消息（HTTP 400 ``invalid_blocks``），只有这种情况
+才去掉 ``blocks`` 只发文字再试一次；令牌失效、限流等其它失败不重试，以免重复发送。
 """
 
 from collections.abc import Callable
@@ -48,6 +48,11 @@ def _ok(resp: httpx2.Response) -> bool:
     return resp.is_success and resp.text == "ok"
 
 
+def _blocks_rejected(resp: httpx2.Response) -> bool:
+    """Slack 因 blocks（如下载不到图片）拒绝消息；``invalid_blocks_format`` 同属此类。"""
+    return resp.status_code == 400 and "invalid_blocks" in resp.text
+
+
 class Channel:
     def __init__(
         self,
@@ -66,7 +71,7 @@ class Channel:
         try:
             async with self.client_factory() as client:
                 resp = await client.post(self.options.webhook_url, json=body)
-                if not _ok(resp) and "blocks" in body:
+                if "blocks" in body and _blocks_rejected(resp):
                     resp = await client.post(
                         self.options.webhook_url, json={"text": body["text"]}
                     )

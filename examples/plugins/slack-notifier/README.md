@@ -9,7 +9,7 @@
 
 ## 消息格式
 
-请求体为 `{"text": "*标题*\n正文"}`（Slack 的 mrkdwn，`&`、`<`、`>` 已转义）。配置了 `notification.base_url` 时单集通知带海报：再加 `blocks`（一段文字和一张图片），`text` 作为手机通知的摘要。海报地址必须能被 Slack 访问；Slack 取不到图片时会拒绝整条消息，插件会去掉 `blocks` 只发文字再试一次。
+请求体为 `{"text": "*标题*\n正文"}`（Slack 的 mrkdwn，`&`、`<`、`>` 已转义）。配置了 `notification.base_url` 时单集通知带海报：再加 `blocks`（一段文字和一张图片），`text` 作为手机通知的摘要。海报地址必须能被 Slack 访问；Slack 取不到图片时会以 HTTP 400 `invalid_blocks` 拒绝整条消息，插件只在这种情况下去掉 `blocks` 只发文字再试一次；令牌失效、限流等其它失败不重试，避免重复发送。
 
 ## 安装
 

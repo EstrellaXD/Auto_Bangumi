@@ -3,7 +3,7 @@ import json
 
 import httpx2
 import pytest
-from apprise_notifier import AppriseNotifier
+from apprise_notifier import AppriseNotifier, Options
 
 from ab_sdk.notify import NotificationMessage, NotifierSettings
 from ab_sdk.testing import NotifierContract, create_plugin
@@ -61,3 +61,10 @@ def test_missing_urls_and_config_key_fails_without_request():
     assert asyncio.run(ch.send(MESSAGE)) is False
     assert asyncio.run(ch.test()) == (False, "需填写 Apprise URL 或配置键")
     assert seen == []
+
+
+def test_urls_is_secret_in_config_schema():
+    # URL 里带着令牌：宿主的读配置接口按 schema 中的 secret 标记掩码每一项
+    urls = Options.model_json_schema()["properties"]["urls"]
+    assert urls["secret"] is True
+    assert urls["type"] == "array"

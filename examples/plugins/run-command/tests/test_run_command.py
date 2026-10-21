@@ -110,6 +110,33 @@ def test_on_event_background_child_does_not_delay_success(caplog):
     assert "已完成" in caplog.text and "已终止" not in caplog.text
 
 
+def test_on_event_files_placeholder_keeps_newline_in_path(tmp_path):
+    # {files} 取原始路径列表：含换行的路径仍是一个参数（AB_FILES 只能按行拼接）
+    out = tmp_path / "out.json"
+    event = TorrentOrganized(
+        torrent_hash="abc",
+        bangumi_id=1,
+        files=(OrganizedFile("/dl/a\nb.mkv", "media"),),
+    )
+    run({"command": [sys.executable, "-c", DUMP, str(out), "{files}"]}, event)
+    assert json.loads(out.read_text())["argv"] == ["/dl/a\nb.mkv"]
+
+
+def test_on_event_huge_stderr_keeps_only_tail(caplog):
+    # 输出远超管道缓冲：边读边丢，命令不会卡到超时，日志只带最后 2000 字节
+    script = (
+        "import sys; sys.stderr.write('x' * 5_000_000 + 'END'); sys.stderr.flush(); "
+        "sys.exit(3)"
+    )
+    start = time.monotonic()
+    with caplog.at_level(logging.WARNING):
+        run({"command": [sys.executable, "-c", script], "timeout": 10})
+    assert time.monotonic() - start < 5
+    [record] = caplog.records
+    assert "退出码 3" in record.getMessage()
+    assert record.args[-1] == "x" * 1997 + "END"
+
+
 def test_on_event_nonzero_exit_logs_code_and_stderr(caplog):
     script = "import sys; sys.stderr.write('boom'); sys.exit(3)"
     with caplog.at_level(logging.WARNING):

@@ -4,7 +4,7 @@
 
 - `@subscribe("*", timeout=...)` 订阅全部事件，按配置过滤；处理超时放宽到命令超时之上
 - `asyncio.create_subprocess_exec` 直接执行参数列表，不经过 shell
-- 命令超时被杀掉，退出码非 0 时记录 stderr 末尾；失败只记日志，不让插件被熔断
+- 命令超时被杀掉，退出码非 0 时记录 stderr 的最后 2000 字节（边读边丢，输出再多也不占满内存）；命令退出后插件即关闭 stderr，留在后台的进程需自行重定向输出。失败只记日志，不让插件被熔断
 
 ## 配置
 
@@ -32,7 +32,7 @@ ln -f "$AB_NEW_PATH" "/media/links/$(basename "$AB_NEW_PATH")"
 | `AB_BANGUMI_ID` | 全部 | 番剧 id；旧种子没有 `ab:<id>` 标签时为空 |
 | `AB_DOWNLOADER_ID` | 全部 | 下载器实例 id |
 | `AB_TORRENT_HASH` | `torrent.organized` | 种子 hash |
-| `AB_FILES` | `torrent.organized` | 正片与字幕的最终路径，每行一个 |
+| `AB_FILES` | `torrent.organized` | 正片与字幕的最终路径，每行一个。路径本身含换行时无法按行区分，需要准确的路径请用 `{files}` 参数 |
 | `AB_OLD_PATH` / `AB_NEW_PATH` | `file.renamed` | 重命名前后的路径 |
 | `AB_FILE_KIND` | `file.renamed` | `media` 或 `subtitle` |
 
