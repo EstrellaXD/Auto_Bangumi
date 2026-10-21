@@ -1,3 +1,4 @@
 repo = "EstrellaXD/Auto_Bangumi"
 commit = "f2d93993f4287778baec3df7afc56a03542b87d3"
 path = "examples/plugins/slack-notifier"
+sha256 = "eb715c069706b6408e30b2c9a3c532577c7ad08fbe35d8ffbf8a93363e7c8095"
