@@ -738,6 +738,7 @@
     "token_once": "Copy this token now. It cannot be shown again.",
     "one_time_token": "One-time token",
     "token_copied": "Token copied",
+    "token_copy_failed": "Copy failed. Select the token and copy it manually.",
     "copy": "Copy",
     "revoke": "Revoke",
     "revoke_token_confirm": "Revoke this token?",

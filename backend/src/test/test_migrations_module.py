@@ -6,7 +6,7 @@ import pytest
 from sqlalchemy import inspect, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError, OperationalError
-from sqlmodel import SQLModel, create_engine
+from sqlmodel import SQLModel, create_engine, select
 
 import module.database.migrations as migration_module
 from module.database.migrations import (
@@ -894,3 +894,82 @@ class TestRunMigrations:
         inspector = inspect(engine)
         rssitem_cols = {c["name"] for c in inspector.get_columns("rssitem")}
         assert "connection_status" not in rssitem_cols
+
+
+class TestSearchKeywordEpisodeMigration:
+    NYAA = "https://nyaa.si/?page=rss&q=%s&c=0_0&f=0"
+    PROVIDERS = {
+        "nyaa": {"url": NYAA, "parser": "tmdb"},
+        "dmhy": {
+            "url": "http://dmhy.org/topics/rss/rss.xml?keyword=%s",
+            "parser": "tmdb",
+        },
+        "mikan": {
+            "url": "https://mikanani.me/RSS/Search?searchstr=%s",
+            "parser": "mikan",
+        },
+    }
+
+    @pytest.mark.parametrize(
+        ("season_raw", "url", "expected"),
+        [
+            (
+                "S03E02",
+                NYAA.replace(
+                    "%s",
+                    "ToonsHub+The+Apothecary+Diaries+S03E02+Multi+Subs+NF+WEB+DL+1080p",
+                ),
+                NYAA.replace(
+                    "%s",
+                    "ToonsHub+The+Apothecary+Diaries+S03+Multi+Subs+NF+WEB+DL+1080p",
+                ),
+            ),
+            (
+                "Season 2 EPs 01-12",
+                "http://dmhy.org/topics/rss/rss.xml?keyword=ANi+葬送的芙莉莲+Season+2+EPs+01+12+1080P",
+                "http://dmhy.org/topics/rss/rss.xml?keyword=ANi+葬送的芙莉莲+Season+2+1080P",
+            ),
+            ("S03", NYAA.replace("%s", "Show+S03+1080p"), None),
+            (
+                "S03E02",
+                "https://mikanani.me/RSS/Bangumi?bangumiId=3519&subgroupid=583",
+                None,
+            ),
+        ],
+        ids=["nyaa-episode", "dmhy-multi-token", "no-episode", "mikan-bangumi-feed"],
+    )
+    def test_strips_episode_from_search_subscription_once(
+        self, monkeypatch, season_raw, url, expected
+    ):
+        """旧版本搜索订阅关键词里的集号在启动时去掉一次，非搜索 URL 不变（#1138）。"""
+        from sqlmodel import Session
+
+        from module.models import Bangumi, RSSItem
+        from test.factories import make_bangumi
+
+        monkeypatch.setattr(
+            "module.searcher.provider.get_provider", lambda: self.PROVIDERS
+        )
+        engine = create_engine("sqlite://")
+        SQLModel.metadata.create_all(engine)
+        with engine.begin() as conn:
+            ensure_schema_version_table(conn)
+            set_schema_version(conn, CURRENT_SCHEMA_VERSION - 1)
+        other = "https://mikanani.me/RSS/Bangumi?bangumiId=1"
+        with Session(engine) as session:
+            session.add(RSSItem(id=1, url=url))
+            session.add(make_bangumi(season_raw=season_raw, rss_link=f"{other},{url}"))
+            session.commit()
+
+        run_migrations(engine)
+        with engine.begin() as conn:
+            assert get_schema_version(conn) == CURRENT_SCHEMA_VERSION
+            # 再跑一次不再改动
+            migration_module._strip_search_keyword_episodes(conn)
+
+        with Session(engine) as session:
+            rss = session.get(RSSItem, 1)
+            bangumi = session.exec(select(Bangumi)).one()
+        assert rss is not None
+        assert rss.url == (expected or url)
+        assert bangumi.rss_link == f"{other},{expected or url}"

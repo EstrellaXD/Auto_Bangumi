@@ -946,6 +946,25 @@ class TestSearchByBangumiId:
         assert await db.search_by_bangumi_id(999) == []
 
 
+async def test_get_needs_review_excludes_archived(db_session):
+    """已归档的番剧不再参与偏移扫描，旧的检查标记不应继续列出。"""
+    db = BangumiDatabase(db_session)
+    for title, archived in (("Active Review", False), ("Archived Review", True)):
+        db_session.add(
+            Bangumi(
+                official_title=title,
+                title_raw=f"{title} Raw",
+                group_name="TestGroup",
+                rss_link="r",
+                needs_review=True,
+                archived=archived,
+            )
+        )
+    await db_session.commit()
+
+    assert [b.official_title for b in await db.get_needs_review()] == ["Active Review"]
+
+
 class TestApplyOffset:
     """Tests for BangumiDatabase.apply_offset."""
 

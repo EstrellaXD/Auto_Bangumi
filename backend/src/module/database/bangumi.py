@@ -700,6 +700,8 @@ class BangumiDatabase:
             and_(
                 Bangumi.needs_review == True,  # noqa: E712
                 Bangumi.deleted == false(),
+                # 偏移扫描跳过已归档的番剧，其旧标记不会再被清除，不列出
+                Bangumi.archived == false(),
             )
         )
         result = await self.session.execute(statement)

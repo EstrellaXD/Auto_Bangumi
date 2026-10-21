@@ -11,6 +11,7 @@
 import logging
 from dataclasses import dataclass
 from typing import Any, Callable, get_args, get_origin
+from urllib.parse import parse_qsl, urlsplit
 
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
@@ -87,6 +88,9 @@ class Migration:
     statements: tuple[str, ...]
     already_applied: AppliedCheck
     guarded_statements: tuple[GuardedStatement, ...] = ()
+    # 一次性的数据修复：在 SQL 语句之后、同一 SAVEPOINT 内执行；
+    # already_applied 为真时跳过
+    data_step: Callable[[Connection], None] | None = None
 
     def pending_statements(self, inspector) -> tuple[str, ...]:
         if self.guarded_statements:
@@ -118,6 +122,66 @@ def _has_downloader_id(table: str) -> AppliedCheck:
         )(inspector)
 
     return check
+
+
+def _strip_search_keyword_episodes(conn: Connection) -> None:
+    """旧版本从搜索结果建的订阅把集号写进了搜索关键词（如 S03E02），刷新时
+    一直按存下的 URL 拉取，订阅锁死在单集（#1138）。
+
+    只改搜索源 URL（主机、路径与某个搜索源模板一致，且带模板里 ``%s`` 所在的
+    关键词参数）：按引用该 URL 的番剧存下的 season_raw，把关键词里的季集写法
+    换成只含季的写法，其余参数与编码原样保留；番剧 rss_link 里的同一 URL 一并
+    替换。Mikan 番剧 RSS、用户手填的订阅不变。
+    """
+    # 延迟导入：searcher 依赖 rss/network，模块级导入会与 database 循环
+    from module.searcher.provider import available_sites, encode_keywords
+    from module.searcher.searcher import strip_season_episode
+
+    keyword_params: dict[tuple[str, str], str] = {}
+    for config in available_sites().values():
+        template = urlsplit(config["url"])
+        for name, value in parse_qsl(template.query):
+            if value == "%s":
+                keyword_params[(template.netloc, template.path)] = name
+    season_by_url: dict[str, str] = {}
+    for raw, rss_link in conn.execute(
+        text(
+            "SELECT season_raw, rss_link FROM bangumi "
+            "WHERE season_raw IS NOT NULL AND rss_link IS NOT NULL"
+        )
+    ):
+        for link in rss_link.split(","):
+            season_by_url.setdefault(link.strip(), raw)
+
+    for rss_id, url in conn.execute(text("SELECT id, url FROM rssitem")).all():
+        parts = urlsplit(url)
+        param_name = keyword_params.get((parts.netloc, parts.path))
+        season_raw = season_by_url.get(url)
+        if param_name is None or season_raw is None:
+            continue
+        old = f"+{encode_keywords([season_raw])}+"
+        new = f"+{encode_keywords([strip_season_episode(season_raw)])}+"
+        base, _, query = url.partition("?")
+        params = query.split("&")
+        for i, param in enumerate(params):
+            key, sep, value = param.partition("=")
+            if key == param_name and sep:
+                params[i] = f"{key}={f'+{value}+'.replace(old, new, 1)[1:-1]}"
+        new_url = f"{base}?{'&'.join(params)}"
+        if new_url == url:
+            continue
+        conn.execute(
+            text("UPDATE rssitem SET url = :new WHERE id = :id"),
+            {"new": new_url, "id": rss_id},
+        )
+        conn.execute(
+            text(
+                "UPDATE bangumi SET rss_link = replace(rss_link, :old, :new) "
+                "WHERE instr(rss_link, :old) > 0"
+            ),
+            {"old": url, "new": new_url},
+        )
+        logger.info(f"Search subscription keyword drops episode: {url} -> {new_url}")
 
 
 # 迁移按版本顺序执行；版本号与 3.2.x 的历史保持一致，旧数据库照常升级。
@@ -858,6 +922,20 @@ MIGRATIONS: tuple[Migration, ...] = (
         ),
         _has_downloader_id("aria2_gid"),
     ),
+    Migration(
+        28,
+        "strip episode from search subscription keywords",
+        (),
+        # 数据修复没有可检查的 schema 痕迹，由 schema_version 保证只跑一次；
+        # 缺少这些列的库里没有要修的订阅
+        lambda inspector: (
+            not all_checks(
+                column_exists("bangumi", "season_raw"),
+                column_exists("bangumi", "rss_link"),
+            )(inspector)
+        ),
+        data_step=_strip_search_keyword_episodes,
+    ),
 )
 
 # 由迁移列表派生，新增迁移时无需手动同步
@@ -908,8 +986,12 @@ def run_migrations_conn(conn: Connection) -> None:
         if migration.version <= current:
             continue
         # 每轮重新 inspect：前一个迁移的 DDL 需要对守卫可见
-        pending = migration.pending_statements(inspect(conn))
-        if not pending:
+        inspector = inspect(conn)
+        pending = migration.pending_statements(inspector)
+        data_step = (
+            None if migration.already_applied(inspector) else migration.data_step
+        )
+        if not pending and data_step is None:
             logger.debug(
                 f"Migration v{migration.version} skipped "
                 f"(already applied): {migration.description}"
@@ -919,6 +1001,8 @@ def run_migrations_conn(conn: Connection) -> None:
             try:
                 for stmt in pending:
                     conn.execute(text(stmt))
+                if data_step is not None:
+                    data_step(conn)
                 savepoint.commit()
                 logger.info(f"Migration v{migration.version}: {migration.description}")
             except Exception as e:

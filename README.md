@@ -123,7 +123,7 @@ ab-plugin pack my-plugin
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=EstrellaXD/Auto_Bangumi&type=Date)](https://star-history.com/#EstrellaXD/Auto_Bangumi)
+[![Star History Chart](https://star-history.dera.page/svg?repos=EstrellaXD/Auto_Bangumi&type=Date)](https://star-history.dera.page/#EstrellaXD/Auto_Bangumi)
 
 ## Licence
 

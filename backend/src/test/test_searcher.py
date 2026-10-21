@@ -173,6 +173,80 @@ class TestSpecialUrl:
         # Only title_raw should be in the URL
         assert "Test" in result.url
 
+    @pytest.mark.parametrize(
+        ("title", "keyword"),
+        [
+            (
+                "[ToonsHub] The Apothecary Diaries S03E02 Multi Subs NF WEB-DL 1080p",
+                "ToonsHub+The+Apothecary+Diaries+S03+Multi+Subs+NF+1080p",
+            ),
+            (
+                "[ToonsHub] The Apothecary Diaries S03 E02 1080p NF WEB-DL",
+                "ToonsHub+The+Apothecary+Diaries+S03+NF+1080p",
+            ),
+            (
+                "[ANi] 葬送的芙莉莲 第二季 - 05 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]",
+                "ANi+葬送的芙莉莲+第二季+CHT+Baha+1080P",
+            ),
+            (
+                "[Lilith-Raws] Kusuriya no Hitorigoto S2 - 05 [Baha][WebDL 1080p AVC AAC][CHT]",
+                "Lilith+Raws+Kusuriya+no+Hitorigoto+S2+CHT+Baha+1080p",
+            ),
+            (
+                "[SubsPlease] Spy x Family Season 2 - 05 (1080p) [ABCDEF12].mkv",
+                "SubsPlease+Spy+x+Family+Season+2+1080p",
+            ),
+            (
+                "[Erai-raws] Mushoku Tensei 2nd Season - 05 [1080p][Multiple Subtitle]",
+                "Erai+raws+Mushoku+Tensei+2nd+Season+Multiple+Subtitle+1080p",
+            ),
+        ],
+    )
+    async def test_keyword_keeps_season_but_drops_episode(self, title, keyword):
+        """搜索结果生成订阅时关键词保留季、去掉集数，订阅才能收到后续集（#1138）。"""
+        from module.parser.title_parser import TitleParser
+        from module.searcher.searcher import SearchTorrent
+
+        bangumi = await TitleParser.raw_parser(title)
+        assert isinstance(bangumi, Bangumi)
+        with patch(
+            "module.searcher.provider.get_provider",
+            return_value={"nyaa": {"url": "https://nyaa.si/?q=%s", "parser": "tmdb"}},
+        ):
+            result = SearchTorrent.special_url(bangumi, "nyaa")
+
+        assert result.url == f"https://nyaa.si/?q={keyword}"
+
+    @pytest.mark.parametrize(
+        ("season_raw", "keyword"),
+        [
+            ("S03E02", "S03"),
+            ("Season 3 Episode 2", "Season+3"),
+            ("S03E01-E03", "S03"),
+            ("Season 2 EPs 01-12", "Season+2"),
+        ],
+    )
+    def test_legacy_season_raw_drops_episode(self, season_raw, keyword):
+        """旧版本存进数据库的季集合写 season_raw，生成关键词时只保留季（#1138）。"""
+        from module.searcher.searcher import SearchTorrent
+        from test.factories import make_bangumi
+
+        bangumi = make_bangumi(
+            group_name=None,
+            title_raw="Test",
+            season_raw=season_raw,
+            dpi=None,
+            source=None,
+            subtitle=None,
+        )
+        with patch(
+            "module.searcher.provider.get_provider",
+            return_value={"nyaa": {"url": "https://nyaa.si/?q=%s", "parser": "tmdb"}},
+        ):
+            result = SearchTorrent.special_url(bangumi, "nyaa")
+
+        assert result.url == f"https://nyaa.si/?q=Test+{keyword}"
+
     def test_supports_movie_without_season_fields(self):
         """Movie search results do not expose Bangumi-only season fields."""
         from module.searcher.searcher import SearchTorrent

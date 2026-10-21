@@ -20,6 +20,7 @@ import ConfigAccess from '@/components/setting/config-access.vue';
 import UpdateCard from '@/components/setting/update-card.vue';
 import ConfigPlugins from '@/components/setting/config-plugins.vue';
 import { configSectionMatches } from '@/utils/config-search';
+import { isAtBottom, pickActiveSection } from '@/utils/scroll-spy';
 
 definePage({
   name: 'Config',
@@ -271,21 +272,41 @@ function setSectionEl(id: string, el: unknown) {
   else sectionEls.delete(id);
 }
 
+// 程序化平滑滚动期间暂停 scroll-spy，避免高亮在途经的分区间跳动
+let isProgrammaticScroll = false;
+let scrollTimer: ReturnType<typeof setTimeout> | null = null;
+
+function endProgrammaticScroll() {
+  isProgrammaticScroll = false;
+  if (scrollTimer) clearTimeout(scrollTimer);
+  scrollTimer = null;
+}
+
 function onScroll() {
   const container = scrollEl.value;
-  if (!container) return;
-  const anchor = container.scrollTop + 80;
-  let current = visibleSections.value[0]?.id ?? baseSections[0].id;
-  for (const section of visibleSections.value) {
-    const el = sectionEls.get(section.id);
-    if (el && el.offsetTop <= anchor) current = section.id;
-  }
-  activeSection.value = current;
+  if (!container || isProgrammaticScroll) return;
+  const containerTop = container.getBoundingClientRect().top;
+  const tops = visibleSections.value.flatMap(({ id }) => {
+    const el = sectionEls.get(id);
+    return el ? [{ id, top: el.getBoundingClientRect().top - containerTop }] : [];
+  });
+  activeSection.value =
+    pickActiveSection(tops, isAtBottom(container)) ??
+    visibleSections.value[0]?.id ??
+    baseSections[0].id;
 }
 
 function jumpTo(id: string) {
   const el = sectionEls.get(id);
   if (!el) return;
+  activeSection.value = id;
+  isProgrammaticScroll = true;
+  // scrollend 不可用（Safari）或未触发时，由定时器兜底解除
+  if (scrollTimer) clearTimeout(scrollTimer);
+  scrollTimer = setTimeout(endProgrammaticScroll, 600);
+  scrollEl.value?.addEventListener('scrollend', endProgrammaticScroll, {
+    once: true,
+  });
   const reduceMotion = window.matchMedia(
     '(prefers-reduced-motion: reduce)'
   ).matches;
@@ -293,7 +314,6 @@ function jumpTo(id: string) {
     behavior: reduceMotion ? 'auto' : 'smooth',
     block: 'start',
   });
-  activeSection.value = id;
 }
 
 // --- 保存 / 放弃 ---
@@ -370,7 +390,14 @@ onBeforeRouteLeave(() => {
         </button>
       </nav>
 
-      <div ref="scrollEl" class="config-scroll" @scroll.passive="onScroll">
+      <div
+        ref="scrollEl"
+        class="config-scroll"
+        @scroll.passive="onScroll"
+        @wheel.passive="endProgrammaticScroll"
+        @touchmove.passive="endProgrammaticScroll"
+        @pointerdown.passive="endProgrammaticScroll"
+      >
         <div v-if="visibleSections.length === 0" class="config-no-match">
           <p>{{ $t('config.no_match') }}</p>
           <ab-button size="sm" @click="searchQuery = ''">
@@ -496,6 +523,7 @@ onBeforeRouteLeave(() => {
 }
 
 .config-scroll {
+  position: relative;
   flex: 1;
   min-width: 0;
   overflow-y: auto;

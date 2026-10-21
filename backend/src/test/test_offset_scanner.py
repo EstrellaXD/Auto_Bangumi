@@ -358,3 +358,114 @@ class TestCheckBangumiUsesRealSignal:
         assert updated.needs_review_reason is not None
         assert "13" in updated.needs_review_reason
         assert "12" in updated.needs_review_reason
+
+    @pytest.mark.parametrize(
+        ("season", "episode", "kept_after_catch_up"),
+        [
+            (1, 13, True),  # 只超出集数：TMDB 跟上后也不自动清除，由用户处理
+            (2, 5, False),  # 季度对不上：TMDB 跟上后不再不匹配，自动清除
+        ],
+        ids=["overflow-only", "season-mismatch"],
+    )
+    async def test_airing_show_flag_notifies_once(
+        self, season, episode, kept_after_catch_up
+    ):
+        """连载中的番剧标记后只通知一次；只超出集数的标记不随复扫清除（#1072）。"""
+        scanner = OffsetScanner()
+        async with Database() as db:
+            bangumi = make_bangumi(
+                title_raw="Airing Anime",
+                season=season,
+                season_offset=0,
+                episode_offset=0,
+            )
+            await db.bangumi.add(bangumi)
+            await db.torrent.add(
+                Torrent(
+                    name=f"[TestGroup] Airing Anime - {episode:02d} [1080p].mkv",
+                    url="https://example.com/airing",
+                    refer_id=bangumi.id,
+                )
+            )
+
+        tmdb_info = self._ended_twelve_episode_season()
+        tmdb_info.series_status = "Returning Series"
+
+        async def scan():
+            async with Database() as db:
+                current = await db.bangumi.search_id(bangumi.id)
+            with patch(
+                "module.core.offset_scanner.tmdb_parser",
+                new=AsyncMock(return_value=tmdb_info),
+            ):
+                event = await scanner._check_bangumi(current)
+            async with Database() as db:
+                updated = await db.bangumi.search_id(bangumi.id)
+            return event, updated.needs_review
+
+        # 首次扫描：标记并通知一次
+        event, needs_review = await scan()
+        assert isinstance(event, OffsetReviewEvent)
+        assert needs_review is True
+
+        # 复扫仍是同样的不匹配：保留标记，不再通知
+        assert await scan() == (None, True)
+
+        # TMDB 跟上（多了第 13 集和第 2 季）后复扫：不再通知
+        tmdb_info.last_season = 2
+        tmdb_info.season_episode_counts = {1: 13, 2: 12}
+        assert await scan() == (None, kept_after_catch_up)
+
+
+class TestRescanFlaggedBangumi:
+    """已标记的番剧重新扫描：误报自动清除，其余情况保留标记（#1072）。"""
+
+    @pytest.mark.parametrize(
+        ("episode", "season_offset", "tmdb_found", "expected_reason"),
+        [
+            (6, 0, True, None),  # TMDB 已更新 / 解析已修正：不再不匹配，清除
+            (13, 0, True, "调整后集数13超出TMDB该季的12集"),  # 仍不匹配：换成新原因
+            (6, -1, True, "旧原因"),  # 用户已手动配置偏移：不动
+            (6, 0, False, "旧原因"),  # TMDB 暂时查不到：没有新结论，不动
+        ],
+        ids=["no-mismatch", "still-mismatch", "user-offset", "tmdb-miss"],
+    )
+    async def test_rescan_clears_only_stale_scanner_flag(
+        self, episode, season_offset, tmdb_found, expected_reason
+    ):
+        scanner = OffsetScanner()
+        reason = "旧原因"
+        async with Database() as db:
+            bangumi = make_bangumi(
+                title_raw="Rescan Anime",
+                season=1,
+                season_offset=season_offset,
+                episode_offset=0,
+            )
+            await db.bangumi.add(bangumi)
+            # 建议偏移非 0 的真实不匹配标记；只超出集数的标记不自动清除
+            await db.bangumi.set_needs_review(
+                bangumi.id, reason, suggested_season_offset=-1
+            )
+            await db.torrent.add(
+                Torrent(
+                    name=f"[TestGroup] Rescan Anime - {episode:02d} [1080p].mkv",
+                    url="https://example.com/rescan",
+                    refer_id=bangumi.id,
+                )
+            )
+            bangumi = await db.bangumi.search_id(bangumi.id)
+
+        tmdb_info = TestCheckBangumiUsesRealSignal._ended_twelve_episode_season()
+        with patch(
+            "module.core.offset_scanner.tmdb_parser",
+            new=AsyncMock(return_value=tmdb_info if tmdb_found else None),
+        ):
+            event = await scanner._check_bangumi(bangumi)
+
+        # 已标记过的番剧不再重复发送检查通知
+        assert event is None
+        async with Database() as db:
+            updated = await db.bangumi.search_id(bangumi.id)
+        assert updated.needs_review is (expected_reason is not None)
+        assert updated.needs_review_reason == expected_reason

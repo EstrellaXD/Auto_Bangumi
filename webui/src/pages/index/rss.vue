@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { RefreshCw } from '@lucide/vue';
 import { type DataTableColumns, NDataTable, NTooltip } from 'naive-ui';
 import AbButton from '@/components/basic/ab-button.vue';
 import AbTag from '@/components/basic/ab-tag.vue';
@@ -119,10 +120,9 @@ const rssColumns = computed<DataTableColumns<RSS>>(() => [
           onClick: () => onRefreshOne(rss.id),
         },
         () =>
-          h('div', {
-            class: isRowRefreshing
-              ? 'i-carbon-renew animate-spin'
-              : 'i-carbon-renew',
+          h(RefreshCw, {
+            size: 14,
+            class: isRowRefreshing ? 'animate-spin' : undefined,
           })
       );
     },
@@ -147,13 +147,7 @@ function onSelectedRSSUpdate(keys: unknown[]) {
           @click="refreshAllRSS"
         >
           <template #icon>
-            <div
-              :class="
-                isRefreshingAll
-                  ? 'i-carbon-renew animate-spin'
-                  : 'i-carbon-renew'
-              "
-            />
+            <RefreshCw :size="14" :class="{ 'animate-spin': isRefreshingAll }" />
           </template>
           {{ $t('rss.refresh_all') }}
         </AbButton>
@@ -214,13 +208,7 @@ function onSelectedRSSUpdate(keys: unknown[]) {
                 :disabled="refreshingId === item.id"
                 @click="onRefreshOne(item.id)"
               >
-                <div
-                  :class="
-                    refreshingId === item.id
-                      ? 'i-carbon-renew animate-spin'
-                      : 'i-carbon-renew'
-                  "
-                />
+                <RefreshCw :size="14" :class="{ 'animate-spin': refreshingId === item.id }" />
                 {{ $t('rss.refresh') }}
               </AbButton>
             </div>

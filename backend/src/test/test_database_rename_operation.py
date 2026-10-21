@@ -261,7 +261,59 @@ async def test_conflict_query_and_done_pruning(db_session):
     conflict.updated_at = now - timedelta(days=31)
     db_session.add(conflict)
     await db_session.commit()
-    assert await repo.prune_done(before=now - timedelta(days=30)) == 1
+    assert (
+        await repo.prune_done(
+            before=now - timedelta(days=30),
+            live_task_ids={"conflict-v4"},
+            downloader_type=None,
+        )
+        == 1
+    )
+
+
+@pytest.mark.parametrize(
+    ("live_task_ids", "downloader_type", "pruned"),
+    [
+        ({"new-v2"}, None, False),
+        ({"other-task"}, None, True),
+        (set(), None, False),
+        ({"other-task"}, "qbittorrent", True),
+        ({"other-task"}, "aria2", False),
+    ],
+    ids=[
+        "task-present",
+        "task-gone",
+        "empty-snapshot",
+        "same-instance",
+        "other-instance",
+    ],
+)
+async def test_prune_done_unchanged_path_rows_only_when_task_gone(
+    db_session, live_task_ids, downloader_type, pruned
+):
+    """路径未变（重命名方式 none）的 done 记录是只通知一次的依据：任务仍在、
+    快照为空或属于别的实例时保留，任务已从该实例删除时清理（#1082）。"""
+    repo = RenameOperationDatabase(db_session)
+    now = datetime.now(timezone.utc)
+    row, _ = await repo.get_or_create(
+        _operation(
+            kind="conflict",
+            state="done",
+            source_path="Anime - 01.mkv",
+            target_path="Anime - 01.mkv",
+        )
+    )
+    row.updated_at = now - timedelta(days=31)
+    db_session.add(row)
+    await db_session.commit()
+
+    assert await repo.prune_done(
+        before=now - timedelta(days=30),
+        live_task_ids=live_task_ids,
+        downloader_type=downloader_type,
+    ) == int(pruned)
+    db_session.expunge_all()
+    assert (await repo.get(row.id) is None) is pruned
 
 
 async def test_database_facade_exposes_rename_operation_repository(db_engine):

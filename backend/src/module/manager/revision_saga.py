@@ -112,9 +112,19 @@ class RevisionSaga:
         episode_offset: int,
     ) -> MediaRenameReport:
         if prepared.source_path == prepared.target_path:
+            # 文件名已是目标名（重命名方式 none，或已符合命名规则）时不会走真正的
+            # 改名，这里是唯一能发下载完成通知的地方；操作记录随后置为 done，
+            # 之后各轮直接返回，通知只发一次（#1082）
             return MediaRenameReport(
                 result=RenameResult(RenameOutcome.ALREADY_APPLIED),
                 prepared=prepared,
+                notification=Notification(
+                    official_title=bangumi_name,
+                    season=prepared.episode.season,
+                    episode=self._adjust_episode(
+                        prepared.episode.episode, episode_offset
+                    ),
+                ),
             )
         result = await self.client.rename_torrent_file(
             _hash=_hash,
@@ -837,9 +847,17 @@ class RevisionSaga:
         identity: RevisionIdentity | None,
         bangumi_name: str,
         episode_offset: int,
+        notify_unchanged: bool = False,
     ) -> MediaRenameReport:
         """Claim and execute one non-replacement rename exactly once at a time."""
 
+        if prepared.source_path == prepared.target_path and not notify_unchanged:
+            # 选定策略未登记、本轮回退到 none：原名不是最终名，不建操作记录也不
+            # 通知；策略恢复后那一轮再建记录并通知（#1082）
+            return MediaRenameReport(
+                result=RenameResult(RenameOutcome.ALREADY_APPLIED),
+                prepared=prepared,
+            )
         template = self._build_operation(
             info=info,
             prepared=prepared,

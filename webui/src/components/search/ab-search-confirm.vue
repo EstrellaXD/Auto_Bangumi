@@ -126,7 +126,7 @@ const infoTags = computed(() => {
 });
 
 // Copy RSS link
-const { copy, copied } = useClipboard({ copiedDuring: 2000 });
+const { copy, copied } = useClipboard({ copiedDuring: 2000, legacy: true });
 
 async function copyRssLink() {
   const rssLink = localBangumi.value.rss_link?.[0] || '';

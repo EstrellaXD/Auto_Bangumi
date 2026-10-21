@@ -384,12 +384,43 @@ class RenameOperationDatabase:
         await self.session.commit()
         return True
 
-    async def prune_done(self, before: datetime) -> int:
+    async def prune_done(
+        self,
+        before: datetime,
+        live_task_ids: set[str],
+        downloader_type: str | None,
+    ) -> int:
+        """清理过期的 done 记录。
+
+        路径未变的记录（重命名方式 none）只在任务已不在下载器里时清理：这类
+        种子不打 ab:renamed、每轮都会再处理，删掉仍在的任务的记录会重建记录并
+        再发一次下载完成通知（#1082）。``live_task_ids`` 是该实例当前的全部任务；
+        为空时不能证明任务已删除，不清理这类记录。``downloader_type`` 为
+        ``None`` 时不限实例。
+        """
+        expired = (
+            col(RenameOperation.state) == "done",
+            col(RenameOperation.updated_at) < before,
+        )
+        unchanged = col(RenameOperation.source_path) == col(RenameOperation.target_path)
+        orphan_ids: list[int | None] = []
+        if live_task_ids:
+            statement = select(RenameOperation.id, RenameOperation.new_task_id).where(
+                *expired, unchanged
+            )
+            if downloader_type is not None:
+                statement = statement.where(
+                    RenameOperation.downloader_type == downloader_type
+                )
+            rows = await self.session.execute(statement)
+            orphan_ids = [
+                row_id for row_id, task_id in rows if task_id not in live_task_ids
+            ]
         result = await self.session.execute(
             delete(RenameOperation)
             .where(
-                col(RenameOperation.state) == "done",
-                col(RenameOperation.updated_at) < before,
+                *expired,
+                or_(~unchanged, col(RenameOperation.id).in_(orphan_ids)),
             )
             .execution_options(synchronize_session=False)
         )
