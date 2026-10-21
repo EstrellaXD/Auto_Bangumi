@@ -113,8 +113,9 @@ class RevisionSaga:
         notify_unchanged: bool = False,
     ) -> MediaRenameReport:
         if prepared.source_path == prepared.target_path:
-            # 重命名方式为 none 时路径从不改变，这里是唯一能发下载完成通知的地方；
-            # 操作记录随后置为 done，之后各轮直接返回，通知只发一次（#1082）
+            # 文件名已是目标名（重命名方式 none，或已符合命名规则）时不会走真正的
+            # 改名，这里是唯一能发下载完成通知的地方；操作记录随后置为 done，
+            # 之后各轮直接返回，通知只发一次（#1082）
             return MediaRenameReport(
                 result=RenameResult(RenameOutcome.ALREADY_APPLIED),
                 prepared=prepared,

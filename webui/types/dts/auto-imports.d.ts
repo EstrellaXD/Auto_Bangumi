@@ -38,6 +38,7 @@ declare global {
   const categoryCounts: typeof import('../../src/utils/plugin-market').categoryCounts
   const computed: typeof import('vue').computed
   const configSectionMatches: typeof import('../../src/utils/config-search').configSectionMatches
+  const copyText: typeof import('../../src/utils/clipboard').copyText
   const countLogLevels: typeof import('../../src/utils/log-parse').countLogLevels
   const createApp: typeof import('vue').createApp
   const createPinia: typeof import('pinia').createPinia
@@ -63,6 +64,7 @@ declare global {
   const i18n: typeof import('../../src/hooks/useMyI18n').i18n
   const idLabel: typeof import('../../src/utils/id-label').idLabel
   const inject: typeof import('vue').inject
+  const isAtBottom: typeof import('../../src/utils/scroll-spy').isAtBottom
   const isProxy: typeof import('vue').isProxy
   const isReactive: typeof import('vue').isReactive
   const isReadonly: typeof import('vue').isReadonly

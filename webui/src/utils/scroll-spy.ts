@@ -5,7 +5,7 @@ export interface SectionTop {
 }
 
 /** 滚动到底部的容差（px） */
-export const SCROLL_BOTTOM_EPSILON = 10;
+const SCROLL_BOTTOM_EPSILON = 10;
 /** 分区上缘越过该锚线即视为当前分区（px） */
 export const SCROLL_ANCHOR_OFFSET = 80;
 
@@ -24,4 +24,19 @@ export function pickActiveSection(
     if (top <= SCROLL_ANCHOR_OFFSET) current = id;
   }
   return current;
+}
+
+/**
+ * 容器是否已滚动到底部。内容不足一屏、容器无法滚动时不算触底，
+ * 否则最后一个分区会一直高亮。
+ */
+export function isAtBottom({
+  scrollTop,
+  scrollHeight,
+  clientHeight,
+}: Pick<HTMLElement, 'scrollTop' | 'scrollHeight' | 'clientHeight'>): boolean {
+  return (
+    scrollHeight - clientHeight > SCROLL_BOTTOM_EPSILON &&
+    scrollHeight - scrollTop - clientHeight <= SCROLL_BOTTOM_EPSILON
+  );
 }

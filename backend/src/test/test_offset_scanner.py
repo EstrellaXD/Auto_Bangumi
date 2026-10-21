@@ -359,25 +359,65 @@ class TestCheckBangumiUsesRealSignal:
         assert "13" in updated.needs_review_reason
         assert "12" in updated.needs_review_reason
 
+    @pytest.mark.parametrize(
+        ("season", "episode", "flagged"),
+        [
+            (1, 13, False),  # 只超出集数：字幕组跑在 TMDB 前面，不标记
+            (2, 5, True),  # 季度对不上：真实不匹配，照常标记
+        ],
+        ids=["overflow-only", "season-mismatch"],
+    )
+    async def test_airing_show_flags_only_real_mismatch(self, season, episode, flagged):
+        """连载中的番剧只有建议的偏移非 0 时才标记，否则每周都会误报一次（#1072）。"""
+        scanner = OffsetScanner()
+        async with Database() as db:
+            bangumi = make_bangumi(
+                title_raw="Airing Anime",
+                season=season,
+                season_offset=0,
+                episode_offset=0,
+            )
+            await db.bangumi.add(bangumi)
+            await db.torrent.add(
+                Torrent(
+                    name=f"[TestGroup] Airing Anime - {episode:02d} [1080p].mkv",
+                    url="https://example.com/airing",
+                    refer_id=bangumi.id,
+                )
+            )
+
+        tmdb_info = self._ended_twelve_episode_season()
+        tmdb_info.series_status = "Returning Series"
+        with patch(
+            "module.core.offset_scanner.tmdb_parser",
+            new=AsyncMock(return_value=tmdb_info),
+        ):
+            event = await scanner._check_bangumi(bangumi)
+
+        assert isinstance(event, OffsetReviewEvent) is flagged
+        async with Database() as db:
+            updated = await db.bangumi.search_id(bangumi.id)
+        assert updated.needs_review is flagged
+
 
 class TestRescanFlaggedBangumi:
     """已标记的番剧重新扫描：误报自动清除，其余情况保留标记（#1072）。"""
 
     @pytest.mark.parametrize(
-        ("episode", "season_offset", "tmdb_found", "still_flagged"),
+        ("episode", "season_offset", "tmdb_found", "expected_reason"),
         [
-            (6, 0, True, False),  # TMDB 已更新 / 解析已修正：不再不匹配，清除
-            (13, 0, True, True),  # 仍然不匹配：保留原标记
-            (6, -1, True, True),  # 用户已手动配置偏移：不动
-            (6, 0, False, True),  # TMDB 暂时查不到：没有新结论，不动
+            (6, 0, True, None),  # TMDB 已更新 / 解析已修正：不再不匹配，清除
+            (13, 0, True, "调整后集数13超出TMDB该季的12集"),  # 仍不匹配：换成新原因
+            (6, -1, True, "旧原因"),  # 用户已手动配置偏移：不动
+            (6, 0, False, "旧原因"),  # TMDB 暂时查不到：没有新结论，不动
         ],
         ids=["no-mismatch", "still-mismatch", "user-offset", "tmdb-miss"],
     )
     async def test_rescan_clears_only_stale_scanner_flag(
-        self, episode, season_offset, tmdb_found, still_flagged
+        self, episode, season_offset, tmdb_found, expected_reason
     ):
         scanner = OffsetScanner()
-        reason = "调整后集数13超出TMDB该季的12集（正在放送中，TMDB可能未更新）"
+        reason = "旧原因"
         async with Database() as db:
             bangumi = make_bangumi(
                 title_raw="Rescan Anime",
@@ -409,5 +449,5 @@ class TestRescanFlaggedBangumi:
         assert event is None
         async with Database() as db:
             updated = await db.bangumi.search_id(bangumi.id)
-        assert updated.needs_review is still_flagged
-        assert updated.needs_review_reason == (reason if still_flagged else None)
+        assert updated.needs_review is (expected_reason is not None)
+        assert updated.needs_review_reason == expected_reason

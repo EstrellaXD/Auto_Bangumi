@@ -22,10 +22,11 @@ SEARCH_KEY = [
     "dpi",
 ]
 
-# season_raw 取自「S03E02」「Season 3 Episode 2」这类季集合写时会带上集数，
-# 只保留季的部分，否则订阅关键词锁死在单集（#1138）
+# 解析器现在只把季的写法存进 season_raw；旧版本存下的「S03E02」「Season 2 EPs
+# 01-12」这类季集合写仍留在数据库里（补全整季时会读到），只保留季的部分，
+# 否则订阅关键词锁死在单集（#1138）
 _SEASON_WITH_EPISODE = re.compile(
-    r"^(S\d{1,2}|Season\s+\d{1,2})\s*E(?:P|pisodes?)?\.?\s*\d.*$", re.I
+    r"^(S\d{1,2}|Season\s+\d{1,2})\s*E(?:Ps?|pisodes?)?\.?\s*\d.*$", re.I
 )
 
 

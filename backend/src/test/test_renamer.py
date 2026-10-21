@@ -452,7 +452,8 @@ class TestRenameSingleFile:
         )
         result = await self._rename(renamer, ep, media_path="My Anime S01E05.mkv")
 
-        assert result == []
+        # 首次处理即完成，下载完成通知照发（#1082）
+        assert result == [Notification(official_title="My Anime", season=1, episode=5)]
         renamer.client.client.torrents_rename_file.assert_not_awaited()
         renamer.client.client.add_tag.assert_awaited_once_with("hash123", "ab:renamed")
 
@@ -514,6 +515,38 @@ class TestRenameSingleFile:
 
         assert first == [Notification(official_title="My Anime", season=1, episode=5)]
         assert second == []
+        renamer.client.client.torrents_rename_file.assert_not_awaited()
+
+    @pytest.mark.parametrize(
+        ("method", "notified"),
+        [("pn", True), ("not-installed", False)],
+        ids=["configured", "fallback"],
+    )
+    async def test_unchanged_path_notifies_once_for_configured_strategy(
+        self, renamer, method, notified
+    ):
+        """文件名已是目标名时首轮通知一次；选定策略未登记、本轮回退到 none 时
+        文件名不是最终名，不通知（#1082）。"""
+        ep = EpisodeFile(
+            media_path="My Anime S01E05.mkv",
+            title="My Anime",
+            season=1,
+            episode=5,
+            suffix=".mkv",
+        )
+        loops = [
+            await self._rename(
+                renamer,
+                ep,
+                media_path="My Anime S01E05.mkv",
+                method=method,
+                _hash=f"hash-unchanged-{method}",
+            )
+            for _ in range(2)
+        ]
+
+        expected = [Notification(official_title="My Anime", season=1, episode=5)]
+        assert loops == [expected if notified else [], []]
         renamer.client.client.torrents_rename_file.assert_not_awaited()
 
     @pytest.mark.parametrize("remove_bad_torrent", [False, True])

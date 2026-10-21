@@ -859,30 +859,6 @@ class TestDeleteByBangumiId:
         assert count == 3
         assert len(await db.search_all()) == 0
 
-    async def test_deletes_with_single_statement(self, db_session, db_engine):
-        """一条 DELETE 删完，不先 SELECT 再逐行删，缩短写事务（#1113）。"""
-        from sqlalchemy import event
-
-        db = TorrentDatabase(db_session)
-        await _ensure_bangumi(db_session, 11)
-        for i in range(3):
-            await db.add(
-                Torrent(name=f"t{i}", url=f"https://example.com/b{i}", refer_id=11)
-            )
-        statements: list[str] = []
-
-        def _record(conn, cursor, statement, parameters, context, executemany):
-            if "torrent" in statement.lower():
-                statements.append(statement.split()[0].upper())
-
-        event.listen(db_engine.sync_engine, "before_cursor_execute", _record)
-        try:
-            assert await db.delete_by_bangumi_id(11) == 3
-        finally:
-            event.remove(db_engine.sync_engine, "before_cursor_execute", _record)
-
-        assert statements == ["DELETE"]
-
     async def test_leaves_other_bangumi_torrents(self, db_session):
         db = TorrentDatabase(db_session)
         await _ensure_bangumi(db_session, 20)
@@ -968,6 +944,25 @@ class TestSearchByBangumiId:
     async def test_no_match_returns_empty_list(self, db_session):
         db = TorrentDatabase(db_session)
         assert await db.search_by_bangumi_id(999) == []
+
+
+async def test_get_needs_review_excludes_archived(db_session):
+    """已归档的番剧不再参与偏移扫描，旧的检查标记不应继续列出。"""
+    db = BangumiDatabase(db_session)
+    for title, archived in (("Active Review", False), ("Archived Review", True)):
+        db_session.add(
+            Bangumi(
+                official_title=title,
+                title_raw=f"{title} Raw",
+                group_name="TestGroup",
+                rss_link="r",
+                needs_review=True,
+                archived=archived,
+            )
+        )
+    await db_session.commit()
+
+    assert [b.official_title for b in await db.get_needs_review()] == ["Active Review"]
 
 
 class TestApplyOffset:

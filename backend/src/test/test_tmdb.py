@@ -345,10 +345,19 @@ async def test_tmdb_parser_negative_result_is_cached_until_ttl_expires(mocker):
 
 
 @pytest.mark.parametrize(
-    ("status", "refetched"), [("Ended", False), ("Returning Series", True)]
+    ("status", "refetched"),
+    [
+        ("Ended", False),
+        ("Canceled", False),
+        ("Returning Series", True),
+        ("In Production", True),
+        ("Planned", True),
+        ("Pilot", True),
+        (None, True),
+    ],
 )
 async def test_tmdb_parser_airing_show_cache_expires(mocker, status, refetched):
-    """连载中剧集的集数会变，缓存过期后重新查询；已完结的永久缓存（#1072）。"""
+    """未完结剧集的集数会变，缓存过期后重新查询；已完结/已取消的永久缓存（#1072）。"""
     requests: list[str] = []
 
     async def fake_get_json(url: str) -> dict:

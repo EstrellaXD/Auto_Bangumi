@@ -20,7 +20,7 @@ import ConfigAccess from '@/components/setting/config-access.vue';
 import UpdateCard from '@/components/setting/update-card.vue';
 import ConfigPlugins from '@/components/setting/config-plugins.vue';
 import { configSectionMatches } from '@/utils/config-search';
-import { SCROLL_BOTTOM_EPSILON, pickActiveSection } from '@/utils/scroll-spy';
+import { isAtBottom, pickActiveSection } from '@/utils/scroll-spy';
 
 definePage({
   name: 'Config',
@@ -290,11 +290,8 @@ function onScroll() {
     const el = sectionEls.get(id);
     return el ? [{ id, top: el.getBoundingClientRect().top - containerTop }] : [];
   });
-  const atBottom =
-    container.scrollHeight - container.scrollTop - container.clientHeight <=
-    SCROLL_BOTTOM_EPSILON;
   activeSection.value =
-    pickActiveSection(tops, atBottom) ??
+    pickActiveSection(tops, isAtBottom(container)) ??
     visibleSections.value[0]?.id ??
     baseSections[0].id;
 }

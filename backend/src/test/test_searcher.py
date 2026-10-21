@@ -217,6 +217,36 @@ class TestSpecialUrl:
 
         assert result.url == f"https://nyaa.si/?q={keyword}"
 
+    @pytest.mark.parametrize(
+        ("season_raw", "keyword"),
+        [
+            ("S03E02", "S03"),
+            ("Season 3 Episode 2", "Season+3"),
+            ("S03E01-E03", "S03"),
+            ("Season 2 EPs 01-12", "Season+2"),
+        ],
+    )
+    def test_legacy_season_raw_drops_episode(self, season_raw, keyword):
+        """旧版本存进数据库的季集合写 season_raw，生成关键词时只保留季（#1138）。"""
+        from module.searcher.searcher import SearchTorrent
+        from test.factories import make_bangumi
+
+        bangumi = make_bangumi(
+            group_name=None,
+            title_raw="Test",
+            season_raw=season_raw,
+            dpi=None,
+            source=None,
+            subtitle=None,
+        )
+        with patch(
+            "module.searcher.provider.get_provider",
+            return_value={"nyaa": {"url": "https://nyaa.si/?q=%s", "parser": "tmdb"}},
+        ):
+            result = SearchTorrent.special_url(bangumi, "nyaa")
+
+        assert result.url == f"https://nyaa.si/?q=Test+{keyword}"
+
     def test_supports_movie_without_season_fields(self):
         """Movie search results do not expose Bangumi-only season fields."""
         from module.searcher.searcher import SearchTorrent
