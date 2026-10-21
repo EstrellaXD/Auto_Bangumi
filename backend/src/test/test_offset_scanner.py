@@ -360,15 +360,17 @@ class TestCheckBangumiUsesRealSignal:
         assert "12" in updated.needs_review_reason
 
     @pytest.mark.parametrize(
-        ("season", "episode", "flagged"),
+        ("season", "episode", "kept_after_catch_up"),
         [
-            (1, 13, False),  # 只超出集数：字幕组跑在 TMDB 前面，不标记
-            (2, 5, True),  # 季度对不上：真实不匹配，照常标记
+            (1, 13, True),  # 只超出集数：TMDB 跟上后也不自动清除，由用户处理
+            (2, 5, False),  # 季度对不上：TMDB 跟上后不再不匹配，自动清除
         ],
         ids=["overflow-only", "season-mismatch"],
     )
-    async def test_airing_show_flags_only_real_mismatch(self, season, episode, flagged):
-        """连载中的番剧只有建议的偏移非 0 时才标记，否则每周都会误报一次（#1072）。"""
+    async def test_airing_show_flag_notifies_once(
+        self, season, episode, kept_after_catch_up
+    ):
+        """连载中的番剧标记后只通知一次；只超出集数的标记不随复扫清除（#1072）。"""
         scanner = OffsetScanner()
         async with Database() as db:
             bangumi = make_bangumi(
@@ -388,16 +390,31 @@ class TestCheckBangumiUsesRealSignal:
 
         tmdb_info = self._ended_twelve_episode_season()
         tmdb_info.series_status = "Returning Series"
-        with patch(
-            "module.core.offset_scanner.tmdb_parser",
-            new=AsyncMock(return_value=tmdb_info),
-        ):
-            event = await scanner._check_bangumi(bangumi)
 
-        assert isinstance(event, OffsetReviewEvent) is flagged
-        async with Database() as db:
-            updated = await db.bangumi.search_id(bangumi.id)
-        assert updated.needs_review is flagged
+        async def scan():
+            async with Database() as db:
+                current = await db.bangumi.search_id(bangumi.id)
+            with patch(
+                "module.core.offset_scanner.tmdb_parser",
+                new=AsyncMock(return_value=tmdb_info),
+            ):
+                event = await scanner._check_bangumi(current)
+            async with Database() as db:
+                updated = await db.bangumi.search_id(bangumi.id)
+            return event, updated.needs_review
+
+        # 首次扫描：标记并通知一次
+        event, needs_review = await scan()
+        assert isinstance(event, OffsetReviewEvent)
+        assert needs_review is True
+
+        # 复扫仍是同样的不匹配：保留标记，不再通知
+        assert await scan() == (None, True)
+
+        # TMDB 跟上（多了第 13 集和第 2 季）后复扫：不再通知
+        tmdb_info.last_season = 2
+        tmdb_info.season_episode_counts = {1: 13, 2: 12}
+        assert await scan() == (None, kept_after_catch_up)
 
 
 class TestRescanFlaggedBangumi:
@@ -426,8 +443,9 @@ class TestRescanFlaggedBangumi:
                 episode_offset=0,
             )
             await db.bangumi.add(bangumi)
+            # 建议偏移非 0 的真实不匹配标记；只超出集数的标记不自动清除
             await db.bangumi.set_needs_review(
-                bangumi.id, reason, suggested_season_offset=0
+                bangumi.id, reason, suggested_season_offset=-1
             )
             await db.torrent.add(
                 Torrent(

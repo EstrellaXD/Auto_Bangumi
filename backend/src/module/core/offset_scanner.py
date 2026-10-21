@@ -8,7 +8,7 @@ from module.models import Bangumi
 from module.notification.events import OffsetReviewEvent
 from module.parser.analyser.offset_detector import detect_offset_mismatch
 from module.parser.analyser.selector import parse_configured_release_title
-from module.parser.analyser.tmdb_parser import FINAL_SERIES_STATUSES, tmdb_parser
+from module.parser.analyser.tmdb_parser import tmdb_parser
 from module.parser.release_policy import is_offset_signal
 
 logger = logging.getLogger(__name__)
@@ -95,27 +95,21 @@ class OffsetScanner:
             "high",
             "medium",
         )
-        # 建议的偏移全为 0 时只是集数超出 TMDB 该季集数；未完结的剧集是字幕组
-        # 跑在 TMDB 前面，不算不匹配。否则 TMDB 缓存每天过期、跟上后清除，
-        # 下周新集又超出，每周都会重新标记并通知一次
-        if (
-            suggestion is not None
-            and not suggestion.season_offset
-            and not suggestion.episode_offset
-            and tmdb_info.series_status not in FINAL_SERIES_STATUSES
-        ):
-            flagged = False
         # 已标记的番剧也要重新扫描：TMDB 集数更新或解析修正后，误报不会自己消失
         # （#1072）。needs_review 只由本扫描器设置；用户忽略或应用后标记已清除，
         # 手动配了偏移的在上面已跳过，这里清除的只会是扫描器自己的旧标记
         if bangumi.needs_review:
             if not flagged:
-                async with Database() as db:
-                    await db.bangumi.clear_needs_review(bangumi.id)
-                logger.info(
-                    "Cleared review flag for %s: no mismatch on rescan",
-                    bangumi.official_title,
-                )
+                # 建议的偏移全为 0 的标记只是集数超出 TMDB 该季集数：连载中 TMDB
+                # 跟上后清除、下周新集又超出，会每周重复通知，所以不自动清除，
+                # 由用户忽略或应用
+                if bangumi.suggested_season_offset or bangumi.suggested_episode_offset:
+                    async with Database() as db:
+                        await db.bangumi.clear_needs_review(bangumi.id)
+                    logger.info(
+                        "Cleared review flag for %s: no mismatch on rescan",
+                        bangumi.official_title,
+                    )
             elif suggestion is not None and (
                 suggestion.reason,
                 suggestion.season_offset,
