@@ -9,6 +9,10 @@
 | `template-rename` | `rename_strategy` Provider，自带过滤器的文件名模板；`RenameSkipped`；`RenameStrategyContract` |
 | `nfo-writer` | 订阅 `torrent.organized`，在正片旁写 `.nfo`；路径映射；幂等 |
 | `ntfy-notifier` | `notifier` Provider；后端拒绝时返回 `False`；`NotifierContract` |
+| `run-command` | 订阅 `torrent.organized` / `file.renamed`，运行外部命令；参数列表不经过 shell；环境变量与占位符；超时终止 |
+| `strm-writer` | 订阅 `torrent.organized`，按媒体目录结构写 `.strm`；幂等 |
+| `synology-chat-notifier` | `notifier` Provider；表单字段 `payload=<JSON>`；HTTP 200 但 `success: false` 时返回 `False` |
+| `slack-notifier` | `notifier` Provider；mrkdwn 转义；带海报时附图片块 |
 | `manual-pick` | 前端挂载点 `bangumi.detail.tab`、插件路由、插件 KV、事件 |
 
 ## 安装一个示例

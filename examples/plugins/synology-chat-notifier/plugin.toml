@@ -1,0 +1,10 @@
+[plugin]
+id = "synology-chat-notifier"
+name = "Synology Chat 通知"
+version = "0.1.0"
+sdk = ">=0.5,<1"
+entry = "synology_chat_notifier:SynologyChatNotifier"
+description = "示例插件：把通知发到 Synology Chat 的传入 Webhook。在「设置 → 通知 → 添加渠道」选择类型 synology-chat"
+authors = ["AutoBangumi"]
+permissions = ["network"]
+extension_points = ["notifier"]

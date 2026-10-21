@@ -1,0 +1,9 @@
+[plugin]
+id = "run-command"
+name = "运行外部命令"
+version = "0.1.0"
+sdk = ">=0.5,<1"
+entry = "run_command:RunCommand"
+description = "示例插件：种子整理完成（或文件重命名）后运行一条外部命令，事件字段以环境变量和参数占位符传入。演示子进程与超时"
+authors = ["AutoBangumi"]
+permissions = ["subprocess"]

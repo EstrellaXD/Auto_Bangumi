@@ -9,6 +9,10 @@
 | `template-rename` | `rename_strategy` Provider。独自フィルター付きのファイル名テンプレート。`RenameSkipped`。`RenameStrategyContract` |
 | `nfo-writer` | `torrent.organized` を購読し、本編の隣に `.nfo` を書きます。パス変換。冪等 |
 | `ntfy-notifier` | `notifier` Provider。バックエンドが拒否したときは `False` を返します。`NotifierContract` |
+| `run-command` | `torrent.organized` / `file.renamed` を購読し、外部コマンドを実行します。引数リストはシェルを通しません。環境変数とプレースホルダー。タイムアウトで終了 |
+| `strm-writer` | `torrent.organized` を購読し、メディアのフォルダー構成どおりに `.strm` を書きます。冪等 |
+| `synology-chat-notifier` | `notifier` Provider。フォームフィールド `payload=<JSON>` を送ります。HTTP 200 でも `success: false` なら `False` を返します |
+| `slack-notifier` | `notifier` Provider。mrkdwn をエスケープします。ポスターがあるときは画像ブロックを付けます |
 | `manual-pick` | フロントエンドスロット `bangumi.detail.tab`、プラグインのルート、プラグイン KV、イベント |
 
 ## サンプルをインストールする
