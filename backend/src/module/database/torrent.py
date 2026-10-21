@@ -3,7 +3,7 @@ from collections import defaultdict
 
 from sqlalchemy import delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import and_, select, true
+from sqlmodel import and_, col, select, true
 
 from module.models import Bangumi, RSSItem, Torrent
 
@@ -122,14 +122,15 @@ class TorrentDatabase:
 
         Returns the number of deleted records.
         """
-        statement = select(Torrent).where(Torrent.bangumi_id == bangumi_id)
-        result = await self.session.execute(statement)
-        torrents = list(result.scalars().all())
-        count = len(torrents)
-        for t in torrents:
-            await self.session.delete(t)
+        # 单条 DELETE：逐行 ORM 删除会拉长写事务，与其他写入争 SQLite 锁（#1113）
+        result = await self.session.execute(
+            delete(Torrent)
+            .where(col(Torrent.bangumi_id) == bangumi_id)
+            .execution_options(synchronize_session=False)
+        )
+        await self.session.commit()
+        count = result.rowcount  # type: ignore[attr-defined]
         if count > 0:
-            await self.session.commit()
             logger.debug(
                 "Deleted %s torrent records for bangumi_id %s.", count, bangumi_id
             )

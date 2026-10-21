@@ -54,11 +54,6 @@ class OffsetScanner:
             An event describing the flag if the bangumi was flagged for
             review, None otherwise.
         """
-        # Skip if already needs review
-        if bangumi.needs_review:
-            logger.debug(f"Skipping {bangumi.official_title}: already needs review")
-            return None
-
         # OVA/OAD/SP are persisted as Bangumi for library compatibility, but
         # they are not weekly episode streams and must never drive offsets.
         if bangumi.episode_type != "episode":
@@ -96,7 +91,24 @@ class OffsetScanner:
             tmdb_info=tmdb_info,
         )
 
-        if suggestion and suggestion.confidence in ("high", "medium"):
+        flagged = suggestion is not None and suggestion.confidence in (
+            "high",
+            "medium",
+        )
+        # 已标记的番剧也要重新扫描：TMDB 集数更新或解析修正后，误报不会自己消失
+        # （#1072）。needs_review 只由本扫描器设置；用户忽略或应用后标记已清除，
+        # 手动配了偏移的在上面已跳过，这里清除的只会是扫描器自己的旧标记
+        if bangumi.needs_review:
+            if not flagged:
+                async with Database() as db:
+                    await db.bangumi.clear_needs_review(bangumi.id)
+                logger.info(
+                    "Cleared review flag for %s: no mismatch on rescan",
+                    bangumi.official_title,
+                )
+            return None
+
+        if suggestion and flagged:
             async with Database() as db:
                 await db.bangumi.set_needs_review(
                     bangumi.id,

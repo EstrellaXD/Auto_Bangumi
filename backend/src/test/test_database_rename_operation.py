@@ -264,6 +264,26 @@ async def test_conflict_query_and_done_pruning(db_session):
     assert await repo.prune_done(before=now - timedelta(days=30)) == 1
 
 
+async def test_prune_done_keeps_unchanged_path_rows(db_session):
+    """路径未变（重命名方式 none）的 done 记录是只通知一次的依据，不能被清理（#1082）。"""
+    repo = RenameOperationDatabase(db_session)
+    now = datetime.now(timezone.utc)
+    row, _ = await repo.get_or_create(
+        _operation(
+            kind="conflict",
+            state="done",
+            source_path="Anime - 01.mkv",
+            target_path="Anime - 01.mkv",
+        )
+    )
+    row.updated_at = now - timedelta(days=31)
+    db_session.add(row)
+    await db_session.commit()
+
+    assert await repo.prune_done(before=now - timedelta(days=30)) == 0
+    assert await repo.get(row.id) is not None
+
+
 async def test_database_facade_exposes_rename_operation_repository(db_engine):
     async with Database(engine=db_engine) as db:
         row, created = await db.rename_operation.get_or_create(_operation())

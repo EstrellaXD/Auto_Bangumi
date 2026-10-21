@@ -390,6 +390,11 @@ class RenameOperationDatabase:
             .where(
                 col(RenameOperation.state) == "done",
                 col(RenameOperation.updated_at) < before,
+                # 路径未变的记录（重命名方式 none）不清理：种子不打 ab:renamed、
+                # 每轮都会再处理，删掉后会重建记录并再发一次下载完成通知（#1082）
+                # ponytail: 这类记录随已删除的种子累积，量级同 torrent 表；
+                # 需要时按下载器里已不存在的任务清理
+                col(RenameOperation.source_path) != col(RenameOperation.target_path),
             )
             .execution_options(synchronize_session=False)
         )

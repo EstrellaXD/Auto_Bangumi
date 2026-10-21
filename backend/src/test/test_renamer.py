@@ -504,6 +504,18 @@ class TestRenameSingleFile:
         renamer.client.client.torrents_rename_file.assert_not_awaited()
         renamer.client.client.add_tag.assert_not_awaited()
 
+    async def test_none_method_notifies_once_across_loops(self, renamer):
+        """none 方法不改名也要发下载完成通知；种子每轮都会再处理，通知只发一次（#1082）。"""
+        ep = EpisodeFile(
+            media_path="old.mkv", title="My Anime", season=1, episode=5, suffix=".mkv"
+        )
+        first = await self._rename(renamer, ep, method="none", _hash="hash-none")
+        second = await self._rename(renamer, ep, method="none", _hash="hash-none")
+
+        assert first == [Notification(official_title="My Anime", season=1, episode=5)]
+        assert second == []
+        renamer.client.client.torrents_rename_file.assert_not_awaited()
+
     @pytest.mark.parametrize("remove_bad_torrent", [False, True])
     async def test_parse_fails(self, renamer, remove_bad_torrent):
         """解析失败时不返回通知；仅 remove_bad_torrent=True 时删除种子。"""

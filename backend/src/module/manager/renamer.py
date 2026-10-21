@@ -561,6 +561,9 @@ class Renamer(RevisionSaga):
             identity=identity,
             bangumi_name=bangumi_name,
             episode_offset=episode_offset,
+            # 只认用户选定的 none：策略未登记而回退到 none 时，恢复后会真正改名
+            # 并通知，这里再通知就重复了
+            notify_unchanged=settings.plugins.slots.rename_strategy == NO_RENAME,
         )
 
     def _finish_torrent(

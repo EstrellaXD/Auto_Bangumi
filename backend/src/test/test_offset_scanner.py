@@ -358,3 +358,56 @@ class TestCheckBangumiUsesRealSignal:
         assert updated.needs_review_reason is not None
         assert "13" in updated.needs_review_reason
         assert "12" in updated.needs_review_reason
+
+
+class TestRescanFlaggedBangumi:
+    """已标记的番剧重新扫描：误报自动清除，其余情况保留标记（#1072）。"""
+
+    @pytest.mark.parametrize(
+        ("episode", "season_offset", "tmdb_found", "still_flagged"),
+        [
+            (6, 0, True, False),  # TMDB 已更新 / 解析已修正：不再不匹配，清除
+            (13, 0, True, True),  # 仍然不匹配：保留原标记
+            (6, -1, True, True),  # 用户已手动配置偏移：不动
+            (6, 0, False, True),  # TMDB 暂时查不到：没有新结论，不动
+        ],
+        ids=["no-mismatch", "still-mismatch", "user-offset", "tmdb-miss"],
+    )
+    async def test_rescan_clears_only_stale_scanner_flag(
+        self, episode, season_offset, tmdb_found, still_flagged
+    ):
+        scanner = OffsetScanner()
+        reason = "调整后集数13超出TMDB该季的12集（正在放送中，TMDB可能未更新）"
+        async with Database() as db:
+            bangumi = make_bangumi(
+                title_raw="Rescan Anime",
+                season=1,
+                season_offset=season_offset,
+                episode_offset=0,
+            )
+            await db.bangumi.add(bangumi)
+            await db.bangumi.set_needs_review(
+                bangumi.id, reason, suggested_season_offset=0
+            )
+            await db.torrent.add(
+                Torrent(
+                    name=f"[TestGroup] Rescan Anime - {episode:02d} [1080p].mkv",
+                    url="https://example.com/rescan",
+                    refer_id=bangumi.id,
+                )
+            )
+            bangumi = await db.bangumi.search_id(bangumi.id)
+
+        tmdb_info = TestCheckBangumiUsesRealSignal._ended_twelve_episode_season()
+        with patch(
+            "module.core.offset_scanner.tmdb_parser",
+            new=AsyncMock(return_value=tmdb_info if tmdb_found else None),
+        ):
+            event = await scanner._check_bangumi(bangumi)
+
+        # 已标记过的番剧不再重复发送检查通知
+        assert event is None
+        async with Database() as db:
+            updated = await db.bangumi.search_id(bangumi.id)
+        assert updated.needs_review is still_flagged
+        assert updated.needs_review_reason == (reason if still_flagged else None)

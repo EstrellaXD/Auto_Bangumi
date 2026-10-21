@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 from collections import OrderedDict
 
 from module.conf import settings
@@ -20,6 +21,12 @@ SEARCH_KEY = [
     "source",
     "dpi",
 ]
+
+# season_raw 取自「S03E02」「Season 3 Episode 2」这类季集合写时会带上集数，
+# 只保留季的部分，否则订阅关键词锁死在单集（#1138）
+_SEASON_WITH_EPISODE = re.compile(
+    r"^(S\d{1,2}|Season\s+\d{1,2})\s*E(?:P|pisodes?)?\.?\s*\d.*$", re.I
+)
 
 
 # Cache for TMDB preview lookups by official_title. Bounded (LRU-ish,
@@ -103,7 +110,11 @@ class SearchTorrent:
 
     @staticmethod
     def special_url(data: Bangumi | Movie, site: str) -> RSSItem:
-        keywords = [value for key in SEARCH_KEY if (value := getattr(data, key, None))]
+        keywords = [
+            _SEASON_WITH_EPISODE.sub(r"\1", value) if key == "season_raw" else value
+            for key in SEARCH_KEY
+            if (value := getattr(data, key, None))
+        ]
         url = search_url(site, keywords)
         return url
 
