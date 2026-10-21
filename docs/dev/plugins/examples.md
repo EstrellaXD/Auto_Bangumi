@@ -9,6 +9,9 @@
 | `template-rename` | `rename_strategy` Provider，自带过滤器的文件名模板；`RenameSkipped`；`RenameStrategyContract` |
 | `nfo-writer` | 订阅 `torrent.organized`，在正片旁写 `.nfo`；路径映射；幂等 |
 | `ntfy-notifier` | `notifier` Provider；后端拒绝时返回 `False`；`NotifierContract` |
+| `wpush-notifier` | `notifier` Provider；WPUSH 多渠道推送，按返回 JSON 的 `code` 判断成败 |
+| `onebot-notifier` | `notifier` Provider；OneBot v11 私聊 / 群消息，消息段附带海报 `poster_url` |
+| `apprise-notifier` | `notifier` Provider；调用 Apprise API 服务器，支持 URL 列表与配置键两种方式 |
 | `manual-pick` | 前端挂载点 `bangumi.detail.tab`、插件路由、插件 KV、事件 |
 
 ## 安装一个示例
