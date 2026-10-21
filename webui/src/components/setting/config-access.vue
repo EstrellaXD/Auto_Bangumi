@@ -17,6 +17,7 @@ import { useAccessStore } from '@/store/access';
 import { useMessage } from '@/hooks/useMessage';
 import { useMyI18n } from '@/hooks/useMyI18n';
 import { useConfirm } from '@/hooks/useConfirm';
+import { copyText } from '@/utils/clipboard';
 
 const store = useAccessStore();
 const { users, tokens, loading } = storeToRefs(store);
@@ -137,9 +138,13 @@ async function handleCreateToken(): Promise<void> {
   }
 }
 
+// 令牌只显示一次：复制失败时如实提示，令牌保持显示供手动复制
 async function copyIssuedToken(): Promise<void> {
-  await navigator.clipboard.writeText(issuedToken.value);
-  message.success(t('access.token_copied'));
+  if (await copyText(issuedToken.value)) {
+    message.success(t('access.token_copied'));
+  } else {
+    message.error(t('access.token_copy_failed'));
+  }
 }
 
 async function revokeToken(tokenId: number): Promise<void> {

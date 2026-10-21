@@ -496,7 +496,8 @@ def _extract_numbers(working: list[_WorkingSegment], state: _State) -> None:
                 work.consume(match)
                 _extract_episode_title(work, match, state)
                 state.season = int(match.group(1))
-                state.season_raw = match.group(0)
+                # 只记季的写法（S03 / Season 2），不带集数（#1138）
+                state.season_raw = match.string[match.start() : match.end(1)]
                 state.set_episode(
                     _number(match.group(2)),
                     priority=100,

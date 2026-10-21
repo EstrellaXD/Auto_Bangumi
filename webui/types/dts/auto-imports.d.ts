@@ -11,6 +11,8 @@ declare global {
   const EffectScope: typeof import('vue').EffectScope
   const MARKET_CATEGORIES: typeof import('../../src/utils/plugin-market').MARKET_CATEGORIES
   const MARKET_STATES: typeof import('../../src/utils/plugin-market').MARKET_STATES
+  const SCROLL_ANCHOR_OFFSET: typeof import('../../src/utils/scroll-spy').SCROLL_ANCHOR_OFFSET
+  const SCROLL_BOTTOM_EPSILON: typeof import('../../src/utils/scroll-spy').SCROLL_BOTTOM_EPSILON
   const acceptHMRUpdate: typeof import('pinia').acceptHMRUpdate
   const apiAuth: typeof import('../../src/api/auth').apiAuth
   const apiBangumi: typeof import('../../src/api/bangumi').apiBangumi
@@ -36,6 +38,7 @@ declare global {
   const categoryCounts: typeof import('../../src/utils/plugin-market').categoryCounts
   const computed: typeof import('vue').computed
   const configSectionMatches: typeof import('../../src/utils/config-search').configSectionMatches
+  const copyText: typeof import('../../src/utils/clipboard').copyText
   const countLogLevels: typeof import('../../src/utils/log-parse').countLogLevels
   const createApp: typeof import('vue').createApp
   const createPinia: typeof import('pinia').createPinia
@@ -61,6 +64,7 @@ declare global {
   const i18n: typeof import('../../src/hooks/useMyI18n').i18n
   const idLabel: typeof import('../../src/utils/id-label').idLabel
   const inject: typeof import('vue').inject
+  const isAtBottom: typeof import('../../src/utils/scroll-spy').isAtBottom
   const isProxy: typeof import('vue').isProxy
   const isReactive: typeof import('vue').isReactive
   const isReadonly: typeof import('vue').isReadonly
@@ -96,6 +100,7 @@ declare global {
   const onWatcherCleanup: typeof import('vue').onWatcherCleanup
   const parseLogLines: typeof import('../../src/utils/log-parse').parseLogLines
   const permissionDiff: typeof import('../../src/utils/plugin-market').permissionDiff
+  const pickActiveSection: typeof import('../../src/utils/scroll-spy').pickActiveSection
   const pluginDescription: typeof import('../../src/utils/plugin-text').pluginDescription
   const pluginName: typeof import('../../src/utils/plugin-text').pluginName
   const pluginReason: typeof import('../../src/utils/plugin-text').pluginReason
@@ -224,4 +229,7 @@ declare global {
   // @ts-ignore
   export type { SchemaFieldKind, SchemaField } from '../../src/utils/plugin-schema'
   import('../../src/utils/plugin-schema')
+  // @ts-ignore
+  export type { SectionTop } from '../../src/utils/scroll-spy'
+  import('../../src/utils/scroll-spy')
 }

@@ -151,7 +151,7 @@ _POSTERS_BASE = Path("data/posters").resolve()
 @app.get("/posters/{path:path}", tags=["posters"])
 def posters(path: str):
     resolved = (_POSTERS_BASE / path).resolve()
-    if not str(resolved).startswith(str(_POSTERS_BASE)):
+    if not resolved.is_relative_to(_POSTERS_BASE):
         return HTMLResponse(status_code=403)
     return FileResponse(str(resolved))
 

@@ -344,6 +344,42 @@ async def test_tmdb_parser_negative_result_is_cached_until_ttl_expires(mocker):
     assert len(requests) == 2 * first
 
 
+@pytest.mark.parametrize(
+    ("status", "refetched"),
+    [
+        ("Ended", False),
+        ("Canceled", False),
+        ("Returning Series", True),
+        ("In Production", True),
+        ("Planned", True),
+        ("Pilot", True),
+        (None, True),
+    ],
+)
+async def test_tmdb_parser_airing_show_cache_expires(mocker, status, refetched):
+    """未完结剧集的集数会变，缓存过期后重新查询；已完结/已取消的永久缓存（#1072）。"""
+    requests: list[str] = []
+
+    async def fake_get_json(url: str) -> dict:
+        requests.append(url)
+        if "/search/tv" in url or "/season/" in url:
+            return await _fake_get_json(url)
+        return {**_SHOW_INFO, "status": status}
+
+    mocker.patch.object(
+        tmdb_parser_module.RequestContent, "get_json", side_effect=fake_get_json
+    )
+    now = mocker.patch.object(tmdb_parser_module.time, "monotonic", return_value=0.0)
+    tmdb_parser_module._tmdb_cache.clear()
+
+    await tmdb_parser("海盗战记", "zh", test=True)
+    first = len(requests)
+    now.return_value = tmdb_parser_module._TMDB_AIRING_TTL + 1
+    await tmdb_parser("海盗战记", "zh", test=True)
+
+    assert len(requests) == (2 * first if refetched else first)
+
+
 async def test_tmdb_parser_cache_hit_refreshes_lru_order(mocker):
     """命中的条目移到队尾，满员淘汰的是最久未用而非最早写入的条目。"""
     mocker.patch.object(tmdb_parser_module, "_TMDB_CACHE_MAX", 2)

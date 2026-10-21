@@ -30,6 +30,12 @@ _TMDB_CACHE_MAX = 512
 # 否定/回退结果（无匹配、回退到电影）的存活时间：既避免对同一个查不到的标题
 # 反复请求 TMDB，又不让一次临时故障把标题永久毒化
 _TMDB_NEGATIVE_TTL = 6 * 3600.0
+# 未完结剧集的各季集数每周都在变；永久缓存会让偏移扫描一直拿旧集数误报，
+# 也无法在 TMDB 更新后自动清除标记（#1072）
+_TMDB_AIRING_TTL = 24 * 3600.0
+# TMDB 剧集的终态；其余状态（Returning Series、In Production、Planned、Pilot、
+# 未知）都可能继续更新集数
+FINAL_SERIES_STATUSES = frozenset({"Ended", "Canceled"})
 # 值为 (过期的 monotonic 时刻, 结果)；inf 表示不过期
 _tmdb_cache: OrderedDict[str, "tuple[float, TMDBInfo | None]"] = OrderedDict()
 
@@ -265,11 +271,12 @@ async def tmdb_parser(
         logger.warning("TMDB request failed for %s: %s", title, e)
         return None
     # 剧集结果的 season 非空；None 与电影回退（season=[]）都按否定结果限时缓存
-    expires = (
-        time.monotonic() + _TMDB_NEGATIVE_TTL
-        if result is None or not result.season
-        else float("inf")
-    )
+    if result is None or not result.season:
+        expires = time.monotonic() + _TMDB_NEGATIVE_TTL
+    elif result.series_status not in FINAL_SERIES_STATUSES:
+        expires = time.monotonic() + _TMDB_AIRING_TTL
+    else:
+        expires = float("inf")
     _tmdb_cache[cache_key] = (expires, result)
     _tmdb_cache.move_to_end(cache_key)
     if len(_tmdb_cache) > _TMDB_CACHE_MAX:

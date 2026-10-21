@@ -1,5 +1,6 @@
 """Tests for Renamer: gen_path, single-file / collection rename, rename flow."""
 
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -7,7 +8,7 @@ import pytest
 from module.conf import settings
 from module.downloader import DownloadClient, RenameOutcome, RenameResult
 from module.manager.renamer import PreparedMediaRename, Renamer
-from module.models import EpisodeFile, Notification, SubtitleFile
+from module.models import EpisodeFile, Notification, RenameOperation, SubtitleFile
 
 # ---------------------------------------------------------------------------
 # gen_path
@@ -452,7 +453,8 @@ class TestRenameSingleFile:
         )
         result = await self._rename(renamer, ep, media_path="My Anime S01E05.mkv")
 
-        assert result == []
+        # 首次处理即完成，下载完成通知照发（#1082）
+        assert result == [Notification(official_title="My Anime", season=1, episode=5)]
         renamer.client.client.torrents_rename_file.assert_not_awaited()
         renamer.client.client.add_tag.assert_awaited_once_with("hash123", "ab:renamed")
 
@@ -503,6 +505,119 @@ class TestRenameSingleFile:
 
         renamer.client.client.torrents_rename_file.assert_not_awaited()
         renamer.client.client.add_tag.assert_not_awaited()
+
+    async def test_none_method_notifies_once_across_loops(self, renamer):
+        """none 方法不改名也要发下载完成通知；种子每轮都会再处理，通知只发一次（#1082）。"""
+        ep = EpisodeFile(
+            media_path="old.mkv", title="My Anime", season=1, episode=5, suffix=".mkv"
+        )
+        first = await self._rename(renamer, ep, method="none", _hash="hash-none")
+        second = await self._rename(renamer, ep, method="none", _hash="hash-none")
+
+        assert first == [Notification(official_title="My Anime", season=1, episode=5)]
+        assert second == []
+        renamer.client.client.torrents_rename_file.assert_not_awaited()
+
+    async def test_unchanged_path_notifies_once_for_configured_strategy(self, renamer):
+        """文件名已是目标名时首轮通知一次（#1082）。"""
+        ep = EpisodeFile(
+            media_path="My Anime S01E05.mkv",
+            title="My Anime",
+            season=1,
+            episode=5,
+            suffix=".mkv",
+        )
+        loops = [
+            await self._rename(
+                renamer,
+                ep,
+                media_path="My Anime S01E05.mkv",
+                _hash="hash-unchanged",
+            )
+            for _ in range(2)
+        ]
+
+        expected = [Notification(official_title="My Anime", season=1, episode=5)]
+        assert loops == [expected, []]
+        renamer.client.client.torrents_rename_file.assert_not_awaited()
+
+    async def test_unchanged_path_fallback_round_defers_record_and_notification(
+        self, renamer
+    ):
+        """选定策略未登记、本轮回退到 none 时原名不是最终名：不建操作记录也不
+        通知；策略恢复后那一轮文件名仍未变，也要通知一次（#1082）。"""
+        from module.database import Database
+
+        ep = EpisodeFile(
+            media_path="My Anime S01E05.mkv",
+            title="My Anime",
+            season=1,
+            episode=5,
+            suffix=".mkv",
+        )
+
+        async def loop(method: str) -> list[Notification]:
+            return await self._rename(
+                renamer,
+                ep,
+                media_path="My Anime S01E05.mkv",
+                method=method,
+                _hash="hash-fallback",
+            )
+
+        async def operation() -> RenameOperation | None:
+            async with Database() as db:
+                return await db.rename_operation.get_by_target(
+                    downloader_type=renamer._downloader_type(),
+                    save_path=self.SAVE_PATH,
+                    target_path="My Anime S01E05.mkv",
+                    active_only=False,
+                )
+
+        assert await loop("not-installed") == []
+        assert await operation() is None
+        assert [await loop("pn") for _ in range(2)] == [
+            [Notification(official_title="My Anime", season=1, episode=5)],
+            [],
+        ]
+        row = await operation()
+        assert row is not None and row.state == "done"
+        renamer.client.client.torrents_rename_file.assert_not_awaited()
+
+    async def test_unchanged_path_done_row_pruned_only_after_task_removed(
+        self, renamer
+    ):
+        """路径未变的 done 记录过期后，任务仍在时保留且不再通知；任务从下载器
+        删除后清理，表不会随已删除的种子无限增长（#1082）。"""
+        from module.database import Database
+
+        ep = EpisodeFile(
+            media_path="old.mkv", title="My Anime", season=1, episode=5, suffix=".mkv"
+        )
+        assert await self._rename(renamer, ep, method="none", _hash="hash-gone")
+        async with Database() as db:
+            row = await db.rename_operation.get_by_target(
+                downloader_type=renamer._downloader_type(),
+                save_path=self.SAVE_PATH,
+                target_path="old.mkv",
+                active_only=False,
+            )
+            assert row is not None
+            row_id = row.id
+            row.updated_at = datetime.now(timezone.utc) - timedelta(days=31)
+            db.session.add(row)
+            await db.session.commit()
+
+        assert await self._rename(renamer, ep, method="none", _hash="hash-gone") == []
+        async with Database() as db:
+            assert await db.rename_operation.get(row_id) is not None
+
+        # 下载器里只剩另一个任务：原任务已删除
+        await self._rename(
+            renamer, ep, media_path="other.mkv", method="none", _hash="hash-other"
+        )
+        async with Database() as db:
+            assert await db.rename_operation.get(row_id) is None
 
     @pytest.mark.parametrize("remove_bad_torrent", [False, True])
     async def test_parse_fails(self, renamer, remove_bad_torrent):
