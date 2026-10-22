@@ -420,7 +420,7 @@ const tableColumnsValue = computed<DataTableColumns<Row>>(() => [
 
   // 手机端操作栏为两行布局，留出其高度，避免遮住最后几行
   &.has-selection {
-    @media (max-width: 639px) {
+    @media (width < 640px) {
       padding-bottom: 104px;
     }
   }
@@ -470,7 +470,7 @@ const tableColumnsValue = computed<DataTableColumns<Row>>(() => [
   z-index: 100;
   max-width: calc(100vw - 32px);
 
-  @media (max-width: 639px) {
+  @media (width < 640px) {
     bottom: calc(72px + env(safe-area-inset-bottom, 0px));
     left: 16px;
     right: 16px;
@@ -491,7 +491,7 @@ const tableColumnsValue = computed<DataTableColumns<Row>>(() => [
   display: flex;
   gap: 8px;
 
-  @media (max-width: 639px) {
+  @media (width < 640px) {
     width: 100%;
 
     :deep(.ab-btn) {
@@ -510,7 +510,7 @@ const tableColumnsValue = computed<DataTableColumns<Row>>(() => [
   opacity: 0;
   transform: translateX(-50%) translateY(8px);
 
-  @media (max-width: 639px) {
+  @media (width < 640px) {
     transform: translateY(8px);
   }
 }

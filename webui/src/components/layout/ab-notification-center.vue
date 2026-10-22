@@ -45,6 +45,11 @@ function onShowChange(open: boolean) {
   panelOpen.value = open;
 }
 
+// 跨断点时关闭面板：浮层与底部抽屉之间不交接焦点
+watch(isMobile, () => {
+  if (panelOpen.value) onShowChange(false);
+});
+
 // NPopover 不处理 Esc：关闭后把焦点还给铃铛
 function closeByEsc() {
   onShowChange(false);
