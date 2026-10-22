@@ -204,17 +204,24 @@ const items = computed(() =>
       </div>
       <div class="instance-add" data-new-instance>
         <ab-field
-          class="instance-add-field"
           :label="$t('config.downloader_set.new_id')"
           :description="$t('config.downloader_set.new_id_hint')"
           :error="idError"
         >
-          <ab-input v-model="newId" @keyup.enter="addInstance" />
+          <!-- 按钮与输入框组成同一控件：始终同一行、垂直居中 -->
+          <div class="instance-add-control">
+            <ab-input v-model="newId" @keyup.enter="addInstance" />
+            <ab-button
+              size="sm"
+              data-action="add"
+              :disabled="!canAdd"
+              @click="addInstance"
+            >
+              <Plus :size="16" />
+              {{ $t('config.downloader_set.add') }}
+            </ab-button>
+          </div>
         </ab-field>
-        <ab-button data-action="add" :disabled="!canAdd" @click="addInstance">
-          <Plus :size="16" />
-          {{ $t('config.downloader_set.add') }}
-        </ab-button>
       </div>
     </div>
 
@@ -284,13 +291,17 @@ const items = computed(() =>
 }
 
 .instance-add {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
   margin-top: 4px;
 }
 
-.instance-add-field {
-  flex: 1;
+.instance-add-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  :deep(.ab-input) {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
 }
 </style>

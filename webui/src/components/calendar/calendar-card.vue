@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ImageOff, Pin } from '@lucide/vue';
+import { ImageOff, Pin, X } from '@lucide/vue';
 import type { BangumiGroup } from './types';
 
 const props = defineProps<{
@@ -47,6 +47,9 @@ const posterSrc = computed(() =>
           </span>
         </div>
         <div class="calendar-card-overlay">
+          <div class="calendar-card-overlay-title">
+            {{ group.primary.official_title }}
+          </div>
           <div class="calendar-card-overlay-tags">
             <ab-tag :title="`S${group.primary.season}`" type="info" />
             <ab-tag
@@ -54,9 +57,6 @@ const posterSrc = computed(() =>
               :title="group.primary.group_name"
               type="info"
             />
-          </div>
-          <div class="calendar-card-overlay-title">
-            {{ group.primary.official_title }}
           </div>
         </div>
         <!-- Pin indicator for manually assigned -->
@@ -68,18 +68,22 @@ const posterSrc = computed(() =>
         </div>
       </div>
     </div>
-    <!-- Unpin button -->
-    <button
+    <!-- Unpin button：盖在置顶标记上，悬停 / 键盘聚焦时出现 -->
+    <ab-icon-button
       v-if="showUnpin && group.primary.weekday_locked"
       class="calendar-unpin-btn"
-      :title="$t('calendar.unpin')"
+      size="sm"
+      round
+      :label="$t('calendar.unpin')"
       @click="emit('unpin', $event)"
     >
-      &times;
-    </button>
-    <div v-if="group.rules.length > 1" class="group-badge">
-      {{ group.rules.length }}
-    </div>
+      <X :size="12" />
+    </ab-icon-button>
+    <ab-badge
+      v-if="group.rules.length > 1"
+      class="group-badge"
+      :count="group.rules.length"
+    />
   </div>
 </template>
 
@@ -91,34 +95,24 @@ const posterSrc = computed(() =>
 
 .group-badge {
   position: absolute;
-  top: -8px;
-  right: -8px;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 5px;
-  border-radius: 10px;
-  background: var(--color-badge-bg);
-  color: var(--color-white);
-  font-size: 11px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  top: -6px;
+  right: -6px;
   z-index: var(--z-dropdown);
   pointer-events: none;
-  box-shadow: 0 2px 4px var(--color-badge-shadow);
 }
 
 .calendar-card {
   cursor: pointer;
   user-select: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   transition: transform var(--transition-fast),
     box-shadow var(--transition-fast);
 
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
+  @media (hover: hover) {
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
   }
 
   &:focus-visible {
@@ -150,7 +144,9 @@ const posterSrc = computed(() =>
   justify-content: center;
   gap: 6px;
   padding: 8px;
-  background: var(--color-surface-hover);
+  border-radius: inherit;
+  background: var(--color-surface-2);
+  box-shadow: inset 0 0 0 1px var(--color-border);
   color: var(--color-text-muted);
   transition: background-color var(--transition-normal);
 }
@@ -163,29 +159,35 @@ const posterSrc = computed(() =>
   color: var(--color-text-secondary);
   text-align: center;
   overflow: hidden;
+  overflow-wrap: anywhere;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 4;
 }
 
+// 标题与标签都放在底部，顶部两角留给置顶标记与组数徽标
 .calendar-card-overlay {
   position: absolute;
   inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 4px;
+  padding: 5px;
   opacity: 0;
   background: rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(2px);
   transition: opacity var(--transition-normal);
 
-  .calendar-card:hover & {
-    opacity: 1;
+  @media (hover: hover) {
+    .calendar-card:hover & {
+      opacity: 1;
+    }
   }
 }
 
 .calendar-card-overlay-title {
-  position: absolute;
-  top: 6px;
-  left: 6px;
-  right: 6px;
+  padding: 0 1px;
   font-size: 11px;
   font-weight: 500;
   color: #fff;
@@ -196,10 +198,6 @@ const posterSrc = computed(() =>
 }
 
 .calendar-card-overlay-tags {
-  position: absolute;
-  bottom: 5px;
-  left: 5px;
-  right: 5px;
   display: flex;
   gap: 3px;
   flex-wrap: wrap;
@@ -222,7 +220,7 @@ const posterSrc = computed(() =>
 .calendar-card-pin {
   position: absolute;
   top: 4px;
-  right: 4px;
+  left: 4px;
   width: 20px;
   height: 20px;
   border-radius: 50%;
@@ -235,35 +233,37 @@ const posterSrc = computed(() =>
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
-// Unpin button
+// Unpin button：与置顶标记同心，悬停 / 聚焦时盖住它
 .calendar-unpin-btn {
   position: absolute;
-  top: -6px;
-  left: -6px;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: var(--color-danger, #e74c3c);
-  color: #fff;
-  border: none;
-  font-size: 12px;
-  line-height: 1;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  top: 1px;
+  left: 1px;
   z-index: var(--z-dropdown);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-sm);
   opacity: 0;
-  transition: opacity var(--transition-fast);
+  // 不可见时不可点：触屏没有 hover，点卡片左上角不能静默取消置顶
+  pointer-events: none;
+  transition: opacity var(--transition-fast),
+    background-color var(--transition-fast);
 
-  .calendar-card-wrapper:hover & {
+  // 只认键盘焦点：触摸点开卡片后焦点留在卡片上，不应让按钮常显
+  .calendar-card-wrapper:has(:focus-visible) & {
     opacity: 1;
+    pointer-events: auto;
+  }
+
+  @media (hover: hover) {
+    .calendar-card-wrapper:hover & {
+      opacity: 1;
+      pointer-events: auto;
+    }
   }
 }
 
-// Pinned card subtle styling
+// Pinned card subtle styling：用 outline，悬停阴影不会盖掉它
 .calendar-card--pinned {
-  box-shadow: 0 0 0 1.5px var(--color-primary);
-  border-radius: var(--radius-md);
+  outline: 1.5px solid var(--color-primary);
 }
 </style>

@@ -124,7 +124,11 @@
       "bark_group": "分组（可选）",
       "bark_level": "中断级别（可选）",
       "bark_icon": "图标地址（可选，默认用海报）",
-      "bark_url": "点击打开的地址（可选）"
+      "bark_url": "点击打开的地址（可选）",
+      "device_key": "设备密钥",
+      "server_url": "服务器地址",
+      "server_url_optional": "服务器地址（可选）",
+      "template": "模板（JSON）"
     },
     "parser_set": {
       "enable": "启用",
@@ -530,20 +534,19 @@
       "sun": "周日"
     },
     "days_short": {
-      "mon": "一",
-      "tue": "二",
-      "wed": "三",
-      "thu": "四",
-      "fri": "五",
-      "sat": "六",
-      "sun": "日"
+      "mon": "周一",
+      "tue": "周二",
+      "wed": "周三",
+      "thu": "周四",
+      "fri": "周五",
+      "sat": "周六",
+      "sun": "周日"
     },
     "unknown": "未知",
     "unknown_title": "未知标题",
     "today": "今天",
-    "empty": "今日无番",
+    "empty": "暂无番剧",
     "refresh": "刷新放送表",
-    "no_data": "暂无放送数据",
     "loading": "加载中...",
     "tracked": "已追踪",
     "tracked_count": "已追踪 {count} 部",
@@ -899,6 +902,7 @@
     "update": "更新",
     "install_enable": "安装并启用",
     "back": "返回",
+    "not_found": "目录中没有这个插件",
     "confirm_install": "安装 {name}",
     "confirm_update": "更新 {name}",
     "warning_lead": "注意",

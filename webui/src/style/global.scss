@@ -90,3 +90,40 @@ input::-webkit-inner-spin-button {
 .n-drawer-mask {
   background-color: var(--color-overlay);
 }
+
+// 空状态里的编号步骤（主页、下载器、播放器共用）
+.empty-steps {
+  max-width: 52ch;
+  margin: 0 0 14px;
+  padding-left: 0;
+  list-style: none;
+  counter-reset: empty-step;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+
+  li {
+    position: relative;
+    padding-left: 1.75em;
+    counter-increment: empty-step;
+  }
+
+  li + li {
+    margin-top: 6px;
+  }
+
+  // 自绘序号：左缘与上方标题对齐（::marker 落在内容区外，各引擎位置不一）
+  li::before {
+    content: counter(empty-step) '.';
+    position: absolute;
+    left: 0;
+    font-family: var(--font-mono);
+    color: var(--color-text-secondary);
+  }
+}
+
+.empty-steps-title {
+  display: block;
+  font-weight: 600;
+  color: var(--color-text);
+}

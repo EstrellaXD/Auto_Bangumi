@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import { NInput, NModal } from 'naive-ui';
 import type { LLMAuthChallenge } from '@/api/llm';
 
 const props = defineProps<{
@@ -28,18 +27,22 @@ function stopPolling() {
   }
 }
 
+// 内容留到下次打开再清空，弹窗淡出时不切换成等待文字
 function close() {
   stopPolling();
-  challenge.value = null;
-  pastedCode.value = '';
   show.value = false;
 }
 
 async function begin() {
+  challenge.value = null;
+  pastedCode.value = '';
   loading.value = true;
   try {
-    challenge.value = await apiLLM.beginAuth(props.providerId);
-    if (challenge.value.method === 'device_code') startPolling();
+    const result = await apiLLM.beginAuth(props.providerId);
+    // 请求返回前弹窗已关闭：丢弃结果，不在隐藏的弹窗里轮询
+    if (!show.value) return;
+    challenge.value = result;
+    if (result.method === 'device_code') startPolling();
   } catch {
     message.error(t('config.llm_set.auth_failed'));
     close();
@@ -88,21 +91,20 @@ async function submitCode() {
   }
 }
 
+// ab-modal 的 X/遮罩/Esc/抽屉下滑只改 show，关闭时在这里统一清理
 watch(show, (visible) => {
   if (visible) begin();
-  else stopPolling();
+  else close();
 });
 
 onUnmounted(stopPolling);
 </script>
 
 <template>
-  <NModal
-    :show="show"
-    preset="card"
+  <ab-modal
+    v-model:show="show"
+    size="sm"
     :title="`${t('config.llm_set.connect')} · ${displayName}`"
-    style="max-width: 460px"
-    @update:show="(v: boolean) => !v && close()"
   >
     <div v-if="challenge" class="auth-body">
       <template v-if="challenge.method === 'device_code'">
@@ -135,26 +137,35 @@ onUnmounted(stopPolling);
           rel="noopener"
           class="auth-link"
         >{{ challenge.authorize_url }}</a>
-        <NInput
-          v-model:value="pastedCode"
-          type="textarea"
-          :rows="2"
+        <textarea
+          v-model="pastedCode"
+          class="auth-textarea"
+          rows="2"
+          :aria-label="t('config.llm_set.auth_paste_code')"
           :placeholder="t('config.llm_set.auth_paste_code')"
         />
-        <ab-button
-          variant="primary"
-          :loading="loading"
-          :disabled="!pastedCode.trim()"
-          @click="submitCode"
-        >
-          {{ t('config.llm_set.connect') }}
-        </ab-button>
       </template>
     </div>
     <div v-else class="auth-body auth-loading">
       {{ t('config.llm_set.auth_pending') }}
     </div>
-  </NModal>
+
+    <template #footer>
+      <ab-button size="sm" @click="close">
+        {{ t('config.cancel') }}
+      </ab-button>
+      <ab-button
+        v-if="challenge && challenge.method !== 'device_code'"
+        size="sm"
+        variant="primary"
+        :loading="loading"
+        :disabled="!pastedCode.trim()"
+        @click="submitCode"
+      >
+        {{ t('config.llm_set.connect') }}
+      </ab-button>
+    </template>
+  </ab-modal>
 </template>
 
 <style lang="scss" scoped>
@@ -185,6 +196,28 @@ onUnmounted(stopPolling);
   border-radius: var(--radius-md);
   background: var(--color-primary-light);
   color: var(--color-primary);
+}
+
+.auth-textarea {
+  // Soft Ink 填充式多行输入（与 config-notification 的 .field-textarea 一致）
+  width: 100%;
+  padding: 8px 11px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  outline: none;
+  resize: none;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  transition: border-color var(--transition-fast),
+    background-color var(--transition-fast), box-shadow var(--transition-fast);
+
+  &:focus {
+    background: var(--color-surface);
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px var(--color-primary-alpha);
+  }
 }
 
 .auth-pending {

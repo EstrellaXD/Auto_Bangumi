@@ -44,6 +44,15 @@ const {
 
 const subscribing = ref(false);
 
+// 确认框关闭后保留最后一次选择，ab-modal 的离场过渡期间内容不消失
+const confirmTarget = shallowRef<BangumiRule | null>(null);
+watch(selectedResult, (value) => {
+  if (value) confirmTarget.value = value;
+});
+
+// 海报加载失败（404 等）时回落到占位，不显示破图图标
+const brokenPosters = ref(new Set<string>());
+
 const showProvider = ref(false);
 const searchInputRef = useTemplateRef<HTMLInputElement>('searchInputRef');
 
@@ -82,8 +91,11 @@ onBeforeUnmount(() => {
 // Close on Escape (this component is always mounted, so the listener must
 // no-op while the modal itself is closed — otherwise Escape anywhere in the
 // app would toggle the modal open via the `close` -> toggleModal() handler).
-onKeyStroke('Escape', () => {
+onKeyStroke('Escape', (e) => {
   if (!showModal.value) return;
+  // 确认弹窗是 ab-modal（NModal / NDrawer），它自己处理 Esc。焦点在弹窗里时
+  // 这里不再处理，否则两个监听器的先后顺序会让一次 Esc 关掉整个搜索窗。
+  if ((e.target as Element | null)?.closest?.('.n-modal-container, .n-drawer-container')) return;
   if (selectedResult.value) {
     clearSelectedResult();
   } else {
@@ -856,10 +868,10 @@ function handleFilterClick(
                   >
                     {{ tag.value }} &times;
                   </button>
+                  <button class="clear-all-btn" @click="clearFilters">
+                    {{ $t('search.filter.clear') }}
+                  </button>
                 </div>
-                <button class="clear-all-btn" @click="clearFilters">
-                  {{ $t('search.filter.clear') }}
-                </button>
               </div>
               <span class="results-count">
                 <template v-if="hasActiveFilters">
@@ -875,8 +887,16 @@ function handleFilterClick(
 
           <!-- Results List -->
           <div class="results-container">
+            <!-- 加载中且尚无结果：骨架屏，避免结果区塌成窄条 -->
+            <div
+              v-if="loading && groupedResults.length === 0"
+              class="bangumi-list"
+            >
+              <ab-skeleton preset="card" :count="3" />
+            </div>
+
             <!-- Failure state (connection/server error, distinct from zero matches) -->
-            <div v-if="!loading && searchFailed" class="empty-state">
+            <div v-else-if="!loading && searchFailed" class="empty-state">
               <p>{{ $t('search.failed_hint') }}</p>
             </div>
 
@@ -906,9 +926,10 @@ function handleFilterClick(
                   <!-- Left: Poster -->
                   <div class="bangumi-poster">
                     <img
-                      v-if="group.poster_link"
+                      v-if="group.poster_link && !brokenPosters.has(group.poster_link)"
                       :src="getPosterUrl(group.poster_link)"
                       :alt="group.official_title"
+                      @error="brokenPosters.add(group.poster_link)"
                     >
                     <div v-else class="bangumi-poster-placeholder">
                       <span class="placeholder-title">{{
@@ -926,18 +947,18 @@ function handleFilterClick(
                       type="button"
                       @click="handleVariantSelect(variant)"
                     >
-                      <span class="tag tag-group">{{
-                        variant.group_name || 'Unknown'
-                      }}</span>
-                      <span v-if="getResolution(variant)" class="tag tag-res">
+                      <ab-tag type="info">
+                        {{ variant.group_name || 'Unknown' }}
+                      </ab-tag>
+                      <ab-tag v-if="getResolution(variant)" type="success">
                         {{ getResolution(variant) }}
-                      </span>
-                      <span v-if="getSubtitle(variant)" class="tag tag-sub">
+                      </ab-tag>
+                      <ab-tag v-if="getSubtitle(variant)" type="warning">
                         {{ getSubtitle(variant) }}
-                      </span>
-                      <span v-if="getSeason(variant)" class="tag tag-season">
+                      </ab-tag>
+                      <ab-tag v-if="getSeason(variant)" type="neutral">
                         {{ getSeason(variant) }}
-                      </span>
+                      </ab-tag>
                     </button>
                     <button
                       v-if="hasVariantOverflow(group)"
@@ -959,8 +980,9 @@ function handleFilterClick(
 
         <!-- Confirmation Modal -->
         <AbSearchConfirm
-          v-if="selectedResult"
-          :bangumi="selectedResult"
+          v-if="confirmTarget"
+          :show="!!selectedResult"
+          :bangumi="confirmTarget"
           @confirm="handleConfirm"
           @cancel="clearSelectedResult"
         />
@@ -1008,6 +1030,12 @@ function handleFilterClick(
     max-height: calc(100vh - 100px);
   }
 
+  // 触屏：筛选区随结果一起滚动，不再常驻占掉半个结果区；搜索栏吸顶
+  @include forTouch {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
   @include forDesktop {
     max-height: calc(100dvh - 120px);
 
@@ -1026,6 +1054,13 @@ function handleFilterClick(
   border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
   transition: border-color var(--transition-normal);
+
+  @include forTouch {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--color-surface);
+  }
 
   @include forTablet {
     gap: 12px;
@@ -1095,6 +1130,14 @@ function handleFilterClick(
   color: var(--color-text-muted);
   transition: color var(--transition-fast);
 
+  // 触屏：命中区撑满输入框高度并向两侧外扩，图标位置不变
+  @include forTouch {
+    align-self: stretch;
+    justify-content: center;
+    min-width: var(--touch-target);
+    margin: 0 -12px;
+  }
+
   &:hover {
     color: var(--color-primary);
   }
@@ -1128,7 +1171,7 @@ function handleFilterClick(
   padding: 0 10px;
   min-width: 70px;
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-white);
   border: none;
   border-radius: 0 var(--radius-md) var(--radius-md) 0;
   cursor: pointer;
@@ -1182,7 +1225,7 @@ function handleFilterClick(
 
   &:hover {
     background: var(--color-primary);
-    color: #fff;
+    color: var(--color-white);
   }
 
   &.active {
@@ -1229,97 +1272,73 @@ function handleFilterClick(
   align-items: center;
 }
 
+// 分类标记色，与 ab-tag 语义一致：组=info、分辨率=success、字幕=warning、季=neutral
+.chip-group {
+  --mark: var(--color-primary);
+}
+
+.chip-resolution {
+  --mark: var(--color-success);
+}
+
+.chip-subtitle {
+  --mark: var(--color-warning);
+}
+
+.chip-season {
+  --mark: var(--color-text-muted);
+}
+
+// Soft Ink 筛选胶囊：发丝边框 + 方形分类标记 + 墨色文字；选中态用主色
 .filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   height: 28px;
-  padding: 0 12px;
+  padding: 0 10px;
   font-size: 12px;
   font-weight: 500;
   font-family: inherit;
-  border-radius: var(--radius-full);
-  border: 1px solid transparent;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
   cursor: pointer;
   user-select: none;
-  transition: all var(--transition-fast);
+  transition: border-color var(--transition-fast),
+    background-color var(--transition-fast);
+
+  &::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    flex-shrink: 0;
+    border-radius: 2px;
+    background: var(--mark);
+  }
+
+  &:hover:not(.disabled) {
+    border-color: var(--color-border-hover);
+  }
+
+  &.active,
+  &.active:hover {
+    border-color: var(--color-primary);
+    background: var(--color-primary-light);
+  }
+
+  &.disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
 
   &:focus-visible {
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
   }
-}
 
-// Group chips - Blue/Primary
-.chip-group {
-  background: var(--color-primary-light);
-  color: var(--color-primary);
-
-  &:hover:not(.disabled),
-  &.active {
-    background: var(--color-primary);
-    color: #fff;
-  }
-
-  &.disabled {
-    background: var(--color-surface-hover);
-    color: var(--color-text-muted);
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-}
-
-// Resolution chips - Green
-.chip-resolution {
-  background: rgba(34, 197, 94, 0.15);
-  color: var(--color-success);
-
-  &:hover:not(.disabled),
-  &.active {
-    background: var(--color-success);
-    color: #fff;
-  }
-
-  &.disabled {
-    background: var(--color-surface-hover);
-    color: var(--color-text-muted);
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-}
-
-// Subtitle chips - Orange
-.chip-subtitle {
-  background: rgba(249, 115, 22, 0.15);
-  color: var(--color-accent);
-
-  &:hover:not(.disabled),
-  &.active {
-    background: var(--color-accent);
-    color: #fff;
-  }
-
-  &.disabled {
-    background: var(--color-surface-hover);
-    color: var(--color-text-muted);
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-}
-
-// Season chips - Purple
-.chip-season {
-  background: rgba(139, 92, 246, 0.15);
-  color: rgb(139, 92, 246);
-
-  &:hover:not(.disabled),
-  &.active {
-    background: rgb(139, 92, 246);
-    color: #fff;
-  }
-
-  &.disabled {
-    background: var(--color-surface-hover);
-    color: var(--color-text-muted);
-    opacity: 0.5;
-    cursor: not-allowed;
+  @include forTouch {
+    height: 36px;
   }
 }
 
@@ -1332,7 +1351,12 @@ function handleFilterClick(
   color: var(--color-text-secondary);
   background: transparent;
   border: 1px dashed var(--color-border);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-sm);
+
+  @include forTouch {
+    height: 36px;
+  }
+
   cursor: pointer;
   transition: all var(--transition-fast);
 
@@ -1345,23 +1369,34 @@ function handleFilterClick(
 
 // Filter Summary
 .filter-summary {
-  display: flex;
+  // 窄屏：首行放标签和结果数，已选胶囊另起一行占满整宽
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px solid var(--color-border);
-  flex-wrap: wrap;
   gap: 8px;
+
+  @include forTablet {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
 }
 
 .selected-filters {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  flex: 1;
-  min-width: 0;
+  display: contents;
+
+  @include forTablet {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    flex: 1;
+    min-width: 0;
+  }
 }
 
 .selected-label {
@@ -1371,58 +1406,56 @@ function handleFilterClick(
 }
 
 .selected-chips {
+  grid-column: 1 / -1;
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
 }
 
 .selected-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   height: 24px;
   padding: 0 8px;
   font-size: 11px;
   font-weight: 500;
   font-family: inherit;
-  border: none;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  display: inline-flex;
-  align-items: center;
   cursor: pointer;
-  color: #fff;
-  transition: opacity var(--transition-fast);
+  transition: border-color var(--transition-fast);
+
+  &::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    flex-shrink: 0;
+    border-radius: 2px;
+    background: var(--mark);
+  }
 
   &:hover,
   &:focus-visible {
-    opacity: 0.8;
-  }
-
-  &.chip-group {
-    background: var(--color-primary);
-  }
-
-  &.chip-resolution {
-    background: var(--color-success);
-  }
-
-  &.chip-subtitle {
-    background: var(--color-accent);
-  }
-
-  &.chip-season {
-    background: rgb(139, 92, 246);
+    border-color: var(--color-border-hover);
   }
 }
 
 .clear-all-btn {
-  padding: 4px 10px;
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
   font-size: 12px;
   font-family: inherit;
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
   background: transparent;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: all var(--transition-fast);
-  flex-shrink: 0;
+  transition: border-color var(--transition-fast), color var(--transition-fast);
 
   &:hover {
     border-color: var(--color-danger);
@@ -1431,7 +1464,10 @@ function handleFilterClick(
 }
 
 .results-count {
+  grid-area: 1 / 2;
+  margin-left: auto;
   font-size: 12px;
+  line-height: 24px;
   color: var(--color-text-muted);
   flex-shrink: 0;
 }
@@ -1441,6 +1477,11 @@ function handleFilterClick(
   flex: 1;
   overflow-y: auto;
   padding: 16px;
+
+  @include forTouch {
+    flex: none;
+    overflow-y: visible;
+  }
 }
 
 .empty-state {
@@ -1490,11 +1531,17 @@ function handleFilterClick(
 }
 
 .bangumi-poster {
+  // 手机上缩小海报，给变体区留出宽度
+  width: 72px;
+  height: 100px;
+  flex-shrink: 0;
+
   // Height = 4 rows: 4 * 36px + 3 * 8px = 168px
   // Width = 168px * 5/7 = 120px
-  width: 120px;
-  height: 168px;
-  flex-shrink: 0;
+  @include forTablet {
+    width: 120px;
+    height: 168px;
+  }
 
   img {
     width: 100%;
@@ -1542,16 +1589,19 @@ function handleFilterClick(
 
 .variant-chip {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-  height: 36px;
-  padding: 0 6px;
+  gap: 6px;
+  max-width: 100%;
+  min-height: 36px;
+  padding: 5px 6px;
   font-family: inherit;
-  background: var(--color-surface-hover);
+  background: var(--color-surface-2);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: border-color var(--transition-fast),
+    background-color var(--transition-fast);
 
   @include forTouch {
     min-height: 44px;
@@ -1560,50 +1610,18 @@ function handleFilterClick(
   &:hover,
   &:focus-visible {
     border-color: var(--color-primary);
-    background: var(--color-primary);
-
-    .tag {
-      background: rgba(255, 255, 255, 0.2);
-      color: #fff;
-    }
+    background: var(--color-surface);
   }
 
   &:active {
     transform: scale(0.97);
   }
-}
 
-// Display-only tags (non-clickable) - unified with filter chips
-.tag {
-  display: inline-flex;
-  align-items: center;
-  height: 24px;
-  padding: 0 10px;
-  font-size: 12px;
-  font-weight: 500;
-  border-radius: var(--radius-full);
-  pointer-events: none;
-  transition: all var(--transition-fast);
-}
-
-.tag-group {
-  background: var(--color-primary-light);
-  color: var(--color-primary);
-}
-
-.tag-res {
-  background: rgba(34, 197, 94, 0.15);
-  color: var(--color-success);
-}
-
-.tag-sub {
-  background: rgba(249, 115, 22, 0.15);
-  color: var(--color-accent);
-}
-
-.tag-season {
-  background: rgba(139, 92, 246, 0.15);
-  color: rgb(139, 92, 246);
+  // 胶囊整体换行，组名等标签内部不折行
+  .ab-tag {
+    background: var(--color-surface);
+    pointer-events: none;
+  }
 }
 
 .variant-expand-btn {
@@ -1615,7 +1633,7 @@ function handleFilterClick(
   color: var(--color-text-secondary);
   background: transparent;
   border: 1px dashed var(--color-border);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-md);
   cursor: pointer;
   transition: all var(--transition-fast);
 

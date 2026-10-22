@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { NPopover } from 'naive-ui';
 import { createReusableTemplate } from '@vueuse/core';
-import { Bell, CircleAlert, CircleX, Info, Trash } from '@lucide/vue';
+import { Bell, Trash } from '@lucide/vue';
 import type { InboxMessage } from '@/api/notification';
 import { relativeTime } from '@/utils/relative-time';
 
@@ -26,12 +26,6 @@ const KIND_ROUTES: Record<string, string> = {
   rename_skipped: '/downloader',
 };
 
-const SEVERITY_ICONS = {
-  error: CircleX,
-  warning: CircleAlert,
-  info: Info,
-} as const;
-
 const confirmClear = ref(false);
 const bell = useTemplateRef<HTMLButtonElement>('bell');
 
@@ -54,10 +48,6 @@ watch(isMobile, () => {
 function closeByEsc() {
   onShowChange(false);
   bell.value?.focus();
-}
-
-function severityIcon(msg: InboxMessage) {
-  return SEVERITY_ICONS[msg.severity] ?? Info;
 }
 
 function onItemClick(msg: InboxMessage) {
@@ -85,9 +75,11 @@ function onClearClick() {
       <div class="notification-head">
         <span class="notification-head-title">
           {{ $t('notifications.title') }}
-          <template v-if="unreadCount > 0">
-            · {{ $t('notifications.unread', { n: unreadCount }) }}
-          </template>
+          <span
+            v-if="unreadCount > 0"
+            class="notification-head-unread"
+            :title="$t('notifications.unread', { n: unreadCount })"
+          >{{ unreadCount }}</span>
         </span>
         <div class="notification-head-actions">
           <ab-button
@@ -128,9 +120,7 @@ function onClearClick() {
           @click="onItemClick(msg)"
           @keydown.enter="onItemClick(msg)"
         >
-          <div class="notification-sev" :class="`is-${msg.severity}`">
-            <Component :is="severityIcon(msg)" :size="14" />
-          </div>
+          <span class="notification-sev" :class="`is-${msg.severity}`" />
           <div class="notification-content">
             <div class="notification-title">
               {{ store.titleOf(msg) }}
@@ -211,7 +201,8 @@ function onClearClick() {
   cursor: pointer;
   user-select: none;
   color: var(--color-text-secondary);
-  transition: color var(--transition-fast), transform var(--transition-fast);
+  transition: color var(--transition-fast),
+    background-color var(--transition-fast);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -229,13 +220,10 @@ function onClearClick() {
     min-height: var(--touch-target);
   }
 
+  // 与 ab-icon-button ghost 一致：状态只靠底色与墨色表达
   &:hover {
-    color: var(--color-primary);
-    transform: scale(1.1);
-  }
-
-  &:active {
-    transform: scale(0.95);
+    background: var(--color-surface-2);
+    color: var(--color-text);
   }
 
   &:focus-visible {
@@ -295,13 +283,26 @@ function onClearClick() {
 }
 
 .notification-head-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 13px;
   font-weight: 600;
   color: var(--color-text);
 }
 
+.notification-head-unread {
+  margin-left: 6px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
 .notification-head-actions {
   display: flex;
+  flex-shrink: 0;
   gap: 4px;
 }
 
@@ -351,29 +352,21 @@ function onClearClick() {
   }
 }
 
+// 严重度 = 语义色方块标记（与 ab-tag/ab-status 一致），对齐标题首行中线
 .notification-sev {
   flex-shrink: 0;
-  width: 26px;
-  height: 26px;
-  margin-top: 2px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 8px;
+  height: 8px;
+  margin-top: 6px;
+  border-radius: 2px;
+  background: var(--color-primary);
 
   &.is-error {
-    color: var(--color-danger, #ef4444);
-    background: color-mix(in srgb, var(--color-danger) 14%, transparent);
+    background: var(--color-danger);
   }
 
   &.is-warning {
-    color: var(--color-warning, #f59e0b);
-    background: color-mix(in srgb, var(--color-warning) 16%, transparent);
-  }
-
-  &.is-info {
-    color: var(--color-primary);
-    background: var(--color-primary-light);
+    background: var(--color-warning);
   }
 }
 
@@ -392,12 +385,11 @@ function onClearClick() {
 }
 
 .notification-count {
-  background: var(--color-primary-light);
-  color: var(--color-primary);
-  font-size: 10.5px;
-  font-weight: 700;
-  border-radius: 8px;
-  padding: 0 6px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
 }
 
 .notification-body {

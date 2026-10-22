@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { NCheckbox, NSpin, useMessage } from 'naive-ui';
+import { NCheckbox, useMessage } from 'naive-ui';
 import { onKeyStroke } from '@vueuse/core';
 import type { BangumiRule, DetectOffsetResponse } from '#/bangumi';
 import { useDownloaderInstances } from '@/hooks/useDownloaderInstances';
@@ -249,46 +249,40 @@ function emitUnarchive() {
     :avoid-keyboard="false"
     @close="close"
   >
-    <!-- Needs Review Warning Banner -->
-    <div
-      v-if="localRule.needs_review"
-      class="review-warning"
-      role="status"
-      :aria-label="$t('offset.needs_review')"
-    >
-      <div class="review-warning-main">
-        <span class="review-warning-emoji">⚠️</span>
-        <div class="review-warning-content">
-          <div class="review-warning-title">
-            {{ $t('offset.needs_review') }}
-          </div>
-          <div
-            v-if="localRule.needs_review_reason"
-            class="review-warning-reason"
+    <!-- Needs Review Warning Banner：忽略/检测后按行高收起，下方内容不跳 -->
+    <Transition name="collapse">
+      <div v-if="localRule.needs_review" class="review-collapse">
+        <div class="review-collapse-inner">
+          <ab-alert
+            type="warning"
+            class="review-warning"
+            :title="$t('offset.needs_review')"
           >
             {{ localRule.needs_review_reason }}
-          </div>
+            <template #action>
+              <span class="review-warning-actions">
+                <ab-button
+                  size="sm"
+                  variant="primary"
+                  :loading="offsetLoading"
+                  @click="autoDetectOffset"
+                >
+                  {{ $t('homepage.rule.auto_detect') }}
+                </ab-button>
+                <ab-button
+                  size="sm"
+                  variant="secondary"
+                  :loading="dismissingReview"
+                  @click="dismissReview"
+                >
+                  {{ $t('offset.dismiss') }}
+                </ab-button>
+              </span>
+            </template>
+          </ab-alert>
         </div>
       </div>
-      <div class="review-warning-actions">
-        <button
-          class="detect-btn"
-          :disabled="offsetLoading"
-          @click="autoDetectOffset"
-        >
-          <NSpin v-if="offsetLoading" :size="12" />
-          <span v-else>{{ $t('homepage.rule.auto_detect') }}</span>
-        </button>
-        <button
-          class="dismiss-btn"
-          :disabled="dismissingReview"
-          @click="dismissReview"
-        >
-          <NSpin v-if="dismissingReview" :size="12" />
-          <span v-else>{{ $t('offset.dismiss') }}</span>
-        </button>
-      </div>
-    </div>
+    </Transition>
 
     <div v-if="pluginTabs.length" class="edit-tabs">
       <ab-segmented
@@ -337,7 +331,6 @@ function emitUnarchive() {
             :model-value="localRule.air_weekday ?? null"
             :options="weekdayOptions"
             clearable
-            size="small"
             :placeholder="$t('calendar.unknown')"
             @update:model-value="onWeekdayChange($event as number | null)"
           />
@@ -347,7 +340,6 @@ function emitUnarchive() {
           <AbSelect
             :model-value="localRule.episode_type"
             :options="episodeTypeOptions"
-            size="small"
             @update:model-value="
               localRule.episode_type = $event as BangumiRule['episode_type']
             "
@@ -362,7 +354,6 @@ function emitUnarchive() {
             v-model="localRule.downloader_id"
             :options="downloaders.options.value"
             clearable
-            size="small"
             :placeholder="
               $t('homepage.rule.downloader_default', {
                 id: downloaders.data.value.default,
@@ -387,7 +378,7 @@ function emitUnarchive() {
             clearable
             filterable
             tag
-            size="small"
+            class="resolution-select"
             :placeholder="$t('homepage.rule.auto_detect')"
           />
         </AbField>
@@ -409,7 +400,7 @@ function emitUnarchive() {
       <p class="delete-message">
         {{ $t('homepage.rule.delete_confirm') }}
       </p>
-      <NCheckbox v-model:checked="deleteLocalFiles" class="delete-files-option">
+      <NCheckbox v-model:checked="deleteLocalFiles">
         {{ $t('homepage.rule.delete_files_label') }}
       </NCheckbox>
 
@@ -454,99 +445,45 @@ function emitUnarchive() {
 
 <style lang="scss" scoped>
 // Review warning banner
+.review-collapse {
+  display: grid;
+  grid-template-rows: 1fr;
+}
+
+.review-collapse-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.collapse-enter-active,
+.collapse-leave-active {
+  transition: grid-template-rows var(--transition-normal),
+    opacity var(--transition-normal);
+}
+
+.collapse-enter-from,
+.collapse-leave-to {
+  grid-template-rows: 0fr;
+  opacity: 0;
+}
+
+// 间距放在收起容器内部，随横幅一起收起
 .review-warning {
-  display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 16px;
-  margin: 12px 20px;
-  background: var(--color-warning-bg);
-  border: 1px solid var(--color-warning-border);
-  border-radius: var(--radius-md);
-}
+  margin-bottom: 14px;
 
-.review-warning-main {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex: 1 1 200px;
-  min-width: 0;
-}
+  :deep(.ab-alert-text) {
+    flex: 1 1 200px;
+  }
 
-.review-warning-emoji {
-  font-size: 20px;
-  flex-shrink: 0;
-}
-
-.review-warning-content {
-  flex: 1;
-  min-width: 0;
-}
-
-.review-warning-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-warning-text);
-}
-
-.review-warning-reason {
-  font-size: 12px;
-  color: var(--color-warning-text-secondary);
-  line-height: 1.3;
-  margin-top: 2px;
+  :deep(.ab-alert-action) {
+    margin-left: auto;
+  }
 }
 
 .review-warning-actions {
   display: flex;
-  align-items: center;
   gap: 8px;
-  flex-shrink: 0;
-  margin-left: auto;
-}
-
-.review-warning-actions .detect-btn,
-.review-warning-actions .dismiss-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 32px;
-  padding: 0 14px;
-  font-size: 13px;
-  font-family: inherit;
-  font-weight: 500;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all var(--transition-fast);
-
-  &:disabled {
-    cursor: wait;
-  }
-}
-
-.review-warning-actions .detect-btn {
-  min-width: 90px;
-  color: #fff;
-  background: var(--color-primary);
-  border: none;
-
-  &:hover:not(:disabled) {
-    background: var(--color-primary-hover);
-  }
-}
-
-.review-warning-actions .dismiss-btn {
-  min-width: 70px;
-  color: var(--color-text-secondary);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-
-  &:hover:not(:disabled) {
-    border-color: var(--color-text-muted);
-    color: var(--color-text);
-  }
 }
 
 .edit-tabs {
@@ -579,8 +516,11 @@ function emitUnarchive() {
   margin: 0 0 12px;
 }
 
-.delete-files-option {
-  margin-bottom: 20px;
+// filterable 下拉按占位文字撑宽（204px）；钉回与其它控件同宽
+.edit-content .resolution-select {
+  @include forTablet {
+    max-width: 200px;
+  }
 }
 
 .preferred-hint {

@@ -10,7 +10,8 @@ import { fillSchemaDefaults } from '@/utils/plugin-schema';
 import type { SchemaField } from '@/utils/plugin-schema';
 
 // 由插件 config_model 的 JSON Schema 渲染的表单；字段描述由 schemaFields() 生成
-defineProps<{ fields: SchemaField[] }>();
+// showAll：外层表单保存时传给列表行里的子表单，让嵌套字段也显示错误
+const props = defineProps<{ fields: SchemaField[]; showAll?: boolean }>();
 const model = defineModel<Record<string, unknown>>({ required: true });
 const { t } = useMyI18n();
 const { confirm } = useConfirm();
@@ -39,6 +40,19 @@ function errorOf(field: SchemaField): string {
     return t('config.plugins_set.field_max', { n: field.maximum });
   return '';
 }
+
+// 字段离开焦点后才显示错误，避免一展开就满屏红框；保存时由父组件调用
+// showErrors() 显示全部
+const touched = ref(new Set<string>());
+const showAll = ref(false);
+function shownError(field: SchemaField): string {
+  return showAll.value || props.showAll || touched.value.has(field.key) ? errorOf(field) : '';
+}
+defineExpose({
+  showErrors() {
+    showAll.value = true;
+  },
+});
 
 function rowsOf(field: SchemaField): Record<string, unknown>[] {
   return (
@@ -94,7 +108,8 @@ function setNumber(field: SchemaField, value: string | number) {
       :label="field.label"
       :description="field.description"
       :required="field.required"
-      :error="errorOf(field)"
+      :error="shownError(field)"
+      @focusout="touched.add(field.key)"
     >
       <AbSwitch
         v-if="field.kind === 'switch'"
@@ -130,7 +145,11 @@ function setNumber(field: SchemaField, value: string | number) {
           :key="rowKey(row)"
           class="schema-form__row"
         >
-          <PluginSchemaForm :model-value="row" :fields="field.itemFields" />
+          <PluginSchemaForm
+            :model-value="row"
+            :fields="field.itemFields"
+            :show-all="showAll || props.showAll"
+          />
           <AbButton
             size="sm"
             variant="ghost"

@@ -28,12 +28,22 @@ watch(
   { immediate: true }
 );
 
+// 标题用番剧名；番剧列表尚未加载（直接打开本页）时回退为 #id。
+// 标题单独计算，列表加载后只更新标题，不重建 loadFn 等回调
+const { bangumi } = storeToRefs(useBangumiStore());
+const title = computed(() => {
+  const id = bangumiId.value;
+  const name = bangumi.value.find((b) => b.id === id)?.official_title;
+  return name
+    ? `${name} · ${t('homepage.torrents.title')}`
+    : `${t('homepage.torrents.title')} #${id}`;
+});
+
 // id 收窄后一次性构造 props，切换参数时 :key 触发重新挂载并加载
 const pageProps = computed(() => {
   const id = bangumiId.value;
   if (id === null) return null;
   return {
-    title: `${t('homepage.torrents.title')} #${id}`,
     loadFn: () => apiBangumi.getTorrents(id),
     deleteOne: (torrentId: number) => apiBangumi.deleteTorrent(id, torrentId),
     deleteAll: () => apiBangumi.deleteAllTorrents(id),
@@ -42,5 +52,5 @@ const pageProps = computed(() => {
 </script>
 
 <template>
-  <AbTorrentListPage v-if="pageProps" :key="bangumiId ?? -1" v-bind="pageProps" />
+  <AbTorrentListPage v-if="pageProps" :key="bangumiId ?? -1" v-bind="pageProps" :title="title" />
 </template>

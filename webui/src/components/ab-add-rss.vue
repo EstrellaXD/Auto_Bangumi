@@ -1,6 +1,5 @@
 <script lang="ts" setup>
 import { Link } from '@lucide/vue';
-import { NSpin } from 'naive-ui';
 import AbField from './basic/ab-field.vue';
 import AbSelect from './basic/ab-select.vue';
 import AbSwitch from './basic/ab-switch.vue';
@@ -173,26 +172,27 @@ function subscribe() {
       <!-- RSS Link -->
       <div class="form-group">
         <label class="form-label">{{ $t('topbar.add.rss_link') }}</label>
-        <div class="input-wrapper">
-          <Link :size="16" class="input-icon" />
-          <input
-            v-model="rss.url"
-            type="text"
-            class="form-input form-input--with-icon"
-            :placeholder="$t('topbar.add.placeholder_link')"
-          >
-        </div>
+        <ab-input
+          v-model="rss.url"
+          class="form-input"
+          :aria-label="$t('topbar.add.rss_link')"
+          :placeholder="$t('topbar.add.placeholder_link')"
+        >
+          <template #prefix>
+            <Link :size="14" />
+          </template>
+        </ab-input>
       </div>
 
       <!-- Name -->
       <div class="form-group">
         <label class="form-label">{{ $t('topbar.add.name') }}</label>
-        <input
+        <ab-input
           v-model="rss.name"
-          type="text"
           class="form-input"
+          :aria-label="$t('topbar.add.name')"
           :placeholder="$t('topbar.add.placeholder_name')"
-        >
+        />
       </div>
 
       <!-- Options row -->
@@ -244,15 +244,17 @@ function subscribe() {
           v-model="rule.episode_offset"
           :label="$t('homepage.rule.episode_offset')"
         >
-          <template #action>
-            <button
+          <!-- 检测依赖已存在的规则 id：新规则没有 id，不显示按钮 -->
+          <template v-if="rule.id" #action>
+            <!-- md：与 ab-input 同高（34px / 触屏 44px） -->
+            <ab-button
+              variant="secondary"
               class="detect-btn"
-              :disabled="offsetLoading || !rule.id"
+              :loading="offsetLoading"
               @click="autoDetectOffset"
             >
-              <NSpin v-if="offsetLoading" :size="14" />
-              <span v-else>{{ $t('homepage.rule.auto_detect') }}</span>
-            </button>
+              {{ $t('homepage.rule.auto_detect') }}
+            </ab-button>
           </template>
         </bangumi-offset-field>
         <div v-if="offsetReason" class="offset-reason">
@@ -282,7 +284,7 @@ function subscribe() {
           {{ $t('setup.nav.previous') }}
         </ab-button>
         <ab-button
-          variant="primary"
+          variant="secondary"
           size="sm"
           :loading="loading.collect"
           @click="collect"
@@ -334,46 +336,9 @@ function subscribe() {
   color: var(--color-text-secondary);
 }
 
-.input-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.input-icon {
-  position: absolute;
-  left: 12px;
-  color: var(--color-text-muted);
-  pointer-events: none;
-}
-
-.form-input {
+// ab-input 在平板以上默认 200px；这里上下堆叠，占满整行
+.form-group .form-input {
   width: 100%;
-  height: 40px;
-  padding: 0 12px;
-  font-size: 14px;
-  font-family: inherit;
-  color: var(--color-text);
-  background: var(--color-surface-hover);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  outline: none;
-  transition: border-color var(--transition-fast),
-    box-shadow var(--transition-fast);
-
-  &:focus {
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px
-      color-mix(in srgb, var(--color-primary) 15%, transparent);
-  }
-
-  &::placeholder {
-    color: var(--color-text-muted);
-  }
-
-  &--with-icon {
-    padding-left: 40px;
-  }
 }
 
 .options-row {
@@ -381,7 +346,7 @@ function subscribe() {
   flex-direction: column;
   gap: var(--layout-gap);
   padding: var(--layout-padding);
-  background: var(--color-surface-hover);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
 }
 
@@ -402,31 +367,7 @@ function subscribe() {
 // shared preview/tags/rss-link/filter/offset-row styles live in the
 // bangumi-* / advanced-section sub-components)
 .detect-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 80px;
-  height: 32px;
-  padding: 0 14px;
-  font-size: 13px;
-  font-family: inherit;
-  font-weight: 500;
-  color: #fff;
-  background: var(--color-primary);
-  border: none;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background-color var(--transition-fast);
-
-  &:hover:not(:disabled) {
-    background: var(--color-primary-hover);
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
+  flex-shrink: 0;
 }
 
 .offset-reason {

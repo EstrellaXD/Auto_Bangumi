@@ -119,7 +119,6 @@ function Exit() {
     [
       h(LogOut, { size: 20 }),
       !isMobileOrTablet.value &&
-      show.value &&
       h('div', { class: 'sidebar-item-label' }, t('sidebar.logout')),
     ]
   );
@@ -140,7 +139,7 @@ function Exit() {
           :aria-expanded="show"
           @click="toggle"
         >
-          <div v-show="show" class="sidebar-title">
+          <div class="sidebar-title">
             {{ $t('sidebar.title') }}
           </div>
           <PanelLeftOpen
@@ -165,7 +164,7 @@ function Exit() {
             ]"
           >
             <Component :is="i.icon" :size="20" />
-            <div v-show="show" class="sidebar-item-label">
+            <div class="sidebar-item-label">
               {{ i.label() }}
             </div>
           </RouterLink>
@@ -175,16 +174,13 @@ function Exit() {
         <div class="sidebar-footer">
           <button
             class="sidebar-item sidebar-item--action sidebar-item--theme"
-            :title="isDark ? 'Light mode' : 'Dark mode'"
-            :aria-label="
-              isDark ? 'Switch to light mode' : 'Switch to dark mode'
-            "
+            :title="isDark ? $t('theme.light') : $t('theme.dark')"
             @click="toggleDark"
           >
             <Moon v-if="!isDark" :size="20" />
             <Sun v-else :size="20" />
-            <div v-show="show" class="sidebar-item-label">
-              {{ isDark ? 'Light' : 'Dark' }}
+            <div class="sidebar-item-label">
+              {{ isDark ? $t('theme.light') : $t('theme.dark') }}
             </div>
           </button>
           <Exit />
@@ -216,7 +212,8 @@ function Exit() {
           <div class="sidebar-footer">
             <button
               class="sidebar-item sidebar-item--action sidebar-item--theme"
-              :title="isDark ? 'Light mode' : 'Dark mode'"
+              :title="isDark ? $t('theme.light') : $t('theme.dark')"
+              :aria-label="isDark ? $t('theme.light') : $t('theme.dark')"
               @click="toggleDark"
             >
               <Moon v-if="!isDark" :size="20" />
@@ -288,7 +285,24 @@ function Exit() {
   font-weight: 600;
   color: var(--color-text);
   white-space: nowrap;
-  transition: opacity var(--transition-fast);
+}
+
+// 标签始终渲染：收起时先快速淡出，展开时等宽度过半再淡入，避免过渡中露出半截文字。
+// 用 :deep 是因为 Exit 是渲染函数，其子元素不带本组件的 scope 属性。
+.sidebar {
+  :deep(.sidebar-title),
+  :deep(.sidebar-item-label) {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: clip;
+    transition: opacity var(--transition-fast) 100ms;
+  }
+
+  &--collapsed :deep(.sidebar-title),
+  &--collapsed :deep(.sidebar-item-label) {
+    opacity: 0;
+    transition: opacity 100ms ease-in;
+  }
 }
 
 .sidebar-toggle-icon {
@@ -329,9 +343,10 @@ function Exit() {
     background-color var(--transition-fast);
   white-space: nowrap;
 
+  // 悬停用中性色，紫色只留给当前页
   &:hover {
-    color: var(--color-primary);
-    background: var(--color-primary-light);
+    color: var(--color-text);
+    background: var(--color-surface-2);
   }
 
   &:focus-visible {
@@ -339,7 +354,8 @@ function Exit() {
     outline-offset: -2px;
   }
 
-  &--active {
+  &--active,
+  &--active:hover {
     color: var(--color-primary);
     background: var(--color-primary-light);
     font-weight: 500;
@@ -363,13 +379,20 @@ function Exit() {
   }
 
   &--theme:hover {
-    color: var(--color-primary);
-    background: var(--color-primary-light);
+    color: var(--color-text);
+    background: var(--color-surface-2);
   }
 }
 
-.sidebar-item-label {
-  font-size: 14px;
+.sidebar-item {
+  // 标签收窄时图标不被压缩
+  :deep(svg) {
+    flex-shrink: 0;
+  }
+
+  :deep(.sidebar-item-label) {
+    font-size: 14px;
+  }
 }
 
 .sidebar-footer {

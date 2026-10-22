@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { Plus, SquarePen, Trash } from '@lucide/vue';
+import { Pencil, Plus, Trash } from '@lucide/vue';
 import { useConfirm } from '@/hooks/useConfirm';
 import {
   buildNexusPhpSearchUrl,
@@ -229,30 +229,31 @@ function validateUrl(url: string): boolean {
           <div class="provider-info">
             <div class="provider-name">
               {{ provider.name }}
-              <span
+              <ab-tag
                 v-if="isDefaultProvider(provider.name)"
-                class="default-badge"
-              >
-                {{ $t('config.search_provider_set.default') }}
-              </span>
+                type="neutral"
+                :title="$t('config.search_provider_set.default')"
+              />
             </div>
             <div class="provider-url" :title="provider.url">
               {{ provider.url }}
             </div>
           </div>
           <div class="provider-actions">
-            <ab-button
+            <ab-icon-button
               size="sm"
-              variant="secondary"
+              :label="$t('config.search_provider_set.edit_title')"
               @click="openEditDialog(provider, index)"
             >
-              <SquarePen :size="16" />
-            </ab-button>
+              <Pencil :size="16" />
+            </ab-icon-button>
+            <!-- 默认源不能删除：按钮隐藏但占位，各行编辑按钮保持同一列 -->
             <ab-icon-button
-              v-if="!isDefaultProvider(provider.name)"
               size="sm"
               class="provider-delete"
+              :class="{ 'provider-delete--hidden': isDefaultProvider(provider.name) }"
               :label="$t('config.search_provider_set.remove')"
+              :disabled="isDefaultProvider(provider.name)"
               @click="onDeleteClick(index)"
             >
               <Trash :size="16" />
@@ -304,7 +305,14 @@ function validateUrl(url: string): boolean {
         </ab-field>
 
         <template v-if="formMode === 'custom'">
-          <ab-field :label="$t('config.search_provider_set.url')">
+          <ab-field
+            :label="$t('config.search_provider_set.url')"
+            :error="
+              formUrl && !validateUrl(formUrl)
+                ? $t('config.search_provider_set.url_missing_placeholder')
+                : ''
+            "
+          >
             <ab-input
               v-model="formUrl"
               type="text"
@@ -312,13 +320,6 @@ function validateUrl(url: string): boolean {
               @keyup.enter="handleAdd"
             />
           </ab-field>
-
-          <div
-            v-if="formUrl && !validateUrl(formUrl)"
-            class="validation-warning"
-          >
-            {{ $t('config.search_provider_set.url_missing_placeholder') }}
-          </div>
         </template>
 
         <template v-else>
@@ -342,7 +343,14 @@ function validateUrl(url: string): boolean {
             />
           </ab-field>
 
-          <ab-field :label="$t('config.search_provider_set.category_id')">
+          <ab-field
+            :label="$t('config.search_provider_set.category_id')"
+            :error="
+              formCategoryId && !categoryIdsValid
+                ? $t('config.search_provider_set.category_id_invalid')
+                : ''
+            "
+          >
             <ab-input
               v-model="formCategoryId"
               type="text"
@@ -352,13 +360,6 @@ function validateUrl(url: string): boolean {
               @keyup.enter="handleAdd"
             />
           </ab-field>
-
-          <div
-            v-if="formCategoryId && !categoryIdsValid"
-            class="validation-warning"
-          >
-            {{ $t('config.search_provider_set.category_id_invalid') }}
-          </div>
 
           <div class="hint-text">
             {{ $t('config.search_provider_set.nexusphp_hint') }}
@@ -404,7 +405,14 @@ function validateUrl(url: string): boolean {
           />
         </ab-field>
 
-        <ab-field :label="$t('config.search_provider_set.url')">
+        <ab-field
+          :label="$t('config.search_provider_set.url')"
+          :error="
+            formUrl && !validateUrl(formUrl)
+              ? $t('config.search_provider_set.url_missing_placeholder')
+              : ''
+          "
+        >
           <ab-input
             v-model="formUrl"
             type="text"
@@ -412,10 +420,6 @@ function validateUrl(url: string): boolean {
             @keyup.enter="handleEdit"
           />
         </ab-field>
-
-        <div v-if="formUrl && !validateUrl(formUrl)" class="validation-warning">
-          {{ $t('config.search_provider_set.url_missing_placeholder') }}
-        </div>
       </div>
 
       <template #footer>
@@ -444,13 +448,9 @@ function validateUrl(url: string): boolean {
   justify-content: space-between;
   gap: 12px;
   padding: 12px;
-  background: var(--color-surface-elevated, #f9fafb);
-  border-radius: 8px;
+  background: var(--color-surface-2);
+  border-radius: var(--radius-md);
   transition: background-color var(--transition-normal);
-
-  :root.dark & {
-    background: var(--color-surface-elevated, #1f2937);
-  }
 }
 
 .provider-info {
@@ -465,16 +465,6 @@ function validateUrl(url: string): boolean {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.default-badge {
-  font-size: 11px;
-  font-weight: 500;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: var(--color-primary);
-  color: white;
-  opacity: 0.8;
 }
 
 .provider-url {
@@ -507,28 +497,21 @@ function validateUrl(url: string): boolean {
   font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas,
     monospace;
   padding: 8px 12px;
-  background: var(--color-surface-elevated, #f9fafb);
-  border-radius: 6px;
+  background: var(--color-surface-2);
+  border-radius: var(--radius-md);
   word-break: break-all;
-
-  :root.dark & {
-    background: var(--color-surface-elevated, #1f2937);
-  }
 }
 
-.validation-warning {
-  font-size: 12px;
-  color: var(--color-danger, #ef4444);
-  padding: 8px 12px;
-  background: color-mix(in srgb, var(--color-danger, #ef4444) 10%, transparent);
-  border-radius: 6px;
-}
 .provider-delete {
   color: var(--color-danger);
 
   &:hover:not(:disabled) {
     color: var(--color-danger);
     background: color-mix(in srgb, var(--color-danger) 12%, transparent);
+  }
+
+  &--hidden {
+    visibility: hidden;
   }
 }
 </style>

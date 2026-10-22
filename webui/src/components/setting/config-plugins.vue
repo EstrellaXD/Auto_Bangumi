@@ -146,7 +146,11 @@ async function setEnabled(plugin: PluginInfo, enabled: boolean) {
   run(plugin.id, () => apiPlugins.update(plugin.id, { enabled }));
 }
 
+// 选项表单只在失焦后显示错误；保存时让未碰过的字段也显示
+const forms: Record<string, InstanceType<typeof PluginSchemaForm> | null> = {};
+
 async function saveOptions(plugin: PluginInfo) {
+  forms[plugin.id]?.showErrors();
   const ok = await run(plugin.id, () =>
     apiPlugins.update(plugin.id, { options: drafts.value[plugin.id] }));
   if (ok) message.success(t('config.plugins_set.save_success'));
@@ -283,6 +287,7 @@ onActivated(async () => {
           </summary>
           <template v-if="plugin.config_schema">
             <PluginSchemaForm
+              :ref="(el) => (forms[plugin.id] = el as typeof forms[string])"
               v-model="drafts[plugin.id]"
               :fields="
                 localizeFields(t, plugin, schemaFields(plugin.config_schema))
@@ -377,6 +382,22 @@ onActivated(async () => {
   gap: 6px;
 }
 
+// 选项区高度过渡（与 ab-fold-panel 一致）；不支持 ::details-content 的浏览器退化为即时切换
+.plugin__options {
+  interpolate-size: allow-keywords;
+
+  &::details-content {
+    height: 0;
+    overflow: clip;
+    transition: height var(--transition-normal),
+      content-visibility var(--transition-normal) allow-discrete;
+  }
+
+  &[open]::details-content {
+    height: auto;
+  }
+}
+
 .plugin__options summary {
   display: flex;
   align-items: center;
@@ -385,6 +406,7 @@ onActivated(async () => {
   min-height: var(--touch-target);
   cursor: pointer;
   font-size: 13px;
+  transition: margin-bottom var(--transition-normal);
 
   svg {
     flex-shrink: 0;

@@ -88,12 +88,12 @@ function formatDate(dateString: string | null): string {
       </div>
 
       <!-- 加载中 -->
-      <div v-else-if="loading" class="text-gray-500 text-14">
+      <div v-else-if="loading" class="passkey-muted text-14">
         {{ $t('passkey.loading') }}
       </div>
 
       <!-- 无 Passkey -->
-      <div v-else-if="passkeys.length === 0" class="text-gray-500 text-14">
+      <div v-else-if="passkeys.length === 0" class="passkey-muted text-14">
         {{ $t('passkey.no_passkeys') }}
       </div>
 
@@ -102,23 +102,26 @@ function formatDate(dateString: string | null): string {
         <div
           v-for="passkey in passkeys"
           :key="passkey.id"
-          class="flex justify-between items-center p-12 bg-gray-50 rounded-8"
+          class="passkey-row"
         >
           <div>
             <div class="font-medium">
               {{ passkey.name }}
             </div>
-            <div class="text-12 text-gray-500">
+            <div class="passkey-muted text-12">
               {{ $t('passkey.created_at') }}:
               {{ formatDate(passkey.created_at) }}
             </div>
-            <div v-if="passkey.last_used_at" class="text-12 text-gray-500">
+            <div v-if="passkey.last_used_at" class="passkey-muted text-12">
               {{ $t('passkey.last_used') }}:
               {{ formatDate(passkey.last_used_at) }}
             </div>
-            <div v-if="passkey.backup_eligible" class="text-12 text-green-600">
-              {{ $t('passkey.synced') }}
-            </div>
+            <ab-tag
+              v-if="passkey.backup_eligible"
+              type="success"
+              class="passkey-synced"
+              :title="$t('passkey.synced')"
+            />
           </div>
           <ab-icon-button
             size="sm"
@@ -162,7 +165,7 @@ function formatDate(dateString: string | null): string {
           />
         </ab-field>
 
-        <div class="text-14 text-gray-500">
+        <div class="passkey-muted text-14">
           {{ $t('passkey.register_hint') }}
         </div>
       </div>
@@ -183,3 +186,23 @@ function formatDate(dateString: string | null): string {
     </ab-modal>
   </ab-fold-panel>
 </template>
+
+<style lang="scss" scoped>
+// 主题色令牌：深色模式下行底与说明文字随 .dark 切换
+.passkey-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: var(--color-surface-2);
+  border-radius: var(--radius-md);
+}
+
+.passkey-muted {
+  color: var(--color-text-secondary);
+}
+
+.passkey-synced {
+  margin-top: 4px;
+}
+</style>

@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { ChevronDown } from '@lucide/vue';
 import type { BangumiRule } from '#/bangumi';
 import PluginSlot from '@/components/plugin-slot.vue';
 import { useUiSlots } from '@/hooks/usePluginUi';
@@ -117,6 +118,21 @@ function onRuleSelect(rule: BangumiRule) {
 function groupNeedsReview(group: BangumiGroup): boolean {
   return group.rules.some((r) => r.needs_review);
 }
+
+// 展开后归档内容在视口外：高度过渡结束（可滚动范围已够）后把折叠栏滚到顶部
+const archivedHeader = useTemplateRef<HTMLButtonElement>('archivedHeader');
+function onArchivedExpanded(e: TransitionEvent) {
+  if (e.target !== e.currentTarget || !showArchived.value) return;
+  archivedHeader.value?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+}
+
+// 离场卡片绝对定位脱离文档流（其余卡片才能 FLIP 移位），先钉住原来的盒子
+function pinLeaving(el: Element) {
+  const node = el as HTMLElement;
+  node.style.width = `${node.offsetWidth}px`;
+  node.style.left = `${node.offsetLeft}px`;
+  node.style.top = `${node.offsetTop}px`;
+}
 </script>
 
 <template>
@@ -143,85 +159,49 @@ function groupNeedsReview(group: BangumiGroup): boolean {
       </div>
 
       <!-- Failed first load — distinct from an empty library -->
-      <div v-else-if="loadFailed && !hasLoaded" class="empty-guide load-failed">
-        <div class="empty-guide-header">
-          <div class="empty-guide-title">
-            {{ $t('homepage.load_failed.title') }}
-          </div>
-          <div class="empty-guide-subtitle">
-            {{ $t('homepage.load_failed.subtitle') }}
-          </div>
-        </div>
-        <ab-button variant="primary" :loading="isLoading" @click="getAll">
-          {{ $t('homepage.load_failed.retry') }}
-        </ab-button>
+      <div v-else-if="loadFailed && !hasLoaded" class="page-empty">
+        <ab-empty
+          :title="$t('homepage.load_failed.title')"
+          :description="$t('homepage.load_failed.subtitle')"
+        >
+          <template #action>
+            <ab-button variant="primary" :loading="isLoading" @click="getAll">
+              {{ $t('homepage.load_failed.retry') }}
+            </ab-button>
+          </template>
+        </ab-empty>
       </div>
 
       <!-- Empty state guide -->
-      <div v-else-if="!bangumi || bangumi.length === 0" class="empty-guide">
-        <div class="empty-guide-header anim-fade-in">
-          <div class="empty-guide-title">
-            {{ $t('homepage.empty.title') }}
-          </div>
-          <div class="empty-guide-subtitle">
-            {{ $t('homepage.empty.subtitle') }}
-          </div>
-        </div>
-
-        <div class="empty-guide-steps">
-          <div class="empty-guide-step anim-slide-up" style="--delay: 0.15s">
-            <div class="empty-guide-step-number">
-              1
-            </div>
-            <div class="empty-guide-step-content">
-              <div class="empty-guide-step-title">
-                {{ $t('homepage.empty.step1_title') }}
-              </div>
-              <div class="empty-guide-step-desc">
-                {{ $t('homepage.empty.step1_desc') }}
-              </div>
-            </div>
-          </div>
-
-          <div class="empty-guide-step anim-slide-up" style="--delay: 0.3s">
-            <div class="empty-guide-step-number">
-              2
-            </div>
-            <div class="empty-guide-step-content">
-              <div class="empty-guide-step-title">
-                {{ $t('homepage.empty.step2_title') }}
-              </div>
-              <div class="empty-guide-step-desc">
-                {{ $t('homepage.empty.step2_desc') }}
-              </div>
-            </div>
-          </div>
-
-          <div class="empty-guide-step anim-slide-up" style="--delay: 0.45s">
-            <div class="empty-guide-step-number">
-              3
-            </div>
-            <div class="empty-guide-step-content">
-              <div class="empty-guide-step-title">
-                {{ $t('homepage.empty.step3_title') }}
-              </div>
-              <div class="empty-guide-step-desc">
-                {{ $t('homepage.empty.step3_desc') }}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="empty-guide-action anim-slide-up" style="--delay: 0.6s">
-          <ab-button variant="primary" @click="openAddRss">
-            {{ $t('homepage.empty.add_rss_btn') }}
-          </ab-button>
-        </div>
+      <div v-else-if="!bangumi || bangumi.length === 0" class="page-empty">
+        <ab-empty
+          :title="$t('homepage.empty.title')"
+          :description="$t('homepage.empty.subtitle')"
+        >
+          <template #action>
+            <ol class="empty-steps" role="list">
+              <li v-for="n in 3" :key="n">
+                <span class="empty-steps-title">{{
+                  $t(`homepage.empty.step${n}_title`)
+                }}</span>
+                {{ $t(`homepage.empty.step${n}_desc`) }}
+              </li>
+            </ol>
+            <ab-button variant="primary" @click="openAddRss">
+              {{ $t('homepage.empty.add_rss_btn') }}
+            </ab-button>
+          </template>
+        </ab-empty>
       </div>
 
       <!-- Bangumi grid -->
       <template v-else>
-        <transition-group name="bangumi" tag="div" class="bangumi-grid">
+        <transition-group
+          name="bangumi"
+          tag="div"
+          class="bangumi-grid"
+          @before-leave="pinLeaving"
+        >
           <div
             v-for="group in groupedBangumi"
             :key="group.key"
@@ -233,20 +213,13 @@ function groupNeedsReview(group: BangumiGroup): boolean {
               type="primary"
               @click="() => onCardClick(group)"
             />
-            <!-- Combined notification badge -->
+            <!-- Combined notification badge：待审核 = 方块标记，多规则 = 墨色计数 -->
             <div
               v-if="groupNeedsReview(group) || group.rules.length > 1"
               class="group-badge"
-              :class="{ 'group-badge--warning': groupNeedsReview(group) }"
             >
-              <template v-if="groupNeedsReview(group)">
-                <span class="badge-icon">!</span>
-                <template v-if="group.rules.length > 1">
-                  <span class="badge-divider" />
-                  <span class="badge-count">{{ group.rules.length }}</span>
-                </template>
-              </template>
-              <template v-else>
+              <span v-if="groupNeedsReview(group)" class="badge-mark" />
+              <template v-if="group.rules.length > 1">
                 {{ group.rules.length }}
               </template>
             </div>
@@ -277,6 +250,7 @@ function groupNeedsReview(group: BangumiGroup): boolean {
         <!-- Archived section -->
         <div v-if="groupedArchivedBangumi.length > 0" class="archived-section">
           <button
+            ref="archivedHeader"
             type="button"
             class="archived-header"
             :aria-expanded="showArchived"
@@ -289,49 +263,55 @@ function groupNeedsReview(group: BangumiGroup): boolean {
                 })
               }}
             </span>
-            <span class="archived-toggle" aria-hidden="true">{{
-              showArchived ? '−' : '+'
-            }}</span>
+            <ChevronDown
+              class="archived-toggle"
+              :class="{ 'archived-toggle--open': showArchived }"
+              :size="16"
+              aria-hidden="true"
+            />
           </button>
 
-          <transition-group
-            v-show="showArchived"
-            name="bangumi"
-            tag="div"
-            class="bangumi-grid archived-grid"
+          <!-- grid-template-rows 0fr↔1fr 做高度过渡；收起时 inert，卡片不可聚焦 -->
+          <div
+            class="archived-body"
+            :class="{ 'archived-body--open': showArchived }"
+            :inert="!showArchived"
+            @transitionend="onArchivedExpanded"
           >
-            <div
-              v-for="group in groupedArchivedBangumi"
-              :key="group.key"
-              class="bangumi-group-wrapper archived-item"
-            >
-              <ab-bangumi-card
-                :bangumi="group.primary"
-                type="primary"
-                @click="() => onCardClick(group)"
-              />
-              <!-- Combined notification badge -->
-              <div
-                v-if="groupNeedsReview(group) || group.rules.length > 1"
-                class="group-badge"
-                :class="{ 'group-badge--warning': groupNeedsReview(group) }"
+            <!-- 裁剪层不带 padding：网格的 12px padding 不会在收起时撑出 24px 高度 -->
+            <div class="archived-clip">
+              <transition-group
+                name="bangumi"
+                tag="div"
+                class="bangumi-grid archived-grid"
+                @before-leave="pinLeaving"
               >
-                <template v-if="groupNeedsReview(group)">
-                  <span class="badge-icon">!</span>
-                  <template v-if="group.rules.length > 1">
-                    <span class="badge-divider" />
-                    <span class="badge-count">{{ group.rules.length }}</span>
-                  </template>
-                </template>
-                <template v-else>
-                  {{ group.rules.length }}
-                </template>
-              </div>
-              <div class="archived-badge">
-                {{ $t('homepage.rule.archived') }}
-              </div>
+                <div
+                  v-for="group in groupedArchivedBangumi"
+                  :key="group.key"
+                  class="bangumi-group-wrapper archived-item"
+                >
+                  <ab-bangumi-card
+                    :bangumi="group.primary"
+                    type="primary"
+                    @click="() => onCardClick(group)"
+                  />
+                  <div
+                    v-if="groupNeedsReview(group) || group.rules.length > 1"
+                    class="group-badge"
+                  >
+                    <span v-if="groupNeedsReview(group)" class="badge-mark" />
+                    <template v-if="group.rules.length > 1">
+                      {{ group.rules.length }}
+                    </template>
+                  </div>
+                  <div class="archived-badge">
+                    {{ $t('homepage.rule.archived') }}
+                  </div>
+                </div>
+              </transition-group>
             </div>
-          </transition-group>
+          </div>
         </div>
       </template>
 
@@ -355,8 +335,11 @@ function groupNeedsReview(group: BangumiGroup): boolean {
             @click="onRuleSelect(rule)"
           >
             <div class="rule-list-item-info">
-              <div class="rule-list-item-title">
-                <span v-if="rule.needs_review" class="warning-text">! </span>{{
+              <div
+                class="rule-list-item-title"
+                :title="rule.needs_review ? $t('homepage.rule.needs_review') : undefined"
+              >
+                {{
                   rule.group_name
                     || rule.rule_name
                     || $t('homepage.rule.unnamed')
@@ -412,7 +395,8 @@ function groupNeedsReview(group: BangumiGroup): boolean {
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   gap: 12px;
   padding: 12px;
-  justify-items: center;
+  // 离场卡片绝对定位时以网格为参照（见 pinLeaving）
+  position: relative;
 
   @include forTablet {
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -427,7 +411,7 @@ function groupNeedsReview(group: BangumiGroup): boolean {
 
 // Skeleton loading cards
 .skeleton-card {
-  width: 150px;
+  width: 100%;
 }
 
 .skeleton-poster {
@@ -470,7 +454,7 @@ function groupNeedsReview(group: BangumiGroup): boolean {
 
 // Others card for orphan torrents
 .others-card {
-  width: 150px;
+  width: 100%;
   cursor: pointer;
   user-select: none;
 
@@ -538,9 +522,15 @@ function groupNeedsReview(group: BangumiGroup): boolean {
 .bangumi-group-wrapper {
   position: relative;
   overflow: visible;
-  width: fit-content;
+  width: 100%;
 }
 
+// 离场卡片脱离文档流，其余卡片才会触发 .bangumi-move 位移（盒子由 pinLeaving 钉住）
+.bangumi-grid > .bangumi-leave-active {
+  position: absolute;
+}
+
+// Soft Ink：surface 底 + 墨色计数，待审核用语义色方块标记，不用彩色填充/光晕
 .group-badge {
   position: absolute;
   top: -8px;
@@ -548,55 +538,41 @@ function groupNeedsReview(group: BangumiGroup): boolean {
   min-width: 20px;
   height: 20px;
   padding: 0 6px;
-  border-radius: 10px;
-  background: var(--color-primary);
-  color: #fff;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 3px;
+  gap: 5px;
   z-index: 10;
   pointer-events: none;
-  box-shadow: 0 2px 6px rgba(124, 77, 255, 0.4);
+  box-shadow: var(--shadow-sm);
 
-  // Warning variant - yellow with purple border
-  &--warning {
+  .badge-mark {
+    width: 7px;
+    height: 7px;
+    border-radius: 2px;
     background: var(--color-warning);
-    border: 2px solid var(--color-primary);
-    color: var(--color-primary);
-    box-shadow: 0 2px 8px rgba(251, 191, 36, 0.5);
-  }
-
-  .badge-icon {
-    font-weight: 800;
-  }
-
-  .badge-divider {
-    width: 1px;
-    height: 10px;
-    background: currentColor;
-    opacity: 0.5;
-  }
-
-  .badge-count {
-    font-weight: 700;
   }
 }
 
 .archived-section {
   margin-top: 24px;
-  padding: 0 8px;
 }
 
+// 左右 padding 与 .bangumi-grid 的 12px 一致，标题文字与海报共用左边线
 .archived-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: 12px 8px;
-  margin-bottom: 12px;
+  padding: 12px;
   cursor: pointer;
   border: none;
   border-radius: var(--radius-md);
@@ -621,9 +597,28 @@ function groupNeedsReview(group: BangumiGroup): boolean {
 }
 
 .archived-toggle {
-  font-size: 18px;
-  font-weight: 500;
-  color: var(--color-text-muted);
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+  transition: transform var(--transition-normal);
+
+  &--open {
+    transform: rotate(180deg);
+  }
+}
+
+.archived-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--transition-normal);
+
+  > .archived-clip {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  &--open {
+    grid-template-rows: 1fr;
+  }
 }
 
 .archived-grid {
@@ -688,33 +683,15 @@ function groupNeedsReview(group: BangumiGroup): boolean {
     opacity: 0.5;
   }
 
-  // Warning variant - needs review
+  // 待审核：内阴影画左侧标记，不改变盒宽（与通知中心未读项同一写法）
   &--warning {
-    background: linear-gradient(
-      135deg,
-      rgba(251, 191, 36, 0.15) 0%,
-      rgba(251, 191, 36, 0.08) 100%
-    );
-    border-left: 3px solid var(--color-warning);
-
-    &:hover {
-      background: linear-gradient(
-        135deg,
-        rgba(251, 191, 36, 0.22) 0%,
-        rgba(251, 191, 36, 0.12) 100%
-      );
-    }
+    box-shadow: inset 3px 0 0 var(--color-warning);
   }
 
   // Add spacing between items
   & + & {
     margin-top: 8px;
   }
-}
-
-.warning-text {
-  color: #d97706;
-  font-weight: 700;
 }
 
 .rule-list-item-info {
@@ -773,117 +750,8 @@ function groupNeedsReview(group: BangumiGroup): boolean {
   margin-top: 2px;
 }
 
-.empty-guide {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 60vh;
-  padding: 24px;
-}
-
-.empty-guide-header {
-  text-align: center;
-  margin-bottom: 32px;
-}
-
-.empty-guide-title {
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--color-text);
-  margin-bottom: 6px;
-}
-
-.empty-guide-subtitle {
-  font-size: 14px;
-  color: var(--color-text-secondary);
-}
-
-.empty-guide-steps {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  max-width: 400px;
-  width: 100%;
-}
-
-.empty-guide-action {
-  margin-top: 24px;
-}
-
-.empty-guide-step {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-  padding: 14px 16px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-  transition: background-color var(--transition-normal),
-    border-color var(--transition-normal);
-}
-
-.empty-guide-step-number {
-  flex-shrink: 0;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: var(--color-primary);
-  color: var(--color-white);
-  font-size: 13px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.empty-guide-step-content {
-  flex: 1;
-  min-width: 0;
-}
-
-.empty-guide-step-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-text);
-  margin-bottom: 4px;
-}
-
-.empty-guide-step-desc {
-  font-size: 13px;
-  color: var(--color-text-secondary);
-  line-height: 1.4;
-}
-
-.anim-fade-in {
-  animation: fadeIn 0.5s ease both;
-}
-
-.anim-slide-up {
-  animation: slideUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
-  animation-delay: var(--delay, 0s);
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.page-empty {
+  padding: 12px;
 }
 </style>
 
@@ -897,5 +765,8 @@ function groupNeedsReview(group: BangumiGroup): boolean {
 .bangumi-leave-to {
   opacity: 0;
   transform: translateY(8px);
+}
+.bangumi-move {
+  transition: transform var(--transition-normal);
 }
 </style>

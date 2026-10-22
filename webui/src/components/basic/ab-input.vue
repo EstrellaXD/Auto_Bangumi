@@ -153,7 +153,8 @@ function clear() {
   align-items: center;
   gap: 7px;
   width: 100%;
-  height: 36px;
+  // 与 ab-select（naive 默认 34px）、ab-button md 同高；触屏统一 44px 命中区
+  height: 34px;
   padding: 0 11px;
   background: var(--color-surface-2);
   border: 1px solid transparent;
@@ -163,7 +164,10 @@ function clear() {
 
   @include forTablet {
     width: 200px;
-    height: 30px;
+  }
+
+  @include forTouch {
+    height: var(--touch-target);
   }
 
   &:focus-within {

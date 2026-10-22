@@ -169,6 +169,12 @@ function tokenOwner(userId: number): string {
   return ownerByUserId.value.get(userId) ?? t('access.unknown_user');
 }
 
+const TOKEN_STATUS_TAG = {
+  active: 'success',
+  expired: 'warning',
+  revoked: 'neutral',
+} as const;
+
 function tokenStatus(token: ApiTokenPublic): ApiTokenStatus {
   if (token.revoked_at !== null) return 'revoked';
   if (token.expires_at !== null) {
@@ -205,9 +211,10 @@ function tokenStatus(token: ApiTokenPublic): ApiTokenStatus {
         >
           <div class="row-main">
             <strong>{{ user.username }}</strong>
-            <span class="status-dot" :class="[{ disabled: !user.enabled }]">
-              {{ user.enabled ? $t('access.enabled') : $t('access.disabled') }}
-            </span>
+            <ab-tag
+              :type="user.enabled ? 'success' : 'neutral'"
+              :title="user.enabled ? $t('access.enabled') : $t('access.disabled')"
+            />
           </div>
           <div class="row-actions">
             <ab-switch
@@ -255,13 +262,13 @@ function tokenStatus(token: ApiTokenPublic): ApiTokenStatus {
           <div class="token-info">
             <div class="row-main">
               <strong>{{ token.name }}</strong>
-              <span class="scope-badge">{{ token.scope.toUpperCase() }}</span>
-              <span
-                class="token-status"
+              <ab-tag type="neutral" :title="token.scope.toUpperCase()" />
+              <ab-tag
                 :class="`token-status--${tokenStatus(token)}`"
+                :type="TOKEN_STATUS_TAG[tokenStatus(token)]"
               >
                 {{ $t(`access.token_status_${tokenStatus(token)}`) }}
-              </span>
+              </ab-tag>
             </div>
             <code>{{ token.prefix }}…</code>
             <small>
@@ -427,36 +434,13 @@ function tokenStatus(token: ApiTokenPublic): ApiTokenStatus {
   gap: 8px;
 }
 
-.status-dot,
-.scope-badge,
-.token-status {
-  padding: 2px 7px;
-  border-radius: var(--radius-full);
-  color: var(--color-primary);
-  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
-  font-size: 11px;
-  white-space: nowrap;
+.row-main .ab-tag {
   flex-shrink: 0;
 }
 
 .row-main strong {
   min-width: 0;
   overflow-wrap: anywhere;
-}
-
-.status-dot.disabled {
-  color: var(--color-text-secondary);
-  background: var(--color-surface-hover);
-}
-
-.token-status--expired {
-  color: var(--color-warning);
-  background: color-mix(in srgb, var(--color-warning) 12%, transparent);
-}
-
-.token-status--revoked {
-  color: var(--color-text-secondary);
-  background: var(--color-surface-hover);
 }
 
 .token-info {

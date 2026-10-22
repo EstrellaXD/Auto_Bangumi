@@ -3,7 +3,7 @@ import AbInput from './ab-input.vue';
 import AbTag from './ab-tag.vue';
 
 // 字符串列表输入：已有项显示为可删除的 ab-tag，回车添加新项（去重、去空白）
-defineProps<{ ariaLabel?: string }>();
+defineProps<{ ariaLabel?: string; placeholder?: string }>();
 const model = defineModel<string[]>({ default: () => [] });
 const draft = ref('');
 
@@ -36,6 +36,7 @@ function onEnter(event: KeyboardEvent) {
     <AbInput
       v-model="draft"
       :aria-label="ariaLabel"
+      :placeholder="placeholder"
       @keydown.enter.prevent="onEnter"
       @focusout="add"
     />

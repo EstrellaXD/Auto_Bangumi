@@ -43,7 +43,9 @@ test('real issue titles distinguish a versioned episode from an offset overflow'
       .click();
     const negativeDialog = page.getByRole('dialog', { name: 'Edit Rule' });
     await expect(
-      negativeDialog.getByRole('status', { name: 'Offset Review Needed' })
+      negativeDialog
+        .getByRole('alert')
+        .filter({ hasText: 'Offset Review Needed' })
     ).toHaveCount(0);
     await page.keyboard.press('Escape');
     await expect(negativeDialog).toHaveCount(0);
@@ -75,9 +77,9 @@ test('real issue titles distinguish a versioned episode from an offset overflow'
       .click();
 
     const dialog = page.getByRole('dialog', { name: 'Edit Rule' });
-    const review = dialog.getByRole('status', {
-      name: 'Offset Review Needed',
-    });
+    const review = dialog
+      .getByRole('alert')
+      .filter({ hasText: 'Offset Review Needed' });
     await expect(review).toContainText(reason);
 
     const dismissed = page.waitForResponse(

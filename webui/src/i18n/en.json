@@ -124,7 +124,11 @@
       "bark_group": "Group (optional)",
       "bark_level": "Interruption level (optional)",
       "bark_icon": "Icon URL (optional, defaults to the poster)",
-      "bark_url": "URL to open on tap (optional)"
+      "bark_url": "URL to open on tap (optional)",
+      "device_key": "Device Key",
+      "server_url": "Server URL",
+      "server_url_optional": "Server URL (optional)",
+      "template": "Template (JSON)"
     },
     "parser_set": {
       "enable": "Enable",
@@ -543,7 +547,6 @@
     "today": "Today",
     "empty": "No anime",
     "refresh": "Refresh schedule",
-    "no_data": "No schedule data available",
     "loading": "Loading...",
     "tracked": "Tracked",
     "tracked_count": "{count} tracked",
@@ -551,7 +554,7 @@
     "search_title": "Search and Add Anime",
     "no_search_results": "No results found. Try different keywords.",
     "empty_state": {
-      "title": "No Schedule Yet",
+      "title": "No schedule yet",
       "subtitle": "Click refresh to fetch this season's broadcast data"
     },
     "drag_hint": "Drag to assign weekday",
@@ -787,7 +790,7 @@
     "restart": "Restart",
     "search": {
       "placeholder": "Type to search",
-      "click_to_search": "Click to search"
+      "click_to_search": "Search"
     },
     "shutdown": "Shutdown",
     "start": "Start"
@@ -867,7 +870,7 @@
     "state_all": "All states",
     "state": {
       "installed": "Installed",
-      "update": "Update available",
+      "update": "Updates",
       "available": "Not installed"
     },
     "update_from": "Update available · {version} installed",
@@ -899,6 +902,7 @@
     "update": "Update",
     "install_enable": "Install and enable",
     "back": "Back",
+    "not_found": "This plugin is not in the catalog",
     "confirm_install": "Install {name}",
     "confirm_update": "Update {name}",
     "warning_lead": "Note",

@@ -74,10 +74,14 @@ const providerFields: Record<
     },
   ],
   bark: [
-    { key: 'device_key', label: 'Device Key', placeholder: 'device key' },
+    {
+      key: 'device_key',
+      label: () => t('config.notification_set.device_key'),
+      placeholder: 'device key',
+    },
     {
       key: 'server_url',
-      label: 'Server URL (optional)',
+      label: () => t('config.notification_set.server_url_optional'),
       placeholder: 'https://api.day.app',
     },
     {
@@ -115,7 +119,7 @@ const providerFields: Record<
   gotify: [
     {
       key: 'server_url',
-      label: 'Server URL',
+      label: () => t('config.notification_set.server_url'),
       placeholder: 'https://gotify.example.com',
     },
     { key: 'token', label: 'App Token', placeholder: 'app token' },
@@ -132,7 +136,7 @@ const providerFields: Record<
     },
     {
       key: 'template',
-      label: 'Template (JSON)',
+      label: () => t('config.notification_set.template'),
       placeholder: '{"title": "{{title}}", "episode": {{episode}}}',
     },
   ],
@@ -342,9 +346,11 @@ function getFieldsForType(type: string) {
               <div v-if="brandIcons[provider.type]" :class="brandIcons[provider.type]" />
               <component :is="lucideIcons[provider.type] ?? Bell" v-else :size="16" />
               {{ getProviderLabel(provider.type) }}
-              <span v-if="!provider.enabled" class="disabled-badge">
-                {{ $t('config.notification_set.disabled') }}
-              </span>
+              <ab-tag
+                v-if="!provider.enabled"
+                type="danger"
+                :title="$t('config.notification_set.disabled')"
+              />
             </div>
           </div>
           <div class="provider-actions">
@@ -387,13 +393,13 @@ function getFieldsForType(type: string) {
         </div>
 
         <!-- Test result message -->
-        <div
+        <ab-alert
           v-if="listResult"
           class="test-result"
-          :class="listResult.success ? 'test-success' : 'test-error'"
+          :type="listResult.success ? 'info' : 'danger'"
         >
           {{ listResult.message }}
-        </div>
+        </ab-alert>
 
         <div class="line" />
 
@@ -453,13 +459,13 @@ function getFieldsForType(type: string) {
           {{ $t('config.notification_set.plugin_hint') }}
         </p>
 
-        <div
+        <ab-alert
           v-if="dialogResult"
           class="test-result"
-          :class="dialogResult.success ? 'test-success' : 'test-error'"
+          :type="dialogResult.success ? 'info' : 'danger'"
         >
           {{ dialogResult.message }}
-        </div>
+        </ab-alert>
       </div>
 
       <template #footer>
@@ -529,13 +535,13 @@ function getFieldsForType(type: string) {
           {{ $t('config.notification_set.plugin_hint') }}
         </p>
 
-        <div
+        <ab-alert
           v-if="dialogResult"
           class="test-result"
-          :class="dialogResult.success ? 'test-success' : 'test-error'"
+          :type="dialogResult.success ? 'info' : 'danger'"
         >
           {{ dialogResult.message }}
-        </div>
+        </ab-alert>
       </div>
 
       <template #footer>
@@ -573,23 +579,20 @@ function getFieldsForType(type: string) {
   justify-content: space-between;
   gap: 12px;
   padding: 12px;
-  background: var(--color-surface-elevated, #f9fafb);
-  border-radius: 8px;
-  transition: background-color var(--transition-normal),
-    opacity var(--transition-normal);
-
-  :root.dark & {
-    background: var(--color-surface-elevated, #1f2937);
-  }
-}
-
-.provider-disabled {
-  opacity: 0.5;
+  background: var(--color-surface-2);
+  border-radius: var(--radius-md);
+  transition: background-color var(--transition-normal);
 }
 
 .provider-info {
   flex: 1;
   min-width: 0;
+  transition: opacity var(--transition-normal);
+
+  // 停用只淡化信息区，“重新启用”等操作按钮保持可点的样子
+  .provider-disabled & {
+    opacity: 0.5;
+  }
 }
 
 .provider-name {
@@ -604,17 +607,6 @@ function getFieldsForType(type: string) {
   > :first-child {
     flex-shrink: 0;
   }
-}
-
-.disabled-badge {
-  white-space: nowrap;
-  font-size: 11px;
-  font-weight: 500;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: var(--color-danger);
-  color: white;
-  opacity: 0.8;
 }
 
 .provider-actions {
@@ -666,25 +658,5 @@ function getFieldsForType(type: string) {
 .plugin-hint {
   font-size: 12px;
   color: var(--color-text-secondary);
-}
-
-.test-result {
-  font-size: 12px;
-  padding: 8px 12px;
-  border-radius: 6px;
-}
-
-.test-success {
-  color: var(--color-success, #22c55e);
-  background: color-mix(
-    in srgb,
-    var(--color-success, #22c55e) 10%,
-    transparent
-  );
-}
-
-.test-error {
-  color: var(--color-danger, #ef4444);
-  background: color-mix(in srgb, var(--color-danger, #ef4444) 10%, transparent);
 }
 </style>
