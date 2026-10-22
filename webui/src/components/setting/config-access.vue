@@ -435,6 +435,13 @@ function tokenStatus(token: ApiTokenPublic): ApiTokenStatus {
   color: var(--color-primary);
   background: color-mix(in srgb, var(--color-primary) 12%, transparent);
   font-size: 11px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.row-main strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .status-dot.disabled {

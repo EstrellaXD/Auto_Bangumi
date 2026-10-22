@@ -502,6 +502,31 @@ function permissionLabel(id: string) {
   overflow: auto;
 }
 
+.market__tabs {
+  @include forMobile {
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+    // overflow-x 让 overflow-y 也成了 auto，裁剪到 padding 盒：盒外的边框盖不到
+    // 选中下划线（margin-bottom:-1px），焦点框也被裁。上下留 4px 并用背景线画边框，
+    // 负 margin 抵消留白，布局与边线位置不变。
+    padding-block: 4px;
+    margin-block: -4px -3px;
+    border-bottom: none;
+    background: linear-gradient(var(--color-border), var(--color-border))
+      left bottom 3px / 100% 1px no-repeat;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+
+    :deep(.ab-segmented-tab) {
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+  }
+}
+
 .market__top {
   display: grid;
   grid-template-areas:
@@ -629,6 +654,7 @@ function permissionLabel(id: string) {
   grid-template-columns: 1fr auto;
   align-items: baseline;
   gap: 2px 10px;
+  flex-shrink: 0;
   min-height: var(--touch-target);
   padding: 10px 12px;
   border-bottom: 1px solid var(--color-border);

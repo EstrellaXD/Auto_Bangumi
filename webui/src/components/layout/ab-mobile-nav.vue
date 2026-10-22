@@ -119,7 +119,7 @@ const visibleItems = computed(() => {
   &__item {
     // 不收缩：项多时导航栏横向滚动，保持 44px 以上的触控区域
     flex: 1 0 auto;
-    min-width: 56px;
+    min-width: var(--touch-target);
     display: flex;
     flex-direction: column;
     align-items: center;

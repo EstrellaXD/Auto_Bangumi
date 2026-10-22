@@ -456,6 +456,7 @@ function emitUnarchive() {
 // Review warning banner
 .review-warning {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
@@ -470,7 +471,7 @@ function emitUnarchive() {
   display: flex;
   align-items: center;
   gap: 10px;
-  flex: 1;
+  flex: 1 1 200px;
   min-width: 0;
 }
 
@@ -502,6 +503,7 @@ function emitUnarchive() {
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+  margin-left: auto;
 }
 
 .review-warning-actions .detect-btn,

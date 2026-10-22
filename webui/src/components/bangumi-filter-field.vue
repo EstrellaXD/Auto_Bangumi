@@ -47,14 +47,22 @@ const emit = defineEmits<{
 .advanced-control {
   display: flex;
   justify-content: flex-end;
+  min-width: 0;
 
   :deep(.n-dynamic-tags) {
     justify-content: flex-end;
     min-height: 32px;
+    min-width: 0;
 
     .n-tag {
       height: 28px;
+      max-width: calc(100% - 6px);
       margin: 2px 0 2px 6px !important;
+    }
+
+    .n-tag__content {
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .n-button {

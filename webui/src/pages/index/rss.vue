@@ -76,7 +76,7 @@ const rssColumns = computed<DataTableColumns<RSS>>(() => [
     title: t('rss.url'),
     key: 'url',
     className: 'text-h3',
-    minWidth: 400,
+    minWidth: 240,
     ellipsis: {
       tooltip: true,
     },
@@ -261,8 +261,10 @@ function onSelectedRSSUpdate(keys: unknown[]) {
 
 :deep(.rss-name-cell) {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
+  row-gap: 4px;
   min-width: 0;
 
   .rss-name {
@@ -292,6 +294,8 @@ function onSelectedRSSUpdate(keys: unknown[]) {
 
 // Mobile RSS card styles
 .rss-card-content {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 4px;

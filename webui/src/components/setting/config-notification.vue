@@ -597,11 +597,17 @@ function getFieldsForType(type: string) {
   font-size: 14px;
   color: var(--color-text);
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+
+  > :first-child {
+    flex-shrink: 0;
+  }
 }
 
 .disabled-badge {
+  white-space: nowrap;
   font-size: 11px;
   font-weight: 500;
   padding: 2px 6px;

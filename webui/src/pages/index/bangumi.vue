@@ -636,7 +636,7 @@ function groupNeedsReview(group: BangumiGroup): boolean {
 
 .archived-badge {
   position: absolute;
-  bottom: 36px; // Above the card title area
+  top: 6px; // 海报左上角，不随标题高度移动
   left: 4px;
   padding: 2px 6px;
   border-radius: 4px;
