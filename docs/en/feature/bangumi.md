@@ -2,15 +2,15 @@
 
 Click an anime poster on the homepage to manage individual anime entries.
 
-![Bangumi List](/image/feature/bangumi-list.png)
+![Bangumi List](/image/en/feature/bangumi-list.png)
 
 If an anime has multiple download rules (e.g., different subtitle groups), a rule selection popup will appear:
 
-![Rule Selection](/image/feature/rule-select.png)
+![Rule Selection](/image/en/feature/rule-select.png)
 
 After selecting a rule, the edit modal opens:
 
-![Edit Bangumi](/image/feature/bangumi-edit.png)
+![Edit Bangumi](/image/en/feature/bangumi-edit.png)
 
 ## Notification Badges
 
@@ -76,7 +76,7 @@ If you delete the anime entry, it will be recreated on the next parse cycle.
 
 Click **Advanced Settings** in the edit modal to access additional options:
 
-![Advanced Settings](/image/feature/bangumi-edit-advanced.png)
+![Advanced Settings](/image/en/feature/bangumi-edit-advanced.png)
 
 - **Season Offset**: Adjust the season number offset
 - **Episode Offset**: Adjust the episode number offset

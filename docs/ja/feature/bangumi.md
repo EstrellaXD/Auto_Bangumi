@@ -2,15 +2,15 @@
 
 ホームページでアニメのポスターをクリックして、個別のアニメエントリを管理します。
 
-![Bangumi List](/image/feature/bangumi-list.png)
+![Bangumi List](/image/en/feature/bangumi-list.png)
 
 アニメに複数のダウンロードルールがある場合（例：異なる字幕グループ）、ルール選択ポップアップが表示されます：
 
-![Rule Selection](/image/feature/rule-select.png)
+![Rule Selection](/image/en/feature/rule-select.png)
 
 ルールを選択すると、編集モーダルが開きます：
 
-![Edit Bangumi](/image/feature/bangumi-edit.png)
+![Edit Bangumi](/image/en/feature/bangumi-edit.png)
 
 ## 通知バッジ
 
@@ -76,7 +76,7 @@ ABは継続的に**集約RSS**フィードを解析するため、不要にな�
 
 編集モーダルで**詳細設定**をクリックして、追加のオプションにアクセスします：
 
-![Advanced Settings](/image/feature/bangumi-edit-advanced.png)
+![Advanced Settings](/image/en/feature/bangumi-edit-advanced.png)
 
 - **シーズンオフセット**：シーズン番号オフセットを調整
 - **エピソードオフセット**：エピソード番号オフセットを調整

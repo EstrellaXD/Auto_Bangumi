@@ -2,7 +2,7 @@
 
 ## WebUI
 
-![manager](/image/config/manager.png){width=700}{class=ab-shadow-card}
+![manager](/image/en/config/manager.png){width=700}{class=ab-shadow-card}
 
 - **有効化**：ファイル整理とリネームを有効化します。
 - **リネーム方式**：

@@ -2,7 +2,7 @@
 
 ## プロキシ
 
-![proxy](/image/config/proxy.png){width=700}{class=ab-shadow-card}
+![proxy](/image/en/config/proxy.png){width=700}{class=ab-shadow-card}
 
 AutoBangumiはHTTP、HTTPS、SOCKS5プロキシに対応しています。RSS、検索プロバイダー、TMDB、Bangumi、LLM providerなどの外部通信に使われます。
 

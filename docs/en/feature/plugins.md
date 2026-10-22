@@ -31,6 +31,8 @@ Changes on plugin cards are not part of the global save at the bottom of the set
 
 ### Configure a Plugin
 
+![Plugin options form](/image/en/feature/plugin-config.png)
+
 1. Expand **Options** on the plugin card.
 2. Fill in the form. For list fields, use **Add row** and **Remove**.
 3. Click **Save options**.
@@ -82,7 +84,9 @@ AB reads the signed plugin catalog from the GitHub release `plugins`. Before AB 
 | `POST /api/v1/plugins/{id}/install` | Installs or updates the plugin and enables it |
 | `DELETE /api/v1/plugins/{id}` | Removes a plugin that you installed from the catalog. Local plugins do not change |
 
-The "Plugin catalog" section of **Settings → Plugins** lets you browse the catalog and install, update and remove plugins. For signatures and the publish procedure, see [Signing and Distribution](/en/dev/plugins/signing).
+The **Plugin market** page lets you browse the catalog and install, update and remove plugins. To open it, click "Open plugin market" in **Settings → Plugins**. For signatures and the publish procedure, see [Signing and Distribution](/en/dev/plugins/signing).
+
+![Plugin market](/image/en/feature/plugin-market.png)
 
 ## Plugin Interface
 

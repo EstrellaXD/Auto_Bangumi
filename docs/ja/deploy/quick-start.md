@@ -116,13 +116,13 @@ ABをインストール後、WebUIは自動的に起動しますが、メイン�
 1. Webページを開きます。デフォルトのユーザー名は`admin`、デフォルトのパスワードは`adminadmin`です。初回ログイン後すぐに変更してください。
 2. ダウンローダーのアドレス、ポート、ユーザー名、パスワードを入力します。
 
-![ab-webui](/image/config/downloader.png){width=500}{class=ab-shadow-card}
+![ab-webui](/image/en/config/downloader.png){width=500}{class=ab-shadow-card}
 
 3. **適用**をクリックして設定を保存します。ABが再起動し、右上のドットが緑色になると、ABが正常に動作していることを示します。
 
 4. 右上の**+**ボタンをクリックし、**集約RSS**にチェックを入れ、パーサータイプを選択し、Mikan RSS URLを入力します。
 
-![ab-rss](/image/config/add-rss.png){width=500}{class=ab-shadow-card}
+![ab-rss](/image/en/config/add-rss.png){width=500}{class=ab-shadow-card}
 
 ABが集約RSSを解析するのを待ちます。解析が完了すると、自動的にアニメを追加し、ダウンロードを管理します。
 

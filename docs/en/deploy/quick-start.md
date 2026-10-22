@@ -116,13 +116,13 @@ After installing AB, the WebUI will start automatically, but the main program wi
 1. Open the webpage. The default username is `admin` and the default password is `adminadmin`. Change these immediately after first login.
 2. Enter your downloader's address, port, username, and password.
 
-![ab-webui](/image/config/downloader.png){width=500}{class=ab-shadow-card}
+![ab-webui](/image/en/config/downloader.png){width=500}{class=ab-shadow-card}
 
 3. Click **Apply** to save the configuration. AB will restart, and when the dot in the upper right corner turns green, it indicates AB is running normally.
 
 4. Click the **+** button in the upper right corner, check **Aggregated RSS**, select the parser type, and enter your Mikan RSS URL.
 
-![ab-rss](/image/config/add-rss.png){width=500}{class=ab-shadow-card}
+![ab-rss](/image/en/config/add-rss.png){width=500}{class=ab-shadow-card}
 
 Wait for AB to parse the aggregated RSS. Once parsing is complete, it will automatically add anime and manage downloads.
 

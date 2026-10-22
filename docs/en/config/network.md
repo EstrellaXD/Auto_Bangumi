@@ -1,6 +1,6 @@
 # Network Settings
 
-![network](/image/config/network.png){width=700}{class=ab-shadow-card}
+![network](/image/en/config/network.png){width=700}{class=ab-shadow-card}
 
 Network settings override external metadata endpoints and credentials. Click **Save & restart** after changing them.
 

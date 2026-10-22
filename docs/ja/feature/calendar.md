@@ -2,7 +2,7 @@
 
 v3.2以降、ABには購読しているアニメを放送日ごとに整理して表示するカレンダービューが含まれています。
 
-![Calendar](/image/feature/calendar.png)
+![Calendar](/image/en/feature/calendar.png)
 
 ## 機能
 

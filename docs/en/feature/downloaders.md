@@ -36,6 +36,8 @@ AB saves the torrent below the download path of the selected instance.
 
 AB records the downloader that it added each torrent to. Rename and delete operations use that downloader.
 
+![Downloader page](/image/en/feature/downloader-page.png)
+
 - **Downloader page**: with more than one downloader, the list has a "Downloader" column. Pause, resume and delete go to the downloader of each torrent.
 - **Torrent lists**: the torrent lists of rules and of unmatched torrents show the downloader of each downloaded torrent.
 

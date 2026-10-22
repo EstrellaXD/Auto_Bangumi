@@ -31,6 +31,8 @@ qBittorrent、aria2 下载器与各通知渠道由 AB 自带，不能停用，�
 
 ### 配置插件
 
+![插件配置表单](/image/feature/plugin-config.png)
+
 1. 展开插件卡片上的 **配置**。
 2. 填写表单。列表类型的字段可以 **添加一行** 或 **删除** 一行。
 3. 点击 **保存配置**。
@@ -82,7 +84,9 @@ AB 从 GitHub release `plugins` 读取签名插件目录。AB 在安装前校验
 | `POST /api/v1/plugins/{id}/install` | 安装或升级插件，并启用它 |
 | `DELETE /api/v1/plugins/{id}` | 卸载从目录安装的插件。本地插件不受影响 |
 
-在 **设置 → 插件** 的「插件目录」区域可以浏览目录，并安装、更新与卸载插件。签名与上架流程见 [签名与分发](/dev/plugins/signing)。
+在 **插件市场** 页面可以浏览目录，并安装、更新与卸载插件。在 **设置 → 插件** 中点「打开插件市场」进入该页面。签名与上架流程见 [签名与分发](/dev/plugins/signing)。
+
+![插件市场](/image/feature/plugin-market.png)
 
 ## 插件界面
 

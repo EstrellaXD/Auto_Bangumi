@@ -18,7 +18,7 @@ title: 概要
   <img
     title="AutoBangumi WebUI"
     alt="AutoBangumi WebUI"
-    src="/image/preview/window.png"
+    src="/image/en/preview/window.png"
     width=85%
     data-zoomable
   >

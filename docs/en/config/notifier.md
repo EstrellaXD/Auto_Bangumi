@@ -2,9 +2,9 @@
 
 ## WebUI
 
-![notification](/image/config/notifier.png){width=700}{class=ab-shadow-card}
+![notification](/image/en/config/notifier.png){width=700}{class=ab-shadow-card}
 
-![notification provider](/image/config/notifier-provider.png){width=700}{class=ab-shadow-card}
+![notification provider](/image/en/config/notifier-provider.png){width=700}{class=ab-shadow-card}
 
 Notifications now support multiple providers. Enable the global switch, then add, edit, enable/disable, remove or test individual providers. Click **Save & restart** after changing notification settings.
 

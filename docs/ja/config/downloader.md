@@ -2,9 +2,9 @@
 
 ## WebUI
 
-![downloader](/image/config/downloader.png){width=700}{class=ab-shadow-card}
+![downloader](/image/en/config/downloader.png){width=700}{class=ab-shadow-card}
 
-![downloader type](/image/config/downloader-type.png){width=700}{class=ab-shadow-card}
+![downloader type](/image/en/config/downloader-type.png){width=700}{class=ab-shadow-card}
 
 - **ダウンローダー種類**：`qbittorrent` または `aria2`。
 - **ホスト**：Web APIまたはRPCのアドレスです。

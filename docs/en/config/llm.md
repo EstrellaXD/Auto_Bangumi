@@ -2,7 +2,7 @@
 
 The LLM parser calls a large language model to parse RSS titles when regex parsing fails or when higher-quality parsing is desired.
 
-![LLM parser](/image/config/llm-parser.png){width=700}{class=ab-shadow-card}
+![LLM parser](/image/en/config/llm-parser.png){width=700}{class=ab-shadow-card}
 
 ## Parse Mode
 
