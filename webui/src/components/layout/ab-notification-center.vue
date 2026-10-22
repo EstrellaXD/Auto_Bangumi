@@ -181,6 +181,7 @@ function onClearClick() {
     <ab-bottom-sheet
       v-if="isMobile"
       class="notification-sheet"
+      :aria-label="$t('notifications.title')"
       :show="panelOpen"
       :show-close="false"
       @update:show="onShowChange"
@@ -245,8 +246,16 @@ function onClearClick() {
   pointer-events: none;
 }
 
-.notification-sheet .ab-bottom-sheet__content {
+// 根元素同时带 .notification-sheet 与 .ab-bottom-sheet：比 ab-bottom-sheet 的
+// scoped 规则多一个类，不依赖样式表顺序。
+.notification-sheet.ab-bottom-sheet .ab-bottom-sheet__content {
   padding: 0;
+}
+
+// 抽屉内容区已可滚动，去掉列表自身的高度上限，避免嵌套滚动
+.notification-sheet .notification-list {
+  max-height: none;
+  overflow-y: visible;
 }
 
 .notification-panel {

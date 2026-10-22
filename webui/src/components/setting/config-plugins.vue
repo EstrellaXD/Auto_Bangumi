@@ -381,6 +381,7 @@ onActivated(async () => {
   display: flex;
   align-items: center;
   gap: 4px;
+  list-style: none;
   min-height: var(--touch-target);
   cursor: pointer;
   font-size: 13px;
@@ -388,6 +389,10 @@ onActivated(async () => {
   svg {
     flex-shrink: 0;
     transition: transform var(--transition-normal);
+  }
+
+  &::-webkit-details-marker {
+    display: none;
   }
 }
 

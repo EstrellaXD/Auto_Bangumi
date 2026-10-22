@@ -153,6 +153,7 @@ describe('downloader store', () => {
   it.each([
     ['/downloads/Bangumi/Frieren/Season 1/', 'Frieren / Season 1'],
     ['D:\\Downloads\\Bangumi\\Frieren\\Season 1\\', 'Frieren / Season 1'],
+    ['/downloads/Fate\\Zero/Season 1/', 'Fate\\Zero / Season 1'],
   ])(
     'should label the group with the last folders when save_path is %s',
     (savePath, expected) => {
