@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { ChevronDown } from '@lucide/vue';
 import AbAlert from '../basic/ab-alert.vue';
 import AbButton from '../basic/ab-button.vue';
 import AbField from '../basic/ab-field.vue';
@@ -276,7 +277,10 @@ onActivated(async () => {
         </p>
 
         <details class="plugin__options">
-          <summary>{{ $t('config.plugins_set.options') }}</summary>
+          <summary>
+            {{ $t('config.plugins_set.options') }}
+            <ChevronDown :size="14" />
+          </summary>
           <template v-if="plugin.config_schema">
             <PluginSchemaForm
               v-model="drafts[plugin.id]"
@@ -376,10 +380,23 @@ onActivated(async () => {
 .plugin__options summary {
   display: flex;
   align-items: center;
+  gap: 4px;
   min-height: var(--touch-target);
-  margin-bottom: var(--layout-gap);
   cursor: pointer;
   font-size: 13px;
+
+  svg {
+    flex-shrink: 0;
+    transition: transform var(--transition-normal);
+  }
+}
+
+.plugin__options[open] > summary {
+  margin-bottom: var(--layout-gap);
+
+  svg {
+    transform: rotate(180deg);
+  }
 }
 
 .plugin__options summary:focus-visible {

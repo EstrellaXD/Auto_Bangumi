@@ -62,11 +62,11 @@ export const apiSearch = {
           es.close();
           return;
         }
-        console.error('EventSource error:', err);
         // onerror also fires when the server closes the stream after a
         // successful search — only count it as a failure when the connection
         // never opened (auth/server/network problem).
         if (status.value === 'CONNECTING') {
+          console.error('EventSource error:', err);
           error.value = true;
         }
         close();

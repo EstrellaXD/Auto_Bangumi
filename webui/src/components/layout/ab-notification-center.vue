@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { NPopover } from 'naive-ui';
+import { createReusableTemplate } from '@vueuse/core';
 import { Bell, CircleAlert, CircleX, Info, Trash } from '@lucide/vue';
 import type { InboxMessage } from '@/api/notification';
 import { relativeTime } from '@/utils/relative-time';
@@ -8,6 +9,9 @@ const { t } = useMyI18n();
 const router = useRouter();
 const store = useNotificationStore();
 const { messages, unreadCount, panelOpen } = storeToRefs(store);
+// 手机上面板放进底部抽屉：贴着铃铛的浮层在窄屏两侧都放不下
+const { isMobile } = useBreakpointQuery();
+const [DefinePanelBody, PanelBody] = createReusableTemplate();
 
 // 点条目跳转的目标页面；未列出的 kind 不跳转
 const KIND_ROUTES: Record<string, string> = {
@@ -72,12 +76,86 @@ function onClearClick() {
 
 <template>
   <div class="notification-center">
+    <DefinePanelBody>
+      <div class="notification-head">
+        <span class="notification-head-title">
+          {{ $t('notifications.title') }}
+          <template v-if="unreadCount > 0">
+            · {{ $t('notifications.unread', { n: unreadCount }) }}
+          </template>
+        </span>
+        <div class="notification-head-actions">
+          <ab-button
+            v-if="unreadCount > 0"
+            variant="ghost"
+            size="sm"
+            @click="store.markAllRead()"
+          >
+            {{ $t('notifications.mark_all_read') }}
+          </ab-button>
+          <ab-button
+            v-if="messages.length > 0"
+            variant="danger"
+            size="sm"
+            @click="onClearClick"
+          >
+            {{
+              confirmClear
+                ? $t('notifications.clear_confirm')
+                : $t('notifications.clear_all')
+            }}
+          </ab-button>
+        </div>
+      </div>
+
+      <div v-if="messages.length === 0" class="notification-empty">
+        {{ $t('notifications.empty') }}
+      </div>
+
+      <div v-else class="notification-list">
+        <div
+          v-for="msg in messages"
+          :key="msg.id"
+          class="notification-item"
+          :class="{ 'notification-item--unread': !msg.read }"
+          role="button"
+          tabindex="0"
+          @click="onItemClick(msg)"
+          @keydown.enter="onItemClick(msg)"
+        >
+          <div class="notification-sev" :class="`is-${msg.severity}`">
+            <Component :is="severityIcon(msg)" :size="14" />
+          </div>
+          <div class="notification-content">
+            <div class="notification-title">
+              {{ store.titleOf(msg) }}
+              <span v-if="msg.count > 1" class="notification-count">×{{ msg.count }}</span>
+            </div>
+            <div class="notification-body">
+              {{ store.bodyOf(msg) }}
+            </div>
+            <div class="notification-meta">
+              {{ relativeTime(t, msg.updated_at) }}
+            </div>
+          </div>
+          <ab-icon-button
+            size="sm"
+            class="notification-delete"
+            :label="$t('notifications.delete')"
+            @click.stop="store.remove(msg.id)"
+          >
+            <Trash :size="13" />
+          </ab-icon-button>
+        </div>
+      </div>
+    </DefinePanelBody>
+
     <NPopover
       trigger="click"
       placement="bottom-end"
       raw
       :show-arrow="false"
-      :show="panelOpen"
+      :show="panelOpen && !isMobile"
       @update:show="onShowChange"
     >
       <template #trigger>
@@ -96,79 +174,19 @@ function onClearClick() {
       </template>
 
       <div class="notification-panel" @keydown.esc="closeByEsc">
-        <div class="notification-head">
-          <span class="notification-head-title">
-            {{ $t('notifications.title') }}
-            <template v-if="unreadCount > 0">
-              · {{ $t('notifications.unread', { n: unreadCount }) }}
-            </template>
-          </span>
-          <div class="notification-head-actions">
-            <ab-button
-              v-if="unreadCount > 0"
-              variant="ghost"
-              size="sm"
-              @click="store.markAllRead()"
-            >
-              {{ $t('notifications.mark_all_read') }}
-            </ab-button>
-            <ab-button
-              v-if="messages.length > 0"
-              variant="danger"
-              size="sm"
-              @click="onClearClick"
-            >
-              {{
-                confirmClear
-                  ? $t('notifications.clear_confirm')
-                  : $t('notifications.clear_all')
-              }}
-            </ab-button>
-          </div>
-        </div>
-
-        <div v-if="messages.length === 0" class="notification-empty">
-          {{ $t('notifications.empty') }}
-        </div>
-
-        <div v-else class="notification-list">
-          <div
-            v-for="msg in messages"
-            :key="msg.id"
-            class="notification-item"
-            :class="{ 'notification-item--unread': !msg.read }"
-            role="button"
-            tabindex="0"
-            @click="onItemClick(msg)"
-            @keydown.enter="onItemClick(msg)"
-          >
-            <div class="notification-sev" :class="`is-${msg.severity}`">
-              <Component :is="severityIcon(msg)" :size="14" />
-            </div>
-            <div class="notification-content">
-              <div class="notification-title">
-                {{ store.titleOf(msg) }}
-                <span v-if="msg.count > 1" class="notification-count">×{{ msg.count }}</span>
-              </div>
-              <div class="notification-body">
-                {{ store.bodyOf(msg) }}
-              </div>
-              <div class="notification-meta">
-                {{ relativeTime(t, msg.updated_at) }}
-              </div>
-            </div>
-            <ab-icon-button
-              size="sm"
-              class="notification-delete"
-              :label="$t('notifications.delete')"
-              @click.stop="store.remove(msg.id)"
-            >
-              <Trash :size="13" />
-            </ab-icon-button>
-          </div>
-        </div>
+        <PanelBody />
       </div>
     </NPopover>
+
+    <ab-bottom-sheet
+      v-if="isMobile"
+      class="notification-sheet"
+      :show="panelOpen"
+      :show-close="false"
+      @update:show="onShowChange"
+    >
+      <PanelBody />
+    </ab-bottom-sheet>
   </div>
 </template>
 
@@ -225,6 +243,10 @@ function onClearClick() {
   top: 0;
   right: 0;
   pointer-events: none;
+}
+
+.notification-sheet .ab-bottom-sheet__content {
+  padding: 0;
 }
 
 .notification-panel {

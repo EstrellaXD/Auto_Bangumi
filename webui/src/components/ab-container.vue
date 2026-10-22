@@ -37,7 +37,7 @@ const { title = 'title', flush = false } = defineProps<{
   align-items: center;
   justify-content: space-between;
   padding: 0 14px;
-  height: 34px;
+  min-height: 34px;
   background: transparent;
   color: var(--color-text-secondary);
   border-bottom: 1px solid var(--color-border);

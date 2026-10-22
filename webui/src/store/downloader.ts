@@ -44,7 +44,7 @@ export const useDownloaderStore = defineStore('downloader', () => {
     const seasonOnlyRegex = /^(Season\s*\d+|S\d+|第\d+季)$/i;
 
     for (const [savePath, items] of map) {
-      const parts = savePath.replace(/\/$/, '').split('/').filter(Boolean);
+      const parts = savePath.split(/[\\/]/).filter(Boolean);
       let name = parts[parts.length - 1] || savePath;
       // If the last part is just a season folder, include the parent folder too
       if (parts.length >= 2 && seasonOnlyRegex.test(name)) {

@@ -224,6 +224,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 8px;
   flex: 1;
+  min-width: 0;
   height: 40px;
   padding: 0 12px;
   border-radius: var(--radius-md);
@@ -243,6 +244,10 @@ onUnmounted(() => {
   &:focus-visible {
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
+  }
+
+  svg {
+    flex-shrink: 0;
   }
 }
 

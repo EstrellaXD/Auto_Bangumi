@@ -448,6 +448,10 @@ const tuningItems = computed(() => [
   font-size: 12px;
   transition: background-color var(--transition-normal),
     border-color var(--transition-normal);
+
+  svg {
+    flex-shrink: 0;
+  }
 }
 
 .llm-config {

@@ -149,6 +149,19 @@ describe('downloader store', () => {
 
     expect(errorMock).toHaveBeenCalledTimes(1);
   });
+
+  it.each([
+    ['/downloads/Bangumi/Frieren/Season 1/', 'Frieren / Season 1'],
+    ['D:\\Downloads\\Bangumi\\Frieren\\Season 1\\', 'Frieren / Season 1'],
+  ])(
+    'should label the group with the last folders when save_path is %s',
+    (savePath, expected) => {
+      const store = useDownloaderStore();
+      store.torrents = [{ ...torrent('a', 'home'), save_path: savePath, size: 0 }];
+
+      expect(store.groups[0].name).toBe(expected);
+    }
+  );
 });
 
 describe('hasConfiguredDownloader', () => {

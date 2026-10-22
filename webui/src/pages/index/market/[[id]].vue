@@ -502,6 +502,23 @@ function permissionLabel(id: string) {
   overflow: auto;
 }
 
+.market__tabs {
+  @include forMobile {
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+
+    :deep(.ab-segmented-tab) {
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+  }
+}
+
 .market__top {
   display: grid;
   grid-template-areas:
@@ -629,6 +646,7 @@ function permissionLabel(id: string) {
   grid-template-columns: 1fr auto;
   align-items: baseline;
   gap: 2px 10px;
+  flex-shrink: 0;
   min-height: var(--touch-target);
   padding: 10px 12px;
   border-bottom: 1px solid var(--color-border);

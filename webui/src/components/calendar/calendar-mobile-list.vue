@@ -75,7 +75,7 @@ function posterSrc(link: string | null | undefined): string {
             </div>
             <div class="calendar-row-info">
               <div class="calendar-row-title">
-                {{ group.primary.official_title }}
+                <span class="calendar-row-title-text">{{ group.primary.official_title }}</span>
                 <span v-if="group.rules.length > 1" class="calendar-row-badge">
                   {{ group.rules.length }}
                 </span>
@@ -216,11 +216,17 @@ function posterSrc(link: string | null | undefined): string {
   font-size: 14px;
   font-weight: 500;
   color: var(--color-text);
+  display: flex;
+  align-items: center;
+  margin-bottom: 4px;
+  transition: color var(--transition-normal);
+}
+
+.calendar-row-title-text {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  margin-bottom: 4px;
-  transition: color var(--transition-normal);
 }
 
 .calendar-row-meta {
@@ -230,6 +236,7 @@ function posterSrc(link: string | null | undefined): string {
 }
 
 .calendar-row-badge {
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
