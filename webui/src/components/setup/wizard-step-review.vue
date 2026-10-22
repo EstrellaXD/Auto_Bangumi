@@ -162,7 +162,8 @@ function maskPassword(pwd: string): string {
 .review-item {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  // 长值换行时标签对齐值的首行
+  align-items: baseline;
   gap: 12px;
   padding: 4px 0;
   font-size: 12px;

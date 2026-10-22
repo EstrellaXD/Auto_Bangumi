@@ -179,7 +179,7 @@ function pinLeaving(el: Element) {
           :description="$t('homepage.empty.subtitle')"
         >
           <template #action>
-            <ol class="empty-steps">
+            <ol class="empty-steps" role="list">
               <li v-for="n in 3" :key="n">
                 <span class="empty-steps-title">{{
                   $t(`homepage.empty.step${n}_title`)

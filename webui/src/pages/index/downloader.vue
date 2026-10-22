@@ -7,6 +7,7 @@ import {
 } from 'naive-ui';
 import AbProgress from '@/components/basic/ab-progress.vue';
 import AbTag from '@/components/basic/ab-tag.vue';
+import { useElementSize, useMediaQuery } from '@vueuse/core';
 import { useConfirm } from '@/hooks/useConfirm';
 import type { QbTorrentInfo, TorrentGroup } from '#/downloader';
 import { useDownloaderInstances } from '@/hooks/useDownloaderInstances';
@@ -183,6 +184,8 @@ function onCheckedChange(keys: DataTableRowKey[]) {
 const downloaders = useDownloaderInstances();
 
 const { isMobile, isTablet } = useBreakpointQuery();
+// 平板窄档（640–767px）放不下下载速度列
+const isNarrowTablet = useMediaQuery('(max-width: 767px)');
 
 function progressCell(row: QbTorrentInfo) {
   return h(AbProgress, {
@@ -215,6 +218,20 @@ function mobileNameCell(row: QbTorrentInfo) {
   ]);
 }
 
+// 各列定宽 + 名称列下限
+function columnsWidth(cols: DataTableColumns<Row>) {
+  return cols.reduce((sum, col) => {
+    if (col.type === 'selection') return sum + 40;
+    const c = col as { width?: number; minWidth?: number };
+    return sum + (c.width ?? c.minWidth ?? 0);
+  }, 0);
+}
+
+// 桌面窄档（1024–1279px，或侧栏展开）放不下全部列：按可用宽度依次去掉
+// 做种/下载、ETA、上传速度，不出现没有提示的横向滚动
+const contentRef = ref<HTMLElement | null>(null);
+const { width: contentWidth } = useElementSize(contentRef);
+
 const tableColumnsValue = computed<DataTableColumns<Row>>(() => {
   const nameCol: DataTableColumns<Row>[number] = {
     title: t('downloader.torrent.name'),
@@ -222,7 +239,8 @@ const tableColumnsValue = computed<DataTableColumns<Row>>(() => {
     // CSS 省略号 + title：不用逐行测量宽度的 tooltip
     ellipsis: !isMobile.value,
     className: 'name-col',
-    minWidth: 200,
+    // 平板收紧名称与进度列，各列总宽不超过内容区（768px 时 672px）
+    minWidth: isTablet.value ? 150 : 200,
     colSpan: (row: Row): number =>
       isGroupRow(row) ? tableColumnsValue.value.length - 1 : 1,
     cellProps: (row) => ({
@@ -239,13 +257,13 @@ const tableColumnsValue = computed<DataTableColumns<Row>>(() => {
   };
   if (isMobile.value) return [{ type: 'selection' }, nameCol];
 
-  return [
+  let cols: DataTableColumns<Row> = [
     { type: 'selection' },
     nameCol,
     {
       title: t('downloader.torrent.progress'),
       key: 'progress',
-      width: 140,
+      width: isTablet.value ? 120 : 140,
       render: torrentCell(progressCell),
     },
     {
@@ -261,13 +279,17 @@ const tableColumnsValue = computed<DataTableColumns<Row>>(() => {
       ...numCol,
       render: torrentCell((row) => formatSize(row.size)),
     },
-    {
-      title: t('downloader.torrent.dlspeed'),
-      key: 'dlspeed',
-      width: 110,
-      ...numCol,
-      render: torrentCell((row) => formatSpeed(row.dlspeed)),
-    },
+    ...(isNarrowTablet.value
+      ? []
+      : [
+          {
+            title: t('downloader.torrent.dlspeed'),
+            key: 'dlspeed',
+            width: 110,
+            ...numCol,
+            render: torrentCell((row) => formatSpeed(row.dlspeed)),
+          },
+        ]),
     // 平板宽度不够：去掉上传速度、ETA、做种/下载
     ...(isTablet.value
       ? []
@@ -309,17 +331,16 @@ const tableColumnsValue = computed<DataTableColumns<Row>>(() => {
         ]
       : []),
   ];
+  for (const key of ['peers', 'eta', 'upspeed']) {
+    if (!contentWidth.value || columnsWidth(cols) <= contentWidth.value) break;
+    cols = cols.filter((col) => (col as { key?: string }).key !== key);
+  }
+  return cols;
 });
 
-// 表格最小宽度 = 各列定宽 + 名称列下限：WebKit 在 table-layout: fixed 下忽略
-// <col> 的 min-width，不设 scroll-x 时名称列会被算成 0
-const tableMinWidth = computed(() =>
-  tableColumnsValue.value.reduce((sum, col) => {
-    if (col.type === 'selection') return sum + 40;
-    const c = col as { width?: number; minWidth?: number };
-    return sum + (c.width ?? c.minWidth ?? 0);
-  }, 0)
-);
+// 表格最小宽度：WebKit 在 table-layout: fixed 下忽略 <col> 的 min-width，
+// 不设 scroll-x 时名称列会被算成 0
+const tableMinWidth = computed(() => columnsWidth(tableColumnsValue.value));
 </script>
 
 <template>
@@ -330,7 +351,7 @@ const tableMinWidth = computed(() =>
         :description="$t('downloader.empty.subtitle')"
       >
         <template #action>
-          <ol class="empty-steps">
+          <ol class="empty-steps" role="list">
             <li v-for="n in 3" :key="n">
               <span class="empty-steps-title">{{
                 $t(`downloader.empty.step${n}_title`)
@@ -345,7 +366,7 @@ const tableMinWidth = computed(() =>
       </ab-empty>
     </div>
 
-    <div v-else class="downloader-content">
+    <div v-else ref="contentRef" class="downloader-content">
       <div v-if="groups.length === 0 && !loading" class="downloader-empty">
         {{ $t('downloader.empty_torrents') }}
       </div>
@@ -370,28 +391,31 @@ const tableMinWidth = computed(() =>
         @update:expanded-row-keys="onExpandedChange"
       />
 
-      <!-- 操作栏在内容列底部占位（不 fixed）：不遮表格、不压底栏，无需预留 padding -->
+      <!-- 操作栏在内容列底部占位（不 fixed）：不遮表格、不压底栏，无需预留 padding；
+           外层 grid 行高 0fr↔1fr 过渡，表格高度随之平滑变化 -->
       <Transition name="action-bar">
-        <div v-if="selectedKeys.size > 0" class="action-bar">
-          <span class="action-bar-count">
-            {{ selectedKeys.size }} {{ $t('downloader.selected') }}
-          </span>
-          <div class="action-bar-buttons">
-            <ab-button variant="primary" size="sm" @click="resumeSelected">
-              {{
-                $t('downloader.action.resume')
-              }}
-            </ab-button>
-            <ab-button variant="secondary" size="sm" @click="pauseSelected">
-              {{
-                $t('downloader.action.pause')
-              }}
-            </ab-button>
-            <ab-button variant="danger" size="sm" @click="onDeleteSelected">
-              {{
-                $t('downloader.action.delete')
-              }}
-            </ab-button>
+        <div v-if="selectedKeys.size > 0" class="action-bar-wrap">
+          <div class="action-bar-clip">
+            <div class="action-bar">
+              <span class="action-bar-count">
+                {{ selectedKeys.size }} {{ $t('downloader.selected') }}
+              </span>
+              <div class="action-bar-buttons">
+                <ab-button variant="primary" size="sm" @click="resumeSelected">
+                  {{ $t('downloader.action.resume') }}
+                </ab-button>
+                <ab-button variant="secondary" size="sm" @click="pauseSelected">
+                  {{ $t('downloader.action.pause') }}
+                </ab-button>
+                <ab-button
+                  variant="danger"
+                  size="sm"
+                  @click="onDeleteSelected"
+                >
+                  {{ $t('downloader.action.delete') }}
+                </ab-button>
+              </div>
+            </div>
           </div>
         </div>
       </Transition>
@@ -413,7 +437,6 @@ const tableMinWidth = computed(() =>
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  gap: 12px;
 }
 
 // flex-height：表格填满页面剩余高度，虚拟滚动在表体内进行
@@ -497,9 +520,22 @@ const tableMinWidth = computed(() =>
   font-size: 14px;
 }
 
-.action-bar {
+.action-bar-wrap {
   flex-shrink: 0;
+  display: grid;
+  grid-template-rows: 1fr;
+}
+
+.action-bar-clip {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.action-bar {
   align-self: center;
+  // 与表格的间距用 margin 放进可收起的格子里，出现/收起时一并过渡
+  margin-top: 12px;
   display: flex;
   align-items: center;
   gap: 16px;
@@ -539,13 +575,18 @@ const tableMinWidth = computed(() =>
 
 .action-bar-enter-active,
 .action-bar-leave-active {
-  transition: opacity var(--transition-normal),
-    transform var(--transition-normal);
+  transition: grid-template-rows var(--transition-normal),
+    opacity var(--transition-normal);
+
+  // 只在过渡中裁切，静止时不裁掉操作栏阴影
+  .action-bar-clip {
+    overflow: hidden;
+  }
 }
 
 .action-bar-enter-from,
 .action-bar-leave-to {
+  grid-template-rows: 0fr;
   opacity: 0;
-  transform: translateY(4px);
 }
 </style>

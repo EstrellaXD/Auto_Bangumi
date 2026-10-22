@@ -14,7 +14,7 @@ const { url } = storeToRefs(usePlayerStore());
         :description="$t('player.empty.subtitle')"
       >
         <template #action>
-          <ol class="empty-steps">
+          <ol class="empty-steps" role="list">
             <li v-for="n in 3" :key="n">
               <span class="empty-steps-title">{{
                 $t(`player.empty.step${n}_title`)

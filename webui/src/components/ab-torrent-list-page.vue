@@ -235,6 +235,8 @@ onActivated(load);
   &--selected:hover {
     background: color-mix(in srgb, var(--color-primary) 12%, transparent);
     outline: 1px solid var(--color-primary);
+    // 首行贴着滚动容器顶边，外描边会被裁掉，改为内描边
+    outline-offset: -1px;
   }
 }
 

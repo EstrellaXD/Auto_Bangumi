@@ -319,12 +319,20 @@ onDeactivated(() => {
 }
 
 // 筛选项不换行：放不下时整组单独占一行并横向滚动，
-// 搜索框与操作按钮落到下一行，不出现 3+1 的零散换行
+// 搜索框与操作按钮落到下一行，不出现 3+1 的零散换行；
+// 手机上 4 个筛选项排成 2×2，全部可见，不靠横向滚动
 .filter-chips {
   display: flex;
   gap: 6px;
   overflow-x: auto;
   scrollbar-width: none;
+
+  @media (max-width: 639px) {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    flex-basis: 100%;
+    overflow: visible;
+  }
 }
 
 .filter-chip {

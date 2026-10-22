@@ -37,7 +37,10 @@ const selectValue = computed<string | number | null>({
 </script>
 
 <template>
-  <div class="setting-item">
+  <div
+    class="setting-item"
+    :class="{ 'setting-item--tags': type === 'dynamic-tags' && data?.length }"
+  >
     <AbField
       :label="label"
       :description="description"
@@ -102,6 +105,20 @@ const selectValue = computed<string | number | null>({
   height: 1px;
   background: var(--color-border);
   margin-top: 12px;
+}
+
+// 有标签时控件分两行（标签行 + 输入框）：标签名对齐首行，不再居中于整块。
+// 行高取 ab-tag 的高度（24px），使文字与标签行垂直居中
+.setting-item--tags {
+  @include forTablet {
+    :deep(.ab-field-main) {
+      align-items: flex-start;
+    }
+
+    :deep(.ab-field-label) {
+      line-height: 24px;
+    }
+  }
 }
 
 // 与 ab-input 同宽（200px），各行控件左缘对齐；标签在框内换行

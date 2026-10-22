@@ -367,43 +367,47 @@ function permissionLabel(id: string) {
     </template>
 
     <div v-else-if="catalog" class="market__panes">
-      <nav
-        v-if="!showDetail"
-        class="market__list"
-        :aria-label="$t('market.list_label')"
-      >
-        <RouterLink
-          v-for="entry in visible"
-          :key="entry.id"
-          :to="`/market/${encodeURIComponent(entry.id)}`"
-          :replace="!isMobile"
-          class="row"
-          :class="{ 'row--on': !isMobile && selected?.id === entry.id }"
-          :aria-current="
-            !isMobile && selected?.id === entry.id ? 'true' : undefined
-          "
+      <!-- 手机上从详情返回时列表按 v-if 重新挂载：与进入详情同样的淡入上移；
+           不加 appear，从别的页面进来时只走路由过渡 -->
+      <Transition name="market-pane">
+        <nav
+          v-if="!showDetail"
+          class="market__list"
+          :aria-label="$t('market.list_label')"
         >
-          <span class="row__name">{{ entry.name || entry.id }}</span>
-          <span class="row__version" :title="entry.version">{{ entry.version }}</span>
-          <span class="row__state">
-            <span
-              class="mark"
-              :class="`mark--${entryState(entry)}`"
-              aria-hidden="true"
-            />
-            {{ stateLabel(entry) }}
-          </span>
-          <span class="row__author">{{ entry.authors.join(', ') }}</span>
-        </RouterLink>
-        <ab-empty
-          v-if="!visible.length"
-          :title="
-            query.trim()
-              ? $t('market.no_match', { query: query.trim() })
-              : $t('market.no_filter_match')
-          "
-        />
-      </nav>
+          <RouterLink
+            v-for="entry in visible"
+            :key="entry.id"
+            :to="`/market/${encodeURIComponent(entry.id)}`"
+            :replace="!isMobile"
+            class="row"
+            :class="{ 'row--on': !isMobile && selected?.id === entry.id }"
+            :aria-current="
+              !isMobile && selected?.id === entry.id ? 'true' : undefined
+            "
+          >
+            <span class="row__name">{{ entry.name || entry.id }}</span>
+            <span class="row__version" :title="entry.version">{{ entry.version }}</span>
+            <span class="row__state">
+              <span
+                class="mark"
+                :class="`mark--${entryState(entry)}`"
+                aria-hidden="true"
+              />
+              {{ stateLabel(entry) }}
+            </span>
+            <span class="row__author">{{ entry.authors.join(', ') }}</span>
+          </RouterLink>
+          <ab-empty
+            v-if="!visible.length"
+            :title="
+              query.trim()
+                ? $t('market.no_match', { query: query.trim() })
+                : $t('market.no_filter_match')
+            "
+          />
+        </nav>
+      </Transition>
 
       <section
         v-if="selected && (!isMobile || showDetail)"
@@ -573,6 +577,12 @@ function permissionLabel(id: string) {
       white-space: nowrap;
     }
   }
+
+  // 平板以上底线由 .market__top::after 画满整行；这里只留透明边框占位
+  @include forTablet {
+    border-bottom-color: transparent;
+    background: none;
+  }
 }
 
 // 手机：标题 | 目录状态 / 搜索 | 状态 / 分类；
@@ -593,6 +603,17 @@ function permissionLabel(id: string) {
       'tabs meta meta';
     grid-template-columns: minmax(0, 1fr) auto 140px;
     gap: 8px 12px;
+
+    // 分类底线横跨整行（含目录状态），不随目录状态宽度伸缩；
+    // order 让它先画，选中下划线盖在上面
+    &:has(.market__tabs)::after {
+      content: '';
+      grid-column: 1 / -1;
+      grid-row: 2;
+      align-self: end;
+      order: -1;
+      border-bottom: 1px solid var(--color-border);
+    }
   }
 }
 
@@ -601,9 +622,9 @@ function permissionLabel(id: string) {
   box-sizing: content-box;
   height: 27px;
 
-  // 桌面画 ab-segmented 的底线；手机/平板已由 .market__tabs 的背景线画出
+  // 桌面与 ab-segmented 一样留 1px 底边；线由 .market__top::after 画
   @include forDesktop {
-    border-bottom: 1px solid var(--color-border);
+    border-bottom: 1px solid transparent;
   }
 
   @include forTouch {
@@ -717,11 +738,11 @@ function permissionLabel(id: string) {
   @include forTablet {
     border-right: 1px solid var(--color-border);
   }
+}
 
-  // 手机上从详情返回时列表按 v-if 重新挂载：与进入详情同样的淡入上移
-  @include forMobile {
-    animation: detail-enter var(--transition-normal) both;
-  }
+// 只在手机上从详情返回列表时触发（见模板里的 Transition）
+.market-pane-enter-active {
+  animation: detail-enter var(--transition-normal) both;
 }
 
 // 右列最多占 45%，名称至少保留一半以上
@@ -868,12 +889,12 @@ function permissionLabel(id: string) {
   margin: 0;
   font-size: 13px;
 
-  @include forMobile {
-    grid-template-columns: minmax(64px, 7.5em) 1fr;
-  }
-
   dt {
     color: var(--color-text-secondary);
+
+    @include forMobile {
+      max-width: 7.5em;
+    }
   }
 
   dd {

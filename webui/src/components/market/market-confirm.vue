@@ -168,12 +168,12 @@ function permissionLabel(id: string) {
   margin: 0;
   font-size: 13px;
 
-  @include forMobile {
-    grid-template-columns: minmax(64px, 7.5em) 1fr;
-  }
-
   dt {
     color: var(--color-text-secondary);
+
+    @include forMobile {
+      max-width: 7.5em;
+    }
   }
 
   dd {

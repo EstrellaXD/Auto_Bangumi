@@ -20,13 +20,18 @@ const ui = computed<PluginUiSlot | undefined>((prev) =>
         (s) => s.slot === 'page' && s.plugin_id === route.params.id
       )
 );
+// 同上：离场时保留上一个 id，标题不在淡出中变化
+const pluginId = computed<string>((prev) =>
+  route.name !== 'Plugin' ? (prev ?? '') : route.params.id
+);
 </script>
 
 <template>
   <div class="page-plugin">
     <!-- 手机上 ab-page-title 隐藏，页面自己给标题 -->
-    <h1 v-if="isMobile && ui" class="page-plugin__title">
-      {{ slotTitle(ui, lang) }}
+    <!-- 与 index.vue 的 pageTitle 一致：插件不存在时用 id 作标题 -->
+    <h1 v-if="isMobile && (ui || loaded || loadFailed)" class="page-plugin__title">
+      {{ ui ? slotTitle(ui, lang) : pluginId }}
     </h1>
     <PluginSlot v-if="ui" :key="`${ui.plugin_id}:${ui.element}`" :ui="ui" />
     <ab-empty

@@ -1030,6 +1030,12 @@ function handleFilterClick(
     max-height: calc(100vh - 100px);
   }
 
+  // 触屏：筛选区随结果一起滚动，不再常驻占掉半个结果区；搜索栏吸顶
+  @include forTouch {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
   @include forDesktop {
     max-height: calc(100dvh - 120px);
 
@@ -1048,6 +1054,13 @@ function handleFilterClick(
   border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
   transition: border-color var(--transition-normal);
+
+  @include forTouch {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--color-surface);
+  }
 
   @include forTablet {
     gap: 12px;
@@ -1464,6 +1477,11 @@ function handleFilterClick(
   flex: 1;
   overflow-y: auto;
   padding: 16px;
+
+  @include forTouch {
+    flex: none;
+    overflow-y: visible;
+  }
 }
 
 .empty-state {
