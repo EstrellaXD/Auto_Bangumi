@@ -219,7 +219,7 @@ const tableColumnsValue = computed<DataTableColumns<Row>>(() => [
   {
     title: t('downloader.torrent.status'),
     key: 'state',
-    width: 100,
+    width: 130,
     render: torrentCell((row) => {
       return h(AbTag, {
         type: stateType(row.state),
