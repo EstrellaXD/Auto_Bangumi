@@ -8,7 +8,7 @@ title: RSS Management
 
 The RSS Manager page displays all your RSS subscriptions with their connection status.
 
-![RSS Manager](/image/feature/rss-manager.png)
+![RSS Manager](/image/en/feature/rss-manager.png)
 
 ### Connection Status
 

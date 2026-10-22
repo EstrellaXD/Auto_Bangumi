@@ -2,9 +2,9 @@
 
 ## WebUI
 
-![downloader](/image/config/downloader.png){width=700}{class=ab-shadow-card}
+![downloader](/image/en/config/downloader.png){width=700}{class=ab-shadow-card}
 
-![downloader type](/image/config/downloader-type.png){width=700}{class=ab-shadow-card}
+![downloader type](/image/en/config/downloader-type.png){width=700}{class=ab-shadow-card}
 
 - **Downloader Type**: `qbittorrent` or `aria2`.
 - **Host**: Web API or RPC address. See [Downloader address](#downloader-address).

@@ -2,7 +2,7 @@
 
 ## WebUI
 
-![program](/image/config/program.png){width=700}{class=ab-shadow-card}
+![program](/image/en/config/program.png){width=700}{class=ab-shadow-card}
 
 The Config page has a searchable section rail on the left. `program` and `log` are global settings; after changing them, click **Save & restart** at the bottom.
 

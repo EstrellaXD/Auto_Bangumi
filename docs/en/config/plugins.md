@@ -6,6 +6,8 @@ From 4.0, downloaders, rename methods, notification channels, search sites and o
 
 Manage plugins under **Settings → Plugins**:
 
+![Plugin settings](/image/en/config/plugins.png)
+
 - **Allow unsigned plugins**: plugins from the local directory (`config/plugins/local/`) or from pip are unsigned. They load only when this switch is on. Plugins run inside the AutoBangumi process with full privileges. Enable only plugins that you trust.
 - **Enabled**: the switch on each plugin card.
 - **Options**: expand the card, fill in the form that the plugin declares, then click **Save options**.

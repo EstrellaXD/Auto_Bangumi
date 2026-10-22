@@ -2,9 +2,9 @@
 
 ## WebUI
 
-![notification](/image/config/notifier.png){width=700}{class=ab-shadow-card}
+![notification](/image/en/config/notifier.png){width=700}{class=ab-shadow-card}
 
-![notification provider](/image/config/notifier-provider.png){width=700}{class=ab-shadow-card}
+![notification provider](/image/en/config/notifier-provider.png){width=700}{class=ab-shadow-card}
 
 通知は複数のproviderに対応しています。全体スイッチを有効にした後、個別providerを追加、編集、有効/無効化、削除、テストできます。変更後は **保存して再起動** をクリックしてください。
 

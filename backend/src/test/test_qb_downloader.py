@@ -1209,6 +1209,17 @@ class TestTorrentExists:
         assert await qb.torrent_exists("abc123") is None
 
 
+class TestTorrentsFiles:
+    async def test_torrents_files_missing_task_returns_empty_list(self):
+        qb = QbDownloader(host="localhost:8080", username="u", password="p", ssl=False)
+        qb._client = AsyncMock()
+        response = MagicMock(status_code=404, text="Not Found")
+        response.json.side_effect = ValueError("not json")
+        qb._client.request = AsyncMock(return_value=response)
+
+        assert await qb.torrents_files("gone") == []
+
+
 # ---------------------------------------------------------------------------
 # torrents_delete (#1046)
 # ---------------------------------------------------------------------------

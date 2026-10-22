@@ -1,6 +1,6 @@
 # ソフトウェア更新
 
-![update](/image/config/update.png){width=700}{class=ab-shadow-card}
+![update](/image/en/config/update.png){width=700}{class=ab-shadow-card}
 
 ソフトウェア更新パネルでは、AutoBangumiの更新確認、適用、ロールバックができます。
 

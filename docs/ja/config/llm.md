@@ -2,7 +2,7 @@
 
 LLMパーサーは、正規表現解析が失敗した場合やより高品質な解析が必要な場合に、大規模言語モデルでRSSタイトルを解析します。
 
-![LLM parser](/image/config/llm-parser.png){width=700}{class=ab-shadow-card}
+![LLM parser](/image/en/config/llm-parser.png){width=700}{class=ab-shadow-card}
 
 ## 解析モード
 

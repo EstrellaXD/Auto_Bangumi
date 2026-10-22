@@ -1,6 +1,6 @@
 # Passkey Settings
 
-![passkey](/image/config/passkey.png){width=700}{class=ab-shadow-card}
+![passkey](/image/en/config/passkey.png){width=700}{class=ab-shadow-card}
 
 Passkey settings manage WebAuthn / Passkey credentials for the current account.
 

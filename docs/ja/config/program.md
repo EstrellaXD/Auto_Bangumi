@@ -2,7 +2,7 @@
 
 ## WebUI
 
-![program](/image/config/program.png){width=700}{class=ab-shadow-card}
+![program](/image/en/config/program.png){width=700}{class=ab-shadow-card}
 
 設定ページ左側のレールから検索とセクション移動ができます。`program` と `log` はグローバル設定です。変更後は下部の **保存して再起動** をクリックしてください。
 

@@ -8,7 +8,7 @@ title: RSS管理
 
 RSSマネージャーページには、すべてのRSS購読と接続ステータスが表示されます。
 
-![RSS Manager](/image/feature/rss-manager.png)
+![RSS Manager](/image/en/feature/rss-manager.png)
 
 ### 接続ステータス
 

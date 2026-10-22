@@ -2,7 +2,7 @@
 
 ## WebUI
 
-![manager](/image/config/manager.png){width=700}{class=ab-shadow-card}
+![manager](/image/en/config/manager.png){width=700}{class=ab-shadow-card}
 
 - **Enable**: enables file organization and rename behavior.
 - **Rename Method**:

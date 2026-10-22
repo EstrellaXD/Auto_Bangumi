@@ -318,6 +318,15 @@ class QbDownloader:
     @qb_connect_failed_wait
     async def torrents_files(self, torrent_hash: str):
         resp = await self._get("torrents/files", params={"hash": torrent_hash})
+        # 任务在 info 与 files 两次请求之间被删除时 qB 返回 404 纯文本：按无文件处理，
+        # 只跳过这一个任务，不让整轮重命名失败
+        if resp.status_code >= 300:
+            logger.warning(
+                "Could not list files of qBittorrent task %s: HTTP %s",
+                torrent_hash,
+                resp.status_code,
+            )
+            return []
         return resp.json()
 
     async def _urls_already_added(self, torrent_urls) -> bool:

@@ -34,7 +34,7 @@
 - **查看** 所有已配置的搜索源
 - **添加** 新搜索源，使用"添加源"按钮
 - **编辑** 现有源的 URL
-- **删除** 自定义源（默认源 mikan、nyaa、dmhy 不能删除）
+- **删除** 自定义源（默认源 mikan、anibt、nyaa、dmhy 不能删除）
 
 ### URL 模板格式
 
@@ -54,6 +54,7 @@ https://example.com/rss/search?q=%s
 | 源 | URL 模板 |
 |----|----------|
 | mikan | `https://mikanani.me/RSS/Search?searchstr=%s` |
+| anibt | `https://anibt.net/rss/magnets.xml?q=%s` |
 | nyaa | `https://nyaa.si/?page=rss&q=%s&c=0_0&f=0` |
 | dmhy | `http://dmhy.org/topics/rss/rss.xml?keyword=%s` |
 
