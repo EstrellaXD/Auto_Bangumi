@@ -30,6 +30,12 @@ const { title = 'title', flush = false } = defineProps<{
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
   transition: border-color var(--transition-normal);
+
+  // 正文/页脚的方角底色会盖住圆角描边：最后一块跟着卡片圆角。
+  // 不用 overflow: hidden，否则卡片边缘的焦点环和定位元素会被裁掉
+  > :last-child {
+    border-radius: 0 0 calc(var(--radius-md) - 1px) calc(var(--radius-md) - 1px);
+  }
 }
 
 .container-header {
@@ -44,6 +50,11 @@ const { title = 'title', flush = false } = defineProps<{
   user-select: none;
   transition: color var(--transition-normal),
     border-color var(--transition-normal);
+
+  // 触屏按钮 44px 高，上下留白，不贴住头部边框
+  @include forTouch {
+    padding-block: 6px;
+  }
 }
 
 .container-title {

@@ -112,7 +112,7 @@ describe('plugin-schema-form validation', () => {
     [{ url: 'x', n: 0 }, 'config.plugins_set.field_min'],
     [{ url: 'x', n: 11 }, 'config.plugins_set.field_max'],
     [{ url: 'x', n: 5 }, null],
-  ])('should show the error for %j', (model, error) => {
+  ])('should show the error for %j', async (model, error) => {
     const wrapper = mountForm(
       {
         properties: {
@@ -123,6 +123,9 @@ describe('plugin-schema-form validation', () => {
       },
       model
     );
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+    for (const field of wrapper.findAll('.ab-field'))
+      await field.trigger('focusout');
     const alert = wrapper.find('[role="alert"]');
     if (error) expect(alert.text()).toBe(error);
     else expect(alert.exists()).toBe(false);

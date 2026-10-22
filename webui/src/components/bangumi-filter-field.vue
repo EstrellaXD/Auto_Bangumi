@@ -1,5 +1,6 @@
 <script lang="ts" setup>
-import { NDynamicTags } from 'naive-ui';
+import AbField from './basic/ab-field.vue';
+import AbTagsInput from './basic/ab-tags-input.vue';
 
 defineProps<{
   modelValue: string[];
@@ -11,63 +12,24 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="advanced-row advanced-row--tags">
-    <label class="advanced-label">{{ $t('homepage.rule.filter') }}</label>
-    <div class="advanced-control filter-tags">
-      <NDynamicTags
-        :value="modelValue"
-        size="small"
-        @update:value="emit('update:modelValue', $event)"
+  <AbField :label="$t('homepage.rule.filter')">
+    <div class="filter-tags">
+      <AbTagsInput
+        :model-value="modelValue"
+        :aria-label="$t('homepage.rule.filter')"
+        @update:model-value="emit('update:modelValue', $event)"
       />
     </div>
-  </div>
+  </AbField>
 </template>
 
 <style lang="scss" scoped>
-.advanced-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: 32px;
+// 与 AbField 里 ab-input / 下拉框同宽，右列左缘对齐
+.filter-tags {
+  width: 100%;
 
-  &--tags {
-    align-items: flex-start;
-  }
-}
-
-.advanced-label {
-  flex-shrink: 0;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--color-text-secondary);
-  line-height: 32px;
-}
-
-.advanced-control {
-  display: flex;
-  justify-content: flex-end;
-  min-width: 0;
-
-  :deep(.n-dynamic-tags) {
-    justify-content: flex-end;
-    min-height: 32px;
-    min-width: 0;
-
-    .n-tag {
-      height: 28px;
-      max-width: calc(100% - 6px);
-      margin: 2px 0 2px 6px !important;
-    }
-
-    .n-tag__content {
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .n-button {
-      height: 28px;
-    }
+  @include forTablet {
+    width: 200px;
   }
 }
 </style>

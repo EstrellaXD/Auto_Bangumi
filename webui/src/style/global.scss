@@ -90,3 +90,29 @@ input::-webkit-inner-spin-button {
 .n-drawer-mask {
   background-color: var(--color-overlay);
 }
+
+// 空状态里的编号步骤（主页、下载器、播放器共用）
+.empty-steps {
+  max-width: 52ch;
+  margin: 0 0 14px;
+  padding-left: 1.5em;
+  list-style: decimal;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+
+  li + li {
+    margin-top: 6px;
+  }
+
+  li::marker {
+    font-family: var(--font-mono);
+    color: var(--color-text-secondary);
+  }
+}
+
+.empty-steps-title {
+  display: block;
+  font-weight: 600;
+  color: var(--color-text);
+}

@@ -160,8 +160,11 @@ function toggleAll() {
   cursor: pointer;
   transition: background-color var(--transition-fast);
 
-  &:hover {
-    background: var(--color-surface-hover);
+  // 触屏点按后不保留悬停态
+  @media (hover: hover) {
+    &:hover {
+      background: var(--color-surface-hover);
+    }
   }
 
   &:focus-visible {

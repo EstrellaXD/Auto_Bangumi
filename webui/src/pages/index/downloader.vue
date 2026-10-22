@@ -182,15 +182,45 @@ function onCheckedChange(keys: DataTableRowKey[]) {
 // 多个下载器实例时标出每个种子所在的实例
 const downloaders = useDownloaderInstances();
 
-const tableColumnsValue = computed<DataTableColumns<Row>>(() => [
-  {
-    type: 'selection',
-  },
-  {
+const { isMobile, isTablet } = useBreakpointQuery();
+
+function progressCell(row: QbTorrentInfo) {
+  return h(AbProgress, {
+    value: row.progress * 100,
+    label: `${Math.round(row.progress * 100)}%`,
+    state:
+      row.state === 'error' || row.state === 'missingFiles' ? 'error' : 'active',
+  });
+}
+
+function stateCell(row: QbTorrentInfo) {
+  return h(AbTag, { type: stateType(row.state), title: stateLabel(row.state) });
+}
+
+// 数据列：等宽数字右对齐，小数点与单位上下对齐
+const numCol = { align: 'right', className: 'num-col' } as const;
+
+// 手机只留勾选与名称列，进度/状态/大小收进名称下方一行
+function mobileNameCell(row: QbTorrentInfo) {
+  return h('div', { class: 'torrent-cell' }, [
+    h('div', { class: 'torrent-name' }, row.name),
+    h('div', { class: 'torrent-meta' }, [
+      progressCell(row),
+      stateCell(row),
+      h('span', { class: 'num-col' }, formatSize(row.size)),
+      downloaders.multiple.value
+        ? h('span', { class: 'num-col torrent-instance' }, row.downloader_id)
+        : null,
+    ]),
+  ]);
+}
+
+const tableColumnsValue = computed<DataTableColumns<Row>>(() => {
+  const nameCol: DataTableColumns<Row>[number] = {
     title: t('downloader.torrent.name'),
     key: 'name',
     // CSS 省略号 + title：不用逐行测量宽度的 tooltip
-    ellipsis: true,
+    ellipsis: !isMobile.value,
     className: 'name-col',
     minWidth: 200,
     colSpan: (row: Row): number =>
@@ -198,158 +228,124 @@ const tableColumnsValue = computed<DataTableColumns<Row>>(() => [
     cellProps: (row) => ({
       title: isGroupRow(row) ? row.group.savePath : row.name,
     }),
-    render: (row) =>
-      isGroupRow(row) ? `${row.group.name} (${row.group.count})` : row.name,
-  },
-  {
-    title: t('downloader.torrent.progress'),
-    key: 'progress',
-    width: 160,
-    render: torrentCell((row) => {
-      return h(AbProgress, {
-        value: row.progress * 100,
-        label: `${Math.round(row.progress * 100)}%`,
-        state:
-          row.state === 'error' || row.state === 'missingFiles'
-            ? 'error'
-            : 'active',
-      });
-    }),
-  },
-  {
-    title: t('downloader.torrent.status'),
-    key: 'state',
-    width: 130,
-    render: torrentCell((row) => {
-      return h(AbTag, {
-        type: stateType(row.state),
-        title: stateLabel(row.state),
-      });
-    }),
-  },
-  {
-    title: t('downloader.torrent.size'),
-    key: 'size',
-    width: 100,
-    render: torrentCell((row) => {
-      return formatSize(row.size);
-    }),
-  },
-  {
-    title: t('downloader.torrent.dlspeed'),
-    key: 'dlspeed',
-    width: 110,
-    render: torrentCell((row) => {
-      return formatSpeed(row.dlspeed);
-    }),
-  },
-  {
-    title: t('downloader.torrent.upspeed'),
-    key: 'upspeed',
-    width: 110,
-    render: torrentCell((row) => {
-      return formatSpeed(row.upspeed);
-    }),
-  },
-  {
-    title: 'ETA',
-    key: 'eta',
-    width: 80,
-    render: torrentCell((row) => {
-      return formatEta(row.eta);
-    }),
-  },
-  {
-    title: t('downloader.torrent.peers'),
-    key: 'peers',
-    width: 110,
-    render: torrentCell((row) => {
-      return `${row.num_seeds} / ${row.num_leechs}`;
-    }),
-  },
-  // 放在最后并完整显示 id（触屏没有悬停提示）
-  ...(downloaders.multiple.value
-    ? [
-        {
-          title: t('downloader.torrent.instance'),
-          key: 'downloader_id',
-          minWidth: 110,
-        },
-      ]
-    : []),
-]);
+    render: (row) => {
+      if (!isGroupRow(row)) return isMobile.value ? mobileNameCell(row) : row.name;
+      const label = `${row.group.name} (${row.group.count})`;
+      // 手机关掉了列省略号，分组名自己截断
+      return isMobile.value
+        ? h('span', { class: 'torrent-cell' }, h('span', { class: 'torrent-name' }, label))
+        : label;
+    },
+  };
+  if (isMobile.value) return [{ type: 'selection' }, nameCol];
+
+  return [
+    { type: 'selection' },
+    nameCol,
+    {
+      title: t('downloader.torrent.progress'),
+      key: 'progress',
+      width: 140,
+      render: torrentCell(progressCell),
+    },
+    {
+      title: t('downloader.torrent.status'),
+      key: 'state',
+      width: 130,
+      render: torrentCell(stateCell),
+    },
+    {
+      title: t('downloader.torrent.size'),
+      key: 'size',
+      width: 100,
+      ...numCol,
+      render: torrentCell((row) => formatSize(row.size)),
+    },
+    {
+      title: t('downloader.torrent.dlspeed'),
+      key: 'dlspeed',
+      width: 110,
+      ...numCol,
+      render: torrentCell((row) => formatSpeed(row.dlspeed)),
+    },
+    // 平板宽度不够：去掉上传速度、ETA、做种/下载
+    ...(isTablet.value
+      ? []
+      : [
+          {
+            title: t('downloader.torrent.upspeed'),
+            key: 'upspeed',
+            width: 110,
+            ...numCol,
+            render: torrentCell((row) => formatSpeed(row.upspeed)),
+          },
+          {
+            title: 'ETA',
+            key: 'eta',
+            width: 72,
+            ...numCol,
+            render: torrentCell((row) => formatEta(row.eta)),
+          },
+          {
+            title: t('downloader.torrent.peers'),
+            key: 'peers',
+            width: 110,
+            ...numCol,
+            render: torrentCell((row) => `${row.num_seeds} / ${row.num_leechs}`),
+          },
+        ]),
+    // 多个下载器实例时放在最后；定宽，名称列是唯一的弹性列
+    ...(downloaders.multiple.value
+      ? [
+          {
+            title: t('downloader.torrent.instance'),
+            key: 'downloader_id',
+            width: 130,
+            ellipsis: true,
+            cellProps: (row: Row) => ({
+              title: isGroupRow(row) ? undefined : row.downloader_id,
+            }),
+          },
+        ]
+      : []),
+  ];
+});
+
+// 表格最小宽度 = 各列定宽 + 名称列下限：WebKit 在 table-layout: fixed 下忽略
+// <col> 的 min-width，不设 scroll-x 时名称列会被算成 0
+const tableMinWidth = computed(() =>
+  tableColumnsValue.value.reduce((sum, col) => {
+    if (col.type === 'selection') return sum + 40;
+    const c = col as { width?: number; minWidth?: number };
+    return sum + (c.width ?? c.minWidth ?? 0);
+  }, 0)
+);
 </script>
 
 <template>
   <div class="page-downloader">
-    <div v-if="isNull" class="empty-guide">
-      <div class="empty-guide-header anim-fade-in">
-        <div class="empty-guide-title">
-          {{ $t('downloader.empty.title') }}
-        </div>
-        <div class="empty-guide-subtitle">
-          {{ $t('downloader.empty.subtitle') }}
-        </div>
-      </div>
-
-      <div class="empty-guide-steps">
-        <div class="empty-guide-step anim-slide-up" style="--delay: 0.15s">
-          <div class="empty-guide-step-number">
-            1
-          </div>
-          <div class="empty-guide-step-content">
-            <div class="empty-guide-step-title">
-              {{ $t('downloader.empty.step1_title') }}
-            </div>
-            <div class="empty-guide-step-desc">
-              {{ $t('downloader.empty.step1_desc') }}
-            </div>
-          </div>
-        </div>
-
-        <div class="empty-guide-step anim-slide-up" style="--delay: 0.3s">
-          <div class="empty-guide-step-number">
-            2
-          </div>
-          <div class="empty-guide-step-content">
-            <div class="empty-guide-step-title">
-              {{ $t('downloader.empty.step2_title') }}
-            </div>
-            <div class="empty-guide-step-desc">
-              {{ $t('downloader.empty.step2_desc') }}
-            </div>
-          </div>
-        </div>
-
-        <div class="empty-guide-step anim-slide-up" style="--delay: 0.45s">
-          <div class="empty-guide-step-number">
-            3
-          </div>
-          <div class="empty-guide-step-content">
-            <div class="empty-guide-step-title">
-              {{ $t('downloader.empty.step3_title') }}
-            </div>
-            <div class="empty-guide-step-desc">
-              {{ $t('downloader.empty.step3_desc') }}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <RouterLink
-        to="/config"
-        class="empty-guide-action anim-slide-up"
-        style="--delay: 0.6s"
+    <div v-if="isNull" class="page-empty">
+      <ab-empty
+        :title="$t('downloader.empty.title')"
+        :description="$t('downloader.empty.subtitle')"
       >
-        {{ $t('sidebar.config') }}
-      </RouterLink>
+        <template #action>
+          <ol class="empty-steps">
+            <li v-for="n in 3" :key="n">
+              <span class="empty-steps-title">{{
+                $t(`downloader.empty.step${n}_title`)
+              }}</span>
+              {{ $t(`downloader.empty.step${n}_desc`) }}
+            </li>
+          </ol>
+          <ab-button variant="primary" @click="$router.push('/config')">
+            {{ $t('sidebar.config') }}
+          </ab-button>
+        </template>
+      </ab-empty>
     </div>
 
-    <div
-      v-else
-      class="downloader-content"
-      :class="{ 'has-selection': selectedKeys.size > 0 }"
-    >
+    <div v-else class="downloader-content">
       <div v-if="groups.length === 0 && !loading" class="downloader-empty">
         {{ $t('downloader.empty_torrents') }}
       </div>
@@ -366,6 +362,7 @@ const tableColumnsValue = computed<DataTableColumns<Row>>(() => [
         :bordered="false"
         :checked-row-keys="checkedKeys"
         :expanded-row-keys="expandedKeys"
+        :scroll-x="tableMinWidth"
         virtual-scroll
         flex-height
         size="small"
@@ -373,7 +370,8 @@ const tableColumnsValue = computed<DataTableColumns<Row>>(() => [
         @update:expanded-row-keys="onExpandedChange"
       />
 
-      <Transition name="fade">
+      <!-- 操作栏在内容列底部占位（不 fixed）：不遮表格、不压底栏，无需预留 padding -->
+      <Transition name="action-bar">
         <div v-if="selectedKeys.size > 0" class="action-bar">
           <span class="action-bar-count">
             {{ selectedKeys.size }} {{ $t('downloader.selected') }}
@@ -416,14 +414,6 @@ const tableColumnsValue = computed<DataTableColumns<Row>>(() => [
   flex: 1;
   min-height: 0;
   gap: 12px;
-  padding-bottom: 60px;
-
-  // 手机端操作栏为两行布局，留出其高度，避免遮住最后几行
-  &.has-selection {
-    @media (width < 640px) {
-      padding-bottom: 104px;
-    }
-  }
 }
 
 // flex-height：表格填满页面剩余高度，虚拟滚动在表体内进行
@@ -443,6 +433,59 @@ const tableColumnsValue = computed<DataTableColumns<Row>>(() => [
   :deep(.name-col .n-data-table-td__ellipsis) {
     max-width: calc(100% - 40px);
   }
+
+  :deep(.num-col) {
+    white-space: nowrap;
+  }
+
+  // 列 className 同时加在 th 上：只给单元格用等宽字体，表头与其他列一致
+  :deep(td.num-col),
+  :deep(.torrent-meta .num-col) {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  // 手机名称格：名称一行省略，下方一行进度/状态/大小
+  :deep(.torrent-cell) {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 4px;
+    width: calc(100% - 40px);
+    vertical-align: top;
+  }
+
+  :deep(.torrent-name) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // 进度条定宽：各行轨道等长、状态标签起点对齐；大小靠右，格子太窄时换到下一行
+  :deep(.torrent-meta) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
+    font-size: 12px;
+    color: var(--color-text-secondary);
+
+    .ab-progress {
+      flex: 0 0 80px;
+    }
+
+    > .num-col {
+      margin-left: auto;
+    }
+
+    // 多实例时实例 id 独占一行，过长省略
+    > .torrent-instance {
+      flex-basis: 100%;
+      min-width: 0;
+      margin-left: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
 }
 
 .downloader-empty {
@@ -455,26 +498,20 @@ const tableColumnsValue = computed<DataTableColumns<Row>>(() => [
 }
 
 .action-bar {
-  position: fixed;
-  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
-  left: 50%;
-  transform: translateX(-50%);
+  flex-shrink: 0;
+  align-self: center;
   display: flex;
   align-items: center;
   gap: 16px;
+  max-width: 100%;
   padding: 10px 20px;
   border-radius: var(--radius-md);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-  z-index: 100;
-  max-width: calc(100vw - 32px);
+  box-shadow: var(--shadow-md);
 
   @media (width < 640px) {
-    bottom: calc(72px + env(safe-area-inset-bottom, 0px));
-    left: 16px;
-    right: 16px;
-    transform: none;
+    align-self: stretch;
     flex-direction: column;
     gap: 8px;
     padding: 12px 16px;
@@ -500,143 +537,15 @@ const tableColumnsValue = computed<DataTableColumns<Row>>(() => [
   }
 }
 
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.2s ease, transform 0.2s ease;
+.action-bar-enter-active,
+.action-bar-leave-active {
+  transition: opacity var(--transition-normal),
+    transform var(--transition-normal);
 }
 
-.fade-enter-from,
-.fade-leave-to {
+.action-bar-enter-from,
+.action-bar-leave-to {
   opacity: 0;
-  transform: translateX(-50%) translateY(8px);
-
-  @media (width < 640px) {
-    transform: translateY(8px);
-  }
-}
-
-.empty-guide {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  flex: 1;
-  padding: 24px;
-}
-
-.empty-guide-header {
-  text-align: center;
-  margin-bottom: 32px;
-}
-
-.empty-guide-title {
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--color-text);
-  margin-bottom: 6px;
-}
-
-.empty-guide-subtitle {
-  font-size: 14px;
-  color: var(--color-text-secondary);
-}
-
-.empty-guide-steps {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  max-width: 400px;
-  width: 100%;
-}
-
-.empty-guide-step {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-  padding: 14px 16px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-  transition: background-color var(--transition-normal),
-    border-color var(--transition-normal);
-}
-
-.empty-guide-step-number {
-  flex-shrink: 0;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: var(--color-primary);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.empty-guide-step-content {
-  flex: 1;
-  min-width: 0;
-}
-
-.empty-guide-step-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-text);
-  margin-bottom: 4px;
-}
-
-.empty-guide-step-desc {
-  font-size: 13px;
-  color: var(--color-text-secondary);
-  line-height: 1.4;
-}
-
-.empty-guide-action {
-  margin-top: 24px;
-  padding: 8px 24px;
-  border-radius: var(--radius-md);
-  background: var(--color-primary);
-  color: #fff;
-  font-size: 14px;
-  font-weight: 500;
-  text-decoration: none;
-  transition: background-color var(--transition-fast);
-
-  &:hover {
-    background: var(--color-primary-hover);
-  }
-}
-
-.anim-fade-in {
-  animation: fadeIn 0.5s ease both;
-}
-
-.anim-slide-up {
-  animation: slideUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
-  animation-delay: var(--delay, 0s);
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  transform: translateY(4px);
 }
 </style>

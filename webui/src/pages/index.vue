@@ -18,13 +18,25 @@ const { comp: EditRule, shown: editRuleShown } = useLazyModal(
 );
 
 // 插件页面的标题取自清单（清单到达前留空，避免闪出路由名 Plugin；清单已到达
-// 或加载失败仍无匹配页面时回退为插件 id）；插件市场用翻译后的标题，其它页面沿用路由名
+// 或加载失败仍无匹配页面时回退为插件 id）；其它页面用与侧栏相同的翻译，未登记的路由回退为路由名
 const route = useRoute();
 const { t, lang } = useMyI18n();
 const { slots, loaded, loadFailed } = usePluginUi();
+const titleKeys: Record<string, string> = {
+  Market: 'market.title',
+  'Bangumi List': 'sidebar.homepage',
+  'Bangumi Torrents': 'homepage.torrents.title',
+  'Orphan Torrents': 'homepage.others.title',
+  Calendar: 'sidebar.calendar',
+  RSS: 'sidebar.rss',
+  Player: 'sidebar.player',
+  Downloader: 'sidebar.downloader',
+  Log: 'sidebar.log',
+  Config: 'sidebar.config',
+};
 const pageTitle = computed(() => {
   const name = String(route.name ?? '');
-  if (name === 'Market') return t('market.title');
+  if (titleKeys[name]) return t(titleKeys[name]);
   if (route.name !== 'Plugin') return name;
   const id = route.params.id;
   const ui = slots.value.find((s) => s.slot === 'page' && s.plugin_id === id);
@@ -68,7 +80,10 @@ function onApplyRule(rule: BangumiRule) {
       <ab-sidebar />
 
       <div id="main-content" class="layout-content">
-        <ab-page-title :title="pageTitle" />
+        <!-- 标题与内容用同一个 page 过渡，切换路由时一起淡出淡入 -->
+        <transition name="page" mode="out-in">
+          <ab-page-title :key="pageTitle" :title="pageTitle" />
+        </transition>
 
         <RouterView v-slot="{ Component }">
           <transition name="page" mode="out-in">

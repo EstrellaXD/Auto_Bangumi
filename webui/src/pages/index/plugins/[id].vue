@@ -1,6 +1,7 @@
 <script lang="ts" setup>
+import type { PluginUiSlot } from '@autobangumi/plugin-ui';
 import PluginSlot from '@/components/plugin-slot.vue';
-import { refreshPluginUi, usePluginUi } from '@/hooks/usePluginUi';
+import { refreshPluginUi, slotTitle, usePluginUi } from '@/hooks/usePluginUi';
 
 definePage({
   name: 'Plugin',
@@ -9,17 +10,24 @@ definePage({
 // 插件经 page 挂载点提供的独立页面；同一插件声明多个时取第一个
 const route = useRoute('Plugin');
 const { slots, loaded, loadFailed } = usePluginUi();
-const ui = computed(() =>
-  slots.value.find(
-    (s) =>
-      s.slot === 'page' &&
-      s.plugin_id === route.params.id
-  )
+const { lang } = useMyI18n();
+const { isMobile } = useBreakpointQuery();
+// 离场淡出时 useRoute() 已是下一个路由：只在本路由激活时取参数，否则保留上一个值
+const ui = computed<PluginUiSlot | undefined>((prev) =>
+  route.name !== 'Plugin'
+    ? prev
+    : slots.value.find(
+        (s) => s.slot === 'page' && s.plugin_id === route.params.id
+      )
 );
 </script>
 
 <template>
   <div class="page-plugin">
+    <!-- 手机上 ab-page-title 隐藏，页面自己给标题 -->
+    <h1 v-if="isMobile && ui" class="page-plugin__title">
+      {{ slotTitle(ui, lang) }}
+    </h1>
     <PluginSlot v-if="ui" :key="`${ui.plugin_id}:${ui.element}`" :ui="ui" />
     <ab-empty
       v-else-if="loaded"
@@ -42,5 +50,11 @@ const ui = computed(() =>
   flex-grow: 1;
   min-height: 0;
   overflow: auto;
+}
+
+.page-plugin__title {
+  margin: 0 0 12px;
+  font-size: 18px;
+  font-weight: 650;
 }
 </style>

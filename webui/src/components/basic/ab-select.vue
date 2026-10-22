@@ -67,6 +67,13 @@ function optionNodeProps() {
 .ab-select {
   max-width: 100%;
 
+  // 触屏与 ab-input、ab-button 同为 44px 命中区（naive 把 --n-height 写在行内样式上）
+  @include forTouch {
+    :deep(.n-base-selection) {
+      --n-height: var(--touch-target) !important;
+    }
+  }
+
   &--error {
     :deep(.n-base-selection) {
       --n-border: 1px solid var(--color-danger) !important;

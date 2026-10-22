@@ -133,22 +133,22 @@ onDeactivated(() => {
   <div class="page-log">
     <div class="log-layout">
       <div class="log-main">
-        <div
+        <ab-alert
           v-if="hasProblems"
-          class="log-health"
-          :class="{ 'has-errors': errorCount > 0 }"
-          role="status"
-        >
-          <b>{{
+          :type="errorCount > 0 ? 'danger' : 'warning'"
+          :title="
             $t('log.health_summary', {
               errors: errorCount,
               warnings: warningCount,
             })
-          }}</b>
-          <ab-button size="sm" @click="jumpToFirstProblem">
-            {{ $t('log.jump_first') }} ↓
-          </ab-button>
-        </div>
+          "
+        >
+          <template #action>
+            <ab-button size="sm" @click="jumpToFirstProblem">
+              {{ $t('log.jump_first') }} ↓
+            </ab-button>
+          </template>
+        </ab-alert>
 
         <div class="log-viewer-card">
           <div class="log-toolbar">
@@ -297,27 +297,9 @@ onDeactivated(() => {
   gap: 10px;
 }
 
-.log-health {
-  display: flex;
+// 健康摘要只有一行引导词：与右侧按钮垂直居中
+.log-main > :deep(.ab-alert) {
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 8px 12px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-warning-border);
-  background: var(--color-warning-bg);
-  color: var(--color-warning-text);
-  font-size: 13px;
-
-  &.has-errors {
-    border-color: color-mix(in srgb, var(--color-danger) 35%, transparent);
-    background: color-mix(
-      in srgb,
-      var(--color-danger) 8%,
-      var(--color-surface)
-    );
-    color: var(--color-danger);
-  }
 }
 
 .log-viewer-card {
@@ -336,10 +318,13 @@ onDeactivated(() => {
   border-bottom: 1px solid var(--color-border);
 }
 
+// 筛选项不换行：放不下时整组单独占一行并横向滚动，
+// 搜索框与操作按钮落到下一行，不出现 3+1 的零散换行
 .filter-chips {
   display: flex;
-  flex-wrap: wrap;
   gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
 
 .filter-chip {
@@ -355,10 +340,19 @@ onDeactivated(() => {
   font-variant-numeric: tabular-nums;
 }
 
-.log-search {
-  flex: 1;
-  min-width: 140px;
-  max-width: 260px;
+// 与同行 sm 按钮等高（ab-input 默认 34px）；窄屏时与操作按钮共用一行并占满剩余宽度
+.log-toolbar .log-search {
+  flex: 1 1 100px;
+  min-width: 0;
+  height: 28px;
+
+  @include forDesktop {
+    max-width: 260px;
+  }
+
+  @include forTouch {
+    height: var(--touch-target);
+  }
 }
 
 .log-actions {
@@ -413,42 +407,36 @@ onDeactivated(() => {
   }
 }
 
+// 级别：方块语义标记 + 墨色文字（与 ab-tag 一致），不用着色填充
 .log-level {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  min-width: 58px;
-  padding: 1px 6px;
-  border-radius: var(--radius-sm);
+  gap: 6px;
   font-size: 10.5px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.04em;
+  color: var(--color-text-secondary);
 
-  &.level-info {
-    background: var(--color-surface-hover);
-    color: var(--color-text-secondary);
+  &::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 2px;
+    flex-shrink: 0;
+    background: var(--color-text-muted);
   }
 
-  &.level-debug {
+  &.level-debug::before {
     background: transparent;
-    border: 1px dashed var(--color-border-hover);
-    color: var(--color-text-secondary);
+    box-shadow: inset 0 0 0 1px var(--color-text-muted);
   }
 
-  &.level-warning {
-    background: var(--color-warning-bg);
-    border: 1px solid var(--color-warning-border);
-    color: var(--color-warning-text);
+  &.level-warning::before {
+    background: var(--color-warning);
   }
 
-  &.level-error {
-    background: color-mix(
-      in srgb,
-      var(--color-danger) 12%,
-      var(--color-surface)
-    );
-    border: 1px solid color-mix(in srgb, var(--color-danger) 40%, transparent);
-    color: var(--color-danger);
+  &.level-error::before {
+    background: var(--color-danger);
   }
 }
 

@@ -1,9 +1,9 @@
 <script lang="ts" setup>
-import { NDynamicTags } from 'naive-ui';
 import AbField from './basic/ab-field.vue';
 import AbInput from './basic/ab-input.vue';
 import AbSelect from './basic/ab-select.vue';
 import AbSwitch from './basic/ab-switch.vue';
+import AbTagsInput from './basic/ab-tags-input.vue';
 import type { AbSettingProps, SelectItem } from '#/components';
 
 // 设置行：ab-field（标签/说明/错误/aria）+ 对应控件的组合。
@@ -72,10 +72,10 @@ const selectValue = computed<string | number | null>({
       />
 
       <div v-else-if="type === 'dynamic-tags'" class="dynamic-tags-wrapper">
-        <NDynamicTags
-          v-model:value="data"
-          size="small"
+        <AbTagsInput
+          v-model="data"
           :aria-label="labelText"
+          :placeholder="prop?.placeholder"
         />
       </div>
     </AbField>
@@ -104,13 +104,12 @@ const selectValue = computed<string | number | null>({
   margin-top: 12px;
 }
 
+// 与 ab-input 同宽（200px），各行控件左缘对齐；标签在框内换行
 .dynamic-tags-wrapper {
   width: 100%;
-  overflow-x: auto;
-  padding-bottom: 2px;
 
   @include forTablet {
-    max-width: 220px;
+    width: 200px;
   }
 }
 </style>

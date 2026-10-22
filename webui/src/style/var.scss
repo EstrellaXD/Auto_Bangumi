@@ -113,7 +113,8 @@
 
   --color-bg: #0F172A;
   --color-surface: #1E293B;
-  --color-surface-hover: #334155;
+  // 介于 surface-2 与 border 之间：悬停行上的发丝边框仍可见
+  --color-surface-hover: #2B3850;
   --color-surface-2: #26334A;
 
   --color-text: #F1F5F9;

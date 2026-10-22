@@ -46,6 +46,14 @@ function inline(raw: string): string {
 
 const LIST_ITEM = /^\s*(?:([-*+])|(\d+)[.)])\s+(.*)$/;
 const RULE = /^\s*([-*_])(?:\s*\1){2,}\s*$/;
+const TABLE_ROW = /^\s*\|/;
+const TABLE_SEP = /^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)*\|?\s*$/;
+
+// GFM 表格的一行：去掉首尾竖线后按 | 切分（不处理转义的 \|）
+function tableCells(row: string, tag: 'th' | 'td'): string {
+  const cells = row.trim().replace(/^\|/, '').replace(/\|$/, '').split('|');
+  return `<tr>${cells.map((c) => `<${tag}>${inline(c.trim())}</${tag}>`).join('')}</tr>`;
+}
 
 export function renderMarkdown(source: string): string {
   const lines = source
@@ -68,7 +76,8 @@ export function renderMarkdown(source: string): string {
     list = null;
   };
 
-  for (const line of lines) {
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
     if (code) {
       if (/^\s*```/.test(line)) {
         out.push(`<pre><code>${escapeHtml(code.join('\n'))}</code></pre>`);
@@ -79,6 +88,18 @@ export function renderMarkdown(source: string): string {
     if (/^\s*```/.test(line)) {
       flush();
       code = [];
+      continue;
+    }
+    // 表格：| 开头的行，下一行是 --- 分隔行
+    if (TABLE_ROW.test(line) && TABLE_SEP.test(lines[i + 1] ?? '')) {
+      flush();
+      const rows: string[] = [];
+      for (i += 2; i < lines.length && TABLE_ROW.test(lines[i]); i++)
+        rows.push(tableCells(lines[i], 'td'));
+      i--;
+      out.push(
+        `<table><thead>${tableCells(line, 'th')}</thead><tbody>${rows.join('')}</tbody></table>`
+      );
       continue;
     }
     if (RULE.test(line)) {

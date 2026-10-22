@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import { Info } from '@lucide/vue';
 import { NSelect } from 'naive-ui';
 import type { SelectGroupOption, SelectOption } from 'naive-ui';
 import type { LLMProviderView } from '@/api/llm';
@@ -262,10 +261,7 @@ const tuningItems = computed(() => [
 <template>
   <ab-fold-panel :title="$t('config.llm_set.title')">
     <div class="llm-section">
-      <div class="llm-hint">
-        <Info :size="16" />
-        <span>{{ $t('config.llm_set.hint') }}</span>
-      </div>
+      <ab-alert>{{ $t('config.llm_set.hint') }}</ab-alert>
 
       <ab-setting
         v-model:data="llm.enable"
@@ -273,150 +269,150 @@ const tuningItems = computed(() => [
         type="switch"
       />
 
-      <transition name="slide-fade">
-        <div v-if="llm.enable" class="llm-config">
-          <ab-field :label="() => t('config.llm_set.provider')">
+      <div v-if="llm.enable" class="llm-config">
+        <ab-field :label="() => t('config.llm_set.provider')">
+          <NSelect
+            v-model:value="llm.provider"
+            class="model-select"
+            :options="providerOptions"
+            :aria-label="t('config.llm_set.provider')"
+          />
+        </ab-field>
+
+        <ab-setting
+          v-model:data="llm.mode"
+          :label="() => t('config.llm_set.mode')"
+          type="select"
+          :prop="{ items: modeItems }"
+        />
+
+        <!-- 订阅类提供商：连接状态 chip 或 Connect 按钮 -->
+        <div v-if="isSubscription" class="llm-subscription">
+          <div v-if="selected?.connected" class="llm-connected">
+            <ab-status
+              state="running"
+              :label="
+                t('config.llm_set.connected_as', {
+                  account: selected.account_label || selected.display_name,
+                })
+              "
+            />
+            <ab-button
+              size="sm"
+              variant="ghost"
+              @click="onDisconnect(selected.id)"
+            >
+              {{ t('config.llm_set.disconnect') }}
+            </ab-button>
+          </div>
+          <ab-button
+            v-else
+            variant="primary"
+            size="sm"
+            @click="showAuthDialog = true"
+          >
+            {{ t('config.llm_set.connect') }}
+          </ab-button>
+        </div>
+
+        <!-- api_key 类（内置 + 预设）：密钥 + 模型 + base_url -->
+        <template v-if="isBuiltinLike">
+          <ab-setting
+            v-model:data="apiKey"
+            :label="() => t('config.llm_set.api_key')"
+            type="input"
+            :prop="{ type: 'password', placeholder: 'sk-...' }"
+          />
+
+          <ab-field :label="() => t('config.llm_set.model')">
             <NSelect
-              v-model:value="llm.provider"
+              v-model:value="model"
               class="model-select"
-              :options="providerOptions"
-              :aria-label="t('config.llm_set.provider')"
+              filterable
+              tag
+              :options="modelOptions"
+              :loading="modelsLoading"
+              :placeholder="modelPlaceholder"
+              :aria-label="t('config.llm_set.model')"
+              @update:show="onModelDropdownShow"
             />
           </ab-field>
 
           <ab-setting
-            v-model:data="llm.mode"
-            :label="() => t('config.llm_set.mode')"
-            type="select"
-            :prop="{ items: modeItems }"
+            v-if="selected?.needs_base_url"
+            v-model:data="baseUrl"
+            :label="() => t('config.llm_set.base_url')"
+            type="input"
+            :prop="{ type: 'url', placeholder: baseUrlPlaceholder }"
           />
+        </template>
 
-          <!-- 订阅类提供商：连接状态 chip 或 Connect 按钮 -->
-          <div v-if="isSubscription" class="llm-subscription">
-            <div v-if="selected?.connected" class="llm-connected">
-              <span class="llm-connected-dot" />
-              <span class="llm-connected-label">{{
-                t('config.llm_set.connected_as', {
-                  account: selected.account_label || selected.display_name,
-                })
-              }}</span>
+        <!-- 可下载插件：安装按钮（灰色插件先弹风险确认） -->
+        <div v-if="isDownloadable" class="llm-install">
+          <p class="llm-install-hint">
+            {{ t('config.llm_set.not_installed') }}
+          </p>
+          <ab-button
+            v-if="!confirmRisk"
+            variant="primary"
+            size="sm"
+            :loading="busyProvider === llm.provider"
+            @click="onInstall(llm.provider)"
+          >
+            {{ t('config.llm_set.install') }}
+          </ab-button>
+          <div v-else class="llm-risk">
+            <p class="llm-risk-text">
+              {{ t('config.llm_set.risk_notice') }}
+            </p>
+            <div class="llm-risk-actions">
               <ab-button
                 size="sm"
-                variant="ghost"
-                @click="onDisconnect(selected.id)"
+                variant="secondary"
+                @click="confirmRisk = false"
               >
-                {{ t('config.llm_set.disconnect') }}
+                {{ t('config.llm_set.risk_cancel') }}
+              </ab-button>
+              <ab-button
+                variant="danger"
+                size="sm"
+                :loading="busyProvider === llm.provider"
+                @click="onInstall(llm.provider)"
+              >
+                {{ t('config.llm_set.risk_confirm') }}
               </ab-button>
             </div>
-            <ab-button
-              v-else
-              variant="primary"
-              size="sm"
-              @click="showAuthDialog = true"
-            >
-              {{ t('config.llm_set.connect') }}
-            </ab-button>
           </div>
-
-          <!-- api_key 类（内置 + 预设）：密钥 + 模型 + base_url -->
-          <template v-if="isBuiltinLike">
-            <ab-setting
-              v-model:data="apiKey"
-              :label="() => t('config.llm_set.api_key')"
-              type="input"
-              :prop="{ type: 'password', placeholder: 'sk-...' }"
-            />
-
-            <ab-field :label="() => t('config.llm_set.model')">
-              <NSelect
-                v-model:value="model"
-                class="model-select"
-                filterable
-                tag
-                :options="modelOptions"
-                :loading="modelsLoading"
-                :placeholder="modelPlaceholder"
-                :aria-label="t('config.llm_set.model')"
-                @update:show="onModelDropdownShow"
-              />
-            </ab-field>
-
-            <ab-setting
-              v-if="selected?.needs_base_url"
-              v-model:data="baseUrl"
-              :label="() => t('config.llm_set.base_url')"
-              type="input"
-              :prop="{ type: 'url', placeholder: baseUrlPlaceholder }"
-            />
-          </template>
-
-          <!-- 可下载插件：安装按钮（灰色插件先弹风险确认） -->
-          <div v-if="isDownloadable" class="llm-install">
-            <p class="llm-install-hint">
-              {{ t('config.llm_set.not_installed') }}
-            </p>
-            <ab-button
-              v-if="!confirmRisk"
-              variant="primary"
-              size="sm"
-              :loading="busyProvider === llm.provider"
-              @click="onInstall(llm.provider)"
-            >
-              {{ t('config.llm_set.install') }}
-            </ab-button>
-            <div v-else class="llm-risk">
-              <p class="llm-risk-text">
-                {{ t('config.llm_set.risk_notice') }}
-              </p>
-              <div class="llm-risk-actions">
-                <ab-button
-                  size="sm"
-                  variant="secondary"
-                  @click="confirmRisk = false"
-                >
-                  {{ t('config.llm_set.risk_cancel') }}
-                </ab-button>
-                <ab-button
-                  variant="danger"
-                  size="sm"
-                  :loading="busyProvider === llm.provider"
-                  @click="onInstall(llm.provider)"
-                >
-                  {{ t('config.llm_set.risk_confirm') }}
-                </ab-button>
-              </div>
-            </div>
-          </div>
-
-          <!-- 已安装的非内置提供商：卸载入口 -->
-          <div
-            v-if="selected && !selected.builtin && selected.plugin_version"
-            class="llm-uninstall"
-          >
-            <ab-button
-              size="sm"
-              variant="danger"
-              :loading="busyProvider === selected.id"
-              @click="onUninstall(selected.id)"
-            >
-              {{ t('config.llm_set.uninstall') }}
-            </ab-button>
-          </div>
-
-          <!-- 超时/缓存/并发/熔断调优项 -->
-          <advanced-section v-model:open="showTuning">
-            <ab-setting
-              v-for="item in tuningItems"
-              :key="item.key"
-              v-model:data="llm[item.key]"
-              :label="() => item.label"
-              type="input"
-              css="w-72"
-              :prop="{ type: 'number', min: 0 }"
-            />
-          </advanced-section>
         </div>
-      </transition>
+
+        <!-- 已安装的非内置提供商：卸载入口 -->
+        <div
+          v-if="selected && !selected.builtin && selected.plugin_version"
+          class="llm-uninstall"
+        >
+          <ab-button
+            size="sm"
+            variant="danger"
+            :loading="busyProvider === selected.id"
+            @click="onUninstall(selected.id)"
+          >
+            {{ t('config.llm_set.uninstall') }}
+          </ab-button>
+        </div>
+
+        <!-- 超时/缓存/并发/熔断调优项 -->
+        <advanced-section v-model:open="showTuning">
+          <ab-setting
+            v-for="item in tuningItems"
+            :key="item.key"
+            v-model:data="llm[item.key]"
+            :label="() => item.label"
+            type="input"
+            css="w-72"
+            :prop="{ type: 'number', min: 0 }"
+          />
+        </advanced-section>
+      </div>
     </div>
 
     <llm-auth-dialog
@@ -436,24 +432,6 @@ const tuningItems = computed(() => [
   gap: 16px;
 }
 
-.llm-hint {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-primary) 25%, transparent);
-  color: var(--color-text-secondary);
-  font-size: 12px;
-  transition: background-color var(--transition-normal),
-    border-color var(--transition-normal);
-
-  svg {
-    flex-shrink: 0;
-  }
-}
-
 .llm-config {
   display: flex;
   flex-direction: column;
@@ -461,9 +439,10 @@ const tuningItems = computed(() => [
   padding-top: 4px;
 }
 
-.model-select {
+// 与 ab-field 控件列同宽（.n-select 提高优先级，压过 ab-field 的 width: auto）
+.llm-config .model-select.n-select {
   @include forTablet {
-    max-width: 260px;
+    width: 200px;
   }
 }
 
@@ -475,22 +454,20 @@ const tuningItems = computed(() => [
   gap: 8px;
 }
 
+// 按钮落在控件列的右边缘，不拉成整行
+.llm-subscription,
+.llm-uninstall {
+  align-items: flex-end;
+}
+
+.llm-install > .ab-btn {
+  align-self: flex-end;
+}
+
 .llm-connected {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.llm-connected-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--color-success, #22c55e);
-}
-
-.llm-connected-label {
-  font-size: 13px;
-  color: var(--color-text);
 }
 
 .llm-install-hint {
@@ -516,19 +493,5 @@ const tuningItems = computed(() => [
 .llm-risk-actions {
   display: flex;
   gap: 8px;
-}
-
-.slide-fade-enter-active {
-  transition: all 0.2s ease-out;
-}
-
-.slide-fade-leave-active {
-  transition: all 0.15s ease-in;
-}
-
-.slide-fade-enter-from,
-.slide-fade-leave-to {
-  opacity: 0;
-  transform: translateY(-8px);
 }
 </style>

@@ -163,6 +163,7 @@ function maskPassword(pwd: string): string {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
   padding: 4px 0;
   font-size: 12px;
 
@@ -172,16 +173,19 @@ function maskPassword(pwd: string): string {
 }
 
 .review-label {
+  flex-shrink: 0;
   color: var(--color-text-muted);
 }
 
 .review-value {
+  flex: 1;
+  min-width: 0;
   color: var(--color-text);
-  font-family: monospace;
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  // 提交前要能看到完整地址，长值换行而不截断
+  overflow-wrap: anywhere;
 }
 
 .wizard-actions {

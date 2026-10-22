@@ -1,8 +1,10 @@
 <script lang="ts" setup>
 import { RefreshCw } from '@lucide/vue';
-import { type DataTableColumns, NDataTable, NTooltip } from 'naive-ui';
+import { type DataTableColumns, NDataTable } from 'naive-ui';
 import AbButton from '@/components/basic/ab-button.vue';
+import AbEmpty from '@/components/basic/ab-empty.vue';
 import AbTag from '@/components/basic/ab-tag.vue';
+import AbTooltip from '@/components/basic/ab-tooltip.vue';
 import { useConfirm } from '@/hooks/useConfirm';
 import type { RSS } from '#/rss';
 
@@ -63,7 +65,6 @@ const rssColumns = computed<DataTableColumns<RSS>>(() => [
     // 名称列同时承载来源元信息（解析器 / 聚合），Status 列只保留运行状态
     title: t('rss.name'),
     key: 'name',
-    className: 'text-h3',
     render(rss: RSS) {
       return h('div', { class: 'rss-name-cell' }, [
         h('span', { class: 'rss-name', title: rss.name }, rss.name),
@@ -75,7 +76,6 @@ const rssColumns = computed<DataTableColumns<RSS>>(() => [
   {
     title: t('rss.url'),
     key: 'url',
-    className: 'text-h3',
     minWidth: 240,
     ellipsis: {
       tooltip: true,
@@ -84,7 +84,6 @@ const rssColumns = computed<DataTableColumns<RSS>>(() => [
   {
     title: t('rss.status'),
     key: 'status',
-    className: 'text-h3',
     align: 'right',
     minWidth: 140,
     render(rss: RSS) {
@@ -92,10 +91,11 @@ const rssColumns = computed<DataTableColumns<RSS>>(() => [
         rss.connection_status === 'healthy' &&
         h(AbTag, { type: 'success', title: t('rss.connected') }),
         rss.connection_status === 'error' &&
-        h(NTooltip, null, {
-          trigger: () => h(AbTag, { type: 'danger', title: t('rss.error') }),
-          default: () => rss.last_error || 'Unknown error',
-        }),
+        h(
+          AbTooltip,
+          { content: rss.last_error || t('rss.error') },
+          () => h(AbTag, { type: 'danger', title: t('rss.error') })
+        ),
         rss.enabled
           ? h(AbTag, { type: 'success', title: t('rss.active') })
           : h(AbTag, { type: 'neutral', title: t('rss.inactive') }),
@@ -165,15 +165,27 @@ function onSelectedRSSUpdate(keys: unknown[]) {
       >
         <template #row="{ item }">
           <div class="rss-card-content">
-            <div class="rss-card-name">
-              {{ item.name }}
+            <div class="rss-card-header">
+              <div class="rss-card-name">
+                {{ item.name }}
+              </div>
+              <AbButton
+                size="sm"
+                :variant="refreshFailedId === item.id ? 'danger' : 'secondary'"
+                :title="$t('rss.refresh')"
+                :aria-label="$t('rss.refresh')"
+                :disabled="refreshingId === item.id"
+                @click.stop="onRefreshOne(item.id)"
+              >
+                <RefreshCw :size="14" :class="{ 'animate-spin': refreshingId === item.id }" />
+              </AbButton>
             </div>
             <div class="rss-card-url">
               {{ item.url }}
             </div>
             <div class="rss-card-tags">
               <AbTag v-if="item.parser" type="info" :title="item.parser" />
-              <AbTag v-if="item.aggregate" type="info" title="aggregate" />
+              <AbTag v-if="item.aggregate" type="info" :title="$t('rss.aggregate')" />
               <AbTag
                 v-if="item.connection_status === 'healthy'"
                 type="success"
@@ -186,11 +198,7 @@ function onSelectedRSSUpdate(keys: unknown[]) {
               />
               <AbTag
                 :type="item.enabled ? 'success' : 'neutral'"
-                :title="
-                  item.enabled
-                    ? $t('config.notification_set.enabled')
-                    : $t('config.notification_set.disabled')
-                "
+                :title="item.enabled ? $t('rss.active') : $t('rss.inactive')"
               />
             </div>
             <!-- Inline on touch — a tooltip can't be hovered on a phone -->
@@ -199,18 +207,6 @@ function onSelectedRSSUpdate(keys: unknown[]) {
               class="rss-card-error"
             >
               {{ item.last_error }}
-            </div>
-            <div class="rss-card-actions" @click.stop>
-              <AbButton
-                size="sm"
-                :variant="refreshFailedId === item.id ? 'danger' : 'secondary'"
-                :title="$t('rss.refresh')"
-                :disabled="refreshingId === item.id"
-                @click="onRefreshOne(item.id)"
-              >
-                <RefreshCw :size="14" :class="{ 'animate-spin': refreshingId === item.id }" />
-                {{ $t('rss.refresh') }}
-              </AbButton>
             </div>
           </div>
         </template>
@@ -227,29 +223,32 @@ function onSelectedRSSUpdate(keys: unknown[]) {
         :bordered="false"
         :max-height="500"
         @update:checked-row-keys="onSelectedRSSUpdate"
-      />
+      >
+        <template #empty>
+          <AbEmpty :title="$t('common.empty')" />
+        </template>
+      </NDataTable>
+    </ab-container>
 
-      <div v-if="selectedRSS.length > 0">
-        <div class="divider" />
-        <div class="rss-actions">
-          <AbButton variant="primary" @click="enableSelected">
-            {{
-              $t('rss.enable')
-            }}
+    <!-- 操作栏在卡片下方占位，长列表时 sticky 贴在滚动区底部；样式与下载器页一致 -->
+    <Transition name="action-bar">
+      <div v-if="selectedRSS.length > 0" class="action-bar">
+        <span class="action-bar-count">
+          {{ selectedRSS.length }} {{ $t('downloader.selected') }}
+        </span>
+        <div class="action-bar-buttons">
+          <AbButton variant="primary" size="sm" @click="enableSelected">
+            {{ $t('rss.enable') }}
           </AbButton>
-          <AbButton variant="secondary" @click="disableSelected">
-            {{
-              $t('rss.disable')
-            }}
+          <AbButton variant="secondary" size="sm" @click="disableSelected">
+            {{ $t('rss.disable') }}
           </AbButton>
-          <AbButton variant="danger" @click="onDeleteSelected">
-            {{
-              $t('rss.delete')
-            }}
+          <AbButton variant="danger" size="sm" @click="onDeleteSelected">
+            {{ $t('rss.delete') }}
           </AbButton>
         </div>
       </div>
-    </ab-container>
+    </Transition>
   </div>
 </template>
 
@@ -268,31 +267,90 @@ function onSelectedRSSUpdate(keys: unknown[]) {
   min-width: 0;
 
   .rss-name {
+    font-weight: 500;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 }
 
-.divider {
+// naive 的空状态容器居中内容；ab-empty 是左对齐说明，铺满表格宽度
+:deep(.n-data-table-empty .ab-empty) {
   width: 100%;
-  height: 1px;
-  background: var(--color-border);
-  margin: 12px 0;
 }
 
-.rss-actions {
+// 与 downloader.vue 的 .action-bar 同一套样式；在 .page-rss 滚动区内 sticky，
+// 按内容区居中，手机上与卡片同宽，不压底栏
+.action-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: var(--z-fixed);
   display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 8px;
+  align-items: center;
+  gap: 16px;
+  width: fit-content;
+  max-width: 100%;
+  margin: 12px auto 0;
+  padding: 10px 20px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-md);
 
-  @include forTablet {
-    gap: 10px;
+  @media (width < 640px) {
+    width: auto;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 16px;
   }
 }
 
+.action-bar-count {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.action-bar-buttons {
+  display: flex;
+  gap: 8px;
+
+  @media (width < 640px) {
+    width: 100%;
+
+    :deep(.ab-btn) {
+      flex: 1;
+    }
+  }
+}
+
+.action-bar-enter-active,
+.action-bar-leave-active {
+  transition: opacity var(--transition-normal), transform var(--transition-normal);
+}
+
+.action-bar-enter-from,
+.action-bar-leave-to {
+  opacity: 0;
+  transform: translateY(4px);
+}
+
 // Mobile RSS card styles
+// 复选框与名称行顶部对齐，不随卡片高度垂直居中
+:deep(.ab-list-row) {
+  align-items: flex-start;
+}
+
+:deep(.ab-list-check) {
+  // 名称行高度 = 刷新按钮高度（桌面 28px，触屏 44px），复选框 16px，居中到该行；
+  // ab-list 用 6px 内边距 + -6px 外边距扩大命中区，这里的值已扣掉那 6px
+  margin-top: 0;
+
+  @include forTouch {
+    margin-top: 8px;
+  }
+}
+
 .rss-card-content {
   flex: 1;
   min-width: 0;
@@ -301,7 +359,21 @@ function onSelectedRSSUpdate(keys: unknown[]) {
   gap: 4px;
 }
 
+.rss-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  // 按钮与卡片同为 surface-2，换成 surface 底色才能看出按钮边界
+  :deep(.ab-btn--secondary) {
+    flex-shrink: 0;
+    background: var(--color-surface);
+  }
+}
+
 .rss-card-name {
+  flex: 1;
+  min-width: 0;
   font-size: 14px;
   font-weight: 500;
   color: var(--color-text);
@@ -312,7 +384,8 @@ function onSelectedRSSUpdate(keys: unknown[]) {
 
 .rss-card-url {
   font-size: 12px;
-  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  color: var(--color-text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -320,7 +393,7 @@ function onSelectedRSSUpdate(keys: unknown[]) {
 
 .rss-card-error {
   font-size: 12px;
-  color: var(--color-warning-text-secondary);
+  color: var(--color-danger);
   word-break: break-word;
 }
 
@@ -328,12 +401,6 @@ function onSelectedRSSUpdate(keys: unknown[]) {
   display: flex;
   gap: 4px;
   flex-wrap: wrap;
-  margin-top: 4px;
-}
-
-.rss-card-actions {
-  display: flex;
-  justify-content: flex-end;
   margin-top: 4px;
 }
 </style>

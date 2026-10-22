@@ -21,19 +21,19 @@ const open = defineModel<boolean>('open', { default: false });
       {{ $t('search.confirm.advanced') }}
     </button>
 
-    <Transition name="expand">
-      <div v-show="open" class="advanced-content">
-        <slot />
+    <!-- 0fr↔1fr 行高过渡：高度可插值，展开/收起不再一帧跳到终值；
+         收起时 inert，隐藏的控件不可聚焦 -->
+    <div class="advanced-collapse" :class="{ 'is-open': open }">
+      <div class="advanced-inner" :inert="!open">
+        <div class="advanced-content">
+          <slot />
+        </div>
       </div>
-    </Transition>
+    </div>
   </div>
 </template>
 
 <style lang="scss" scoped>
-.advanced-section {
-  margin-bottom: 8px;
-}
-
 .advanced-toggle {
   display: flex;
   align-items: center;
@@ -72,29 +72,35 @@ const open = defineModel<boolean>('open', { default: false });
   }
 }
 
+.advanced-collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows var(--transition-normal),
+    opacity var(--transition-normal);
+
+  &.is-open {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
+.advanced-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
 .advanced-content {
   display: flex;
   flex-direction: column;
   gap: 12px;
   padding: 16px;
-  background: var(--color-surface-hover);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   margin-top: 8px;
-}
-
-// Expand transition
-.expand-enter-active,
-.expand-leave-active {
-  transition: all var(--transition-normal);
-  overflow: hidden;
-}
-
-.expand-enter-from,
-.expand-leave-to {
-  opacity: 0;
-  max-height: 0;
-  margin-top: 0;
-  padding-top: 0;
-  padding-bottom: 0;
 }
 </style>

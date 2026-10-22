@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import AbField from './basic/ab-field.vue';
+
 /**
  * 单个数字 offset 行：标签 + 数字输入 + 可选的操作插槽（如“自动检测”按钮）。
  * ab-add-rss 用它承载 episode_offset + 检测按钮，ab-edit-rule 用它承载
@@ -21,57 +23,33 @@ const proxyValue = computed({
 </script>
 
 <template>
-  <div class="advanced-row">
-    <label class="advanced-label">{{ label }}</label>
-    <div class="advanced-control offset-controls">
-      <ab-input
-        v-model="proxyValue"
-        type="number"
-        class="offset-input"
-        :aria-label="label"
-      />
+  <AbField :label="label">
+    <div class="offset-controls">
+      <ab-input v-model="proxyValue" type="number" class="offset-input" />
       <slot name="action" />
     </div>
-  </div>
+  </AbField>
 </template>
 
 <style lang="scss" scoped>
-.advanced-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: 32px;
-}
-
-.advanced-label {
-  flex-shrink: 0;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--color-text-secondary);
-  line-height: 32px;
-}
-
-.advanced-control {
-  display: flex;
-  justify-content: flex-end;
-}
-
+// 控件列与其它 AbField 行同宽（200px）；有操作按钮时输入框收窄让位
 .offset-controls {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
   gap: 8px;
-  min-height: 32px;
+  width: 100%;
+
+  @include forTablet {
+    width: 200px;
+  }
 }
 
-.offset-input {
-  width: 70px;
-  height: 32px;
-  text-align: center;
+// 压过 AbField 给 .ab-input 的 200px 宽度下限，让输入框给按钮让位
+.offset-controls .ab-input.offset-input {
+  flex: 1 1 0;
+  min-width: 0;
 
   @include forTouch {
-    width: 84px;
     height: var(--touch-target);
   }
 }

@@ -64,7 +64,6 @@ const rule = defineModel<BangumiRule>('rule', { required: true });
 .bangumi-info {
   display: flex;
   gap: 16px;
-  margin-bottom: 20px;
 }
 
 .bangumi-poster {
@@ -169,15 +168,9 @@ const rule = defineModel<BangumiRule>('rule', { required: true });
     color: var(--color-text-muted);
   }
 
+  // 缺年份：只用警示色下划线标记，不着底色、不改内边距（与标题左缘对齐）
   &--empty {
-    background: color-mix(in srgb, var(--color-warning) 15%, transparent);
     border-bottom-color: var(--color-warning);
-    border-radius: var(--radius-xs) var(--radius-xs) 0 0;
-    padding: 2px 4px;
-
-    &::placeholder {
-      color: var(--color-warning);
-    }
   }
 }
 
@@ -192,7 +185,7 @@ const rule = defineModel<BangumiRule>('rule', { required: true });
 }
 
 .season-input {
-  width: 40px;
+  width: 4ch;
   font-size: 13px;
   color: var(--color-text-secondary);
   background: transparent;
@@ -200,7 +193,6 @@ const rule = defineModel<BangumiRule>('rule', { required: true });
   border-bottom: 1px solid transparent;
   padding: 2px 0;
   outline: none;
-  text-align: center;
   transition: border-color var(--transition-fast);
 
   &:hover,

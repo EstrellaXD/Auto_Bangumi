@@ -51,11 +51,12 @@ const unknownGroups = computed({
       <calendar-day-column
         v-for="(key, index) in dayKeys"
         :key="key"
+        class="calendar-enter"
+        :style="{ '--delay': `${index * 0.03}s` }"
         :day-label="getDayLabel(key)"
         :is-today="isToday(index)"
         :is-dragging="isDragging"
         :groups="groupedByDay[key] || []"
-        :delay="`${index * 0.05}s`"
         @change="onDropToDay(index, $event)"
         @card-click="emit('card-click', $event)"
         @unpin="onUnpin"
@@ -65,8 +66,8 @@ const unknownGroups = computed({
     <!-- Unknown air day section (draggable source) -->
     <div
       v-if="unknownGroups.length > 0"
-      class="calendar-unknown-section anim-slide-up"
-      style="--delay: 0.4s"
+      class="calendar-unknown-section calendar-enter"
+      style="--delay: 0.2s"
     >
       <div class="calendar-unknown-header">
         <span class="calendar-day-label">{{ getDayLabel('unknown') }}</span>
@@ -101,12 +102,12 @@ const unknownGroups = computed({
 
 .calendar-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 10px;
 }
 
 .calendar-unknown-section {
-  background: var(--color-surface-hover);
+  background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   padding: 12px;
@@ -147,27 +148,5 @@ const unknownGroups = computed({
   opacity: 0.9;
   box-shadow: var(--shadow-lg);
   transform: rotate(2deg);
-}
-
-.anim-slide-up {
-  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
-  animation-delay: var(--delay, 0s);
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .anim-slide-up {
-    animation: none;
-  }
 }
 </style>

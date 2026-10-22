@@ -214,19 +214,25 @@ onActivated(load);
   align-items: center;
   padding: 8px 12px;
   border-radius: var(--radius-sm);
-  background: var(--color-surface-hover);
+  background: var(--color-surface-2);
   cursor: pointer;
   transition: background-color var(--transition-fast);
 
   &:hover {
     background: color-mix(
       in srgb,
-      var(--color-surface-hover) 80%,
+      var(--color-surface-2) 85%,
       var(--color-primary)
     );
   }
 
-  &--selected {
+  // 行底色（含悬停混色）接近 --color-border，行内标签描边提一级
+  :deep(.ab-tag) {
+    border-color: var(--color-border-hover);
+  }
+
+  &--selected,
+  &--selected:hover {
     background: color-mix(in srgb, var(--color-primary) 12%, transparent);
     outline: 1px solid var(--color-primary);
   }
@@ -237,7 +243,7 @@ onActivated(load);
   width: 18px;
   height: 18px;
   border-radius: 4px;
-  border: 2px solid var(--color-border);
+  border: 2px solid var(--color-border-hover);
   display: flex;
   align-items: center;
   justify-content: center;

@@ -17,7 +17,6 @@ const emit = defineEmits<{
       <span class="info-label">{{ $t('search.confirm.rss') }}:</span>
       <span class="info-value info-value--link">{{ props.link }}</span>
       <ab-icon-button
-        size="sm"
         class="copy-btn"
         :class="{ copied: props.copied }"
         :label="$t('common.copy')"
@@ -35,15 +34,14 @@ const emit = defineEmits<{
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 16px;
-  background: var(--color-surface-hover);
+  padding: 12px 16px;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  margin-bottom: 16px;
 }
 
 .info-row {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
 }
 
@@ -70,29 +68,10 @@ const emit = defineEmits<{
   }
 }
 
-.copy-btn {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  color: var(--color-text-muted);
-  transition: all var(--transition-fast);
-
-  &:hover {
-    border-color: var(--color-primary);
-    color: var(--color-primary);
-  }
-
-  &.copied {
-    background: var(--color-success);
-    border-color: var(--color-success);
-    color: #fff;
-  }
+// 复制成功只换图标并着成功色（标记，不填充）
+// 点击时指针仍悬停在按钮上（触屏 hover 会粘住），悬停态也保留成功色
+.copy-btn.copied,
+.copy-btn.copied:hover:not(:disabled) {
+  color: var(--color-success);
 }
 </style>

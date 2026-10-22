@@ -136,8 +136,12 @@ function resetFilters() {
 }
 
 // 选中项：/market/:id；桌面上没有 id 时默认显示列表第一项
-const routeId = computed(
-  () => (route.params as Record<string, string | undefined>).id
+// 离场淡出时 useRoute() 已是下一个路由（如 /plugins/:id 也叫 id）：
+// 只在本路由激活时取参数，否则保留上一个值
+const routeId = computed<string | undefined>((prev) =>
+  route.name === 'Market'
+    ? (route.params as Record<string, string | undefined>).id
+    : prev
 );
 const selected = computed(() => {
   const list = catalog.value ?? [];
@@ -238,7 +242,10 @@ function permissionLabel(id: string) {
       <ab-icon-button :label="$t('market.back')" @click="back">
         <ChevronLeft :size="20" />
       </ab-icon-button>
-      <h1 class="market__bar-title">
+      <h1
+        class="market__bar-title"
+        :title="selected ? selected.name || selected.id : undefined"
+      >
         {{ selected ? selected.name || selected.id : $t('market.title') }}
       </h1>
     </header>
@@ -281,18 +288,24 @@ function permissionLabel(id: string) {
           v-model="state"
           class="market__state"
           :options="stateOptions"
+          :consistent-menu-width="false"
           :aria-label="$t('market.state_filter')"
         />
+        <ab-segmented
+          v-if="catalog?.length"
+          v-model:value="category"
+          size="sm"
+          class="market__tabs"
+          :options="categoryOptions"
+          :aria-label="$t('market.categories')"
+        />
+        <!-- 首次加载：给分类 Tab 留同高的位置，内容出现时不再下移 -->
+        <div
+          v-else-if="!catalog && loading"
+          class="market__tabs market__tabs--placeholder"
+          aria-hidden="true"
+        />
       </header>
-
-      <ab-segmented
-        v-if="catalog?.length"
-        v-model:value="category"
-        size="sm"
-        class="market__tabs"
-        :options="categoryOptions"
-        :aria-label="$t('market.categories')"
-      />
     </template>
 
     <ab-alert v-if="stale" type="warning" :title="$t('market.stale_lead')">
@@ -305,7 +318,15 @@ function permissionLabel(id: string) {
       </template>
     </ab-alert>
 
-    <ab-skeleton v-if="!catalog && loading" preset="row" :count="5" />
+    <!-- 骨架与最终的列表 + 详情双栏同形 -->
+    <div v-if="!catalog && loading" class="market__panes">
+      <div class="market__list">
+        <ab-skeleton preset="row" :count="6" />
+      </div>
+      <div v-if="!isMobile" class="market__detail">
+        <ab-skeleton preset="lines" :count="4" />
+      </div>
+    </div>
 
     <ab-empty
       v-else-if="!catalog && error !== null"
@@ -321,6 +342,29 @@ function permissionLabel(id: string) {
         </ab-button>
       </template>
     </ab-empty>
+
+    <!-- 列表为空且没有选中的插件：单独的左对齐空状态，不嵌进双栏。
+         路由带 id 时保留双栏，详情与进行中的安装确认不能消失 -->
+    <template v-else-if="catalog && !visible.length && !routeId">
+      <ab-empty
+        v-if="query.trim()"
+        :title="$t('market.no_match', { query: query.trim() })"
+      >
+        <template #action>
+          <ab-button size="sm" variant="ghost" @click="query = ''">
+            {{ $t('market.clear_search') }}
+          </ab-button>
+        </template>
+      </ab-empty>
+      <ab-empty v-else-if="catalog.length" :title="$t('market.no_filter_match')">
+        <template #action>
+          <ab-button size="sm" variant="ghost" @click="resetFilters">
+            {{ $t('market.show_all') }}
+          </ab-button>
+        </template>
+      </ab-empty>
+      <ab-empty v-else :title="$t('market.empty')" />
+    </template>
 
     <div v-else-if="catalog" class="market__panes">
       <nav
@@ -340,7 +384,7 @@ function permissionLabel(id: string) {
           "
         >
           <span class="row__name">{{ entry.name || entry.id }}</span>
-          <span class="row__version">{{ entry.version }}</span>
+          <span class="row__version" :title="entry.version">{{ entry.version }}</span>
           <span class="row__state">
             <span
               class="mark"
@@ -351,32 +395,19 @@ function permissionLabel(id: string) {
           </span>
           <span class="row__author">{{ entry.authors.join(', ') }}</span>
         </RouterLink>
-
         <ab-empty
-          v-if="!visible.length && query.trim()"
-          :title="$t('market.no_match', { query: query.trim() })"
-        >
-          <template #action>
-            <ab-button size="sm" variant="ghost" @click="query = ''">
-              {{ $t('market.clear_search') }}
-            </ab-button>
-          </template>
-        </ab-empty>
-        <ab-empty
-          v-else-if="!visible.length && catalog.length"
-          :title="$t('market.no_filter_match')"
-        >
-          <template #action>
-            <ab-button size="sm" variant="ghost" @click="resetFilters">
-              {{ $t('market.show_all') }}
-            </ab-button>
-          </template>
-        </ab-empty>
-        <ab-empty v-else-if="!catalog.length" :title="$t('market.empty')" />
+          v-if="!visible.length"
+          :title="
+            query.trim()
+              ? $t('market.no_match', { query: query.trim() })
+              : $t('market.no_filter_match')
+          "
+        />
       </nav>
 
       <section
         v-if="selected && (!isMobile || showDetail)"
+        :key="confirming ? 'confirm' : selected.id"
         class="market__detail"
       >
         <MarketConfirm
@@ -488,6 +519,19 @@ function permissionLabel(id: string) {
           </div>
         </template>
       </section>
+
+      <section
+        v-else-if="routeId && (!isMobile || showDetail)"
+        class="market__detail"
+      >
+        <ab-empty :title="$t('market.not_found')" :description="routeId">
+          <template #action>
+            <ab-button size="sm" variant="ghost" @click="back">
+              {{ $t('market.back') }}
+            </ab-button>
+          </template>
+        </ab-empty>
+      </section>
     </div>
   </div>
 </template>
@@ -503,6 +547,10 @@ function permissionLabel(id: string) {
 }
 
 .market__tabs {
+  grid-area: tabs;
+  // 与原先在 header 外时一样，离搜索行 12px（header 行距 8px）
+  margin-top: 4px;
+
   @include forMobile {
     max-width: 100%;
     overflow-x: auto;
@@ -511,7 +559,7 @@ function permissionLabel(id: string) {
     // 选中下划线（margin-bottom:-1px），焦点框也被裁。上下留 4px 并用背景线画边框，
     // 负 margin 抵消留白，布局与边线位置不变。
     padding-block: 4px;
-    margin-block: -4px -3px;
+    margin-block: 0 -3px;
     border-bottom: none;
     background: linear-gradient(var(--color-border), var(--color-border))
       left bottom 3px / 100% 1px no-repeat;
@@ -527,19 +575,39 @@ function permissionLabel(id: string) {
   }
 }
 
+// 手机：标题 | 目录状态 / 搜索 | 状态 / 分类；
+// 平板以上：搜索 | 状态 / 分类 | 目录状态 —— 目录状态宽度变化不再推动搜索框与下拉
 .market__top {
   display: grid;
   grid-template-areas:
     'title meta'
-    'search state';
+    'search state'
+    'tabs tabs';
   grid-template-columns: minmax(0, 1fr) 128px;
   align-items: center;
   gap: 8px;
 
   @include forTablet {
-    grid-template-areas: 'search state meta';
-    grid-template-columns: minmax(0, 1fr) 140px auto;
+    grid-template-areas:
+      'search search state'
+      'tabs meta meta';
+    grid-template-columns: minmax(0, 1fr) auto 140px;
     gap: 8px 12px;
+  }
+}
+
+// 与 ab-segmented 同高：标签行 27px + 底线（手机/平板由 .market__tabs 加上下 4px 留白）
+.market__tabs--placeholder {
+  box-sizing: content-box;
+  height: 27px;
+
+  // 桌面画 ab-segmented 的底线；手机/平板已由 .market__tabs 的背景线画出
+  @include forDesktop {
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  @include forTouch {
+    height: 35px;
   }
 }
 
@@ -584,7 +652,6 @@ function permissionLabel(id: string) {
 }
 
 .market__time {
-  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
 
@@ -615,10 +682,13 @@ function permissionLabel(id: string) {
   min-width: 0;
 }
 
+// 长名称最多两行，完整名称在 title 提示里
 .market__bar-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 // 桌面：列表 + 详情双栏，各自滚动；手机：只显示其中一栏
@@ -647,11 +717,17 @@ function permissionLabel(id: string) {
   @include forTablet {
     border-right: 1px solid var(--color-border);
   }
+
+  // 手机上从详情返回时列表按 v-if 重新挂载：与进入详情同样的淡入上移
+  @include forMobile {
+    animation: detail-enter var(--transition-normal) both;
+  }
 }
 
+// 右列最多占 45%，名称至少保留一半以上
 .row {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) fit-content(45%);
   align-items: baseline;
   gap: 2px 10px;
   flex-shrink: 0;
@@ -696,9 +772,13 @@ function permissionLabel(id: string) {
 }
 
 .row__version {
+  min-width: 0;
+  overflow: hidden;
   color: var(--color-text-secondary);
   font-size: 12px;
   text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .row__state {
@@ -747,6 +827,8 @@ function permissionLabel(id: string) {
   min-width: 0;
   min-height: 0;
   overflow: auto;
+  // 换插件 / 进入确认时按 key 重建：与路由切换同样的淡入上移
+  animation: detail-enter var(--transition-normal) both;
 
   @include forTablet {
     padding: 16px 20px 0;
@@ -768,20 +850,27 @@ function permissionLabel(id: string) {
   margin: 0;
   font-size: 17px;
   font-weight: 650;
+  overflow-wrap: anywhere;
 }
 
 .detail__desc {
   margin: 2px 0 0;
   color: var(--color-text-secondary);
   font-size: 13px;
+  overflow-wrap: anywhere;
 }
 
 .detail__kv {
   display: grid;
   grid-template-columns: minmax(64px, max-content) 1fr;
+  align-items: baseline;
   gap: 8px 14px;
   margin: 0;
   font-size: 13px;
+
+  @include forMobile {
+    grid-template-columns: minmax(64px, 7.5em) 1fr;
+  }
 
   dt {
     color: var(--color-text-secondary);
@@ -887,6 +976,34 @@ function permissionLabel(id: string) {
 
   :deep(a) {
     color: var(--color-primary);
+  }
+
+  :deep(table) {
+    display: block;
+    overflow-x: auto;
+    border-collapse: collapse;
+    margin: 0 0 8px;
+    font-size: 12px;
+    overflow-wrap: normal;
+  }
+
+  :deep(th),
+  :deep(td) {
+    padding: 4px 8px;
+    border-bottom: 1px solid var(--color-border);
+    text-align: left;
+    vertical-align: top;
+  }
+
+  :deep(th) {
+    font-weight: 600;
+  }
+}
+
+@keyframes detail-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
   }
 }
 </style>

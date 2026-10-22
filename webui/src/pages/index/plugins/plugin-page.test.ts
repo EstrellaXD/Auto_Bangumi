@@ -17,6 +17,9 @@ vi.mock('@/hooks/usePluginUi', () => ({
   usePluginUi: () => state,
   refreshPluginUi: () => refreshPluginUi(),
 }));
+vi.mock('@/hooks/useMyI18n', () => ({
+  useMyI18n: () => ({ lang: ref('zh-CN') }),
+}));
 vi.mock('@/components/plugin-slot.vue', () => ({
   default: { template: '<div class="slot-stub" />' },
 }));

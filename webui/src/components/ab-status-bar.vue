@@ -78,7 +78,8 @@ const menuItems = computed<AbMenuItem[]>(() =>
   cursor: pointer;
   user-select: none;
   color: var(--color-text-secondary);
-  transition: color var(--transition-fast), transform var(--transition-fast);
+  transition: color var(--transition-fast),
+    background-color var(--transition-fast);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -97,13 +98,10 @@ const menuItems = computed<AbMenuItem[]>(() =>
     min-height: var(--touch-target);
   }
 
+  // 与 ab-icon-button ghost 一致：状态只靠底色与墨色表达
   &:hover {
-    color: var(--color-primary);
-    transform: scale(1.1);
-  }
-
-  &:active {
-    transform: scale(0.95);
+    background: var(--color-surface-2);
+    color: var(--color-text);
   }
 
   &:focus-visible {

@@ -146,9 +146,11 @@ function permissionLabel(id: string) {
 }
 
 .confirm__title {
+  min-width: 0;
   margin: 0;
   font-size: 17px;
   font-weight: 650;
+  overflow-wrap: anywhere;
 }
 
 .confirm__version {
@@ -161,9 +163,14 @@ function permissionLabel(id: string) {
 .confirm__kv {
   display: grid;
   grid-template-columns: minmax(64px, max-content) 1fr;
+  align-items: baseline;
   gap: 8px 14px;
   margin: 0;
   font-size: 13px;
+
+  @include forMobile {
+    grid-template-columns: minmax(64px, 7.5em) 1fr;
+  }
 
   dt {
     color: var(--color-text-secondary);
@@ -243,6 +250,13 @@ function permissionLabel(id: string) {
   @include forMobile {
     margin-top: auto;
     background: var(--color-bg);
+  }
+
+  // 手机：与详情页的整宽主按钮衔接，两个按钮平分整行
+  @media screen and (max-width: 639px) {
+    > * {
+      flex: 1;
+    }
   }
 }
 </style>

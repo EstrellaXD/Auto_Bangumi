@@ -98,8 +98,8 @@ watch(
     <ab-skeleton v-if="loading" preset="lines" :count="2" />
     <ab-alert v-if="failed" type="danger" :title="$t('plugin.load_failed')">
       <span class="plugin-slot__id">{{ ui.plugin_id }}</span>
-      <span v-if="reason" class="plugin-slot__id">{{ reason }}</span>
       {{ $t('plugin.load_failed_hint') }}
+      <span v-if="reason" class="plugin-slot__reason">{{ reason }}</span>
       <template #action>
         <ab-button size="sm" @click="reload">
           {{
@@ -119,5 +119,15 @@ watch(
 
 .plugin-slot__id {
   font-family: var(--font-mono);
+}
+
+// 原因（多为 URL 或异常信息）单独一行，长串可在任意位置换行
+.plugin-slot__reason {
+  display: block;
+  margin-top: 4px;
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  overflow-wrap: anywhere;
 }
 </style>

@@ -282,9 +282,19 @@ function endProgrammaticScroll() {
   scrollTimer = null;
 }
 
+// 程序化滚动静止 150ms 后才恢复 scroll-spy（平滑滚动时长不固定，长距离可超过 600ms）
+function armScrollTimer() {
+  if (scrollTimer) clearTimeout(scrollTimer);
+  scrollTimer = setTimeout(endProgrammaticScroll, 150);
+}
+
 function onScroll() {
   const container = scrollEl.value;
-  if (!container || isProgrammaticScroll) return;
+  if (!container) return;
+  if (isProgrammaticScroll) {
+    armScrollTimer();
+    return;
+  }
   const containerTop = container.getBoundingClientRect().top;
   const tops = visibleSections.value.flatMap(({ id }) => {
     const el = sectionEls.get(id);
@@ -301,9 +311,8 @@ function jumpTo(id: string) {
   if (!el) return;
   activeSection.value = id;
   isProgrammaticScroll = true;
-  // scrollend 不可用（Safari）或未触发时，由定时器兜底解除
-  if (scrollTimer) clearTimeout(scrollTimer);
-  scrollTimer = setTimeout(endProgrammaticScroll, 600);
+  // scrollend 不可用（Safari）或根本没有滚动时，由静止定时器兜底解除
+  armScrollTimer();
   scrollEl.value?.addEventListener('scrollend', endProgrammaticScroll, {
     once: true,
   });
@@ -456,6 +465,11 @@ onBeforeRouteLeave(() => {
   display: flex;
   flex-direction: column;
   gap: 10px;
+
+  // 保存栏与内容列同宽：rail 190 + gap 16 + 内容 860
+  @include forDesktop {
+    max-width: calc(190px + 16px + 860px);
+  }
 }
 
 .config-layout {
@@ -517,7 +531,7 @@ onBeforeRouteLeave(() => {
 .dirty-dot {
   width: 7px;
   height: 7px;
-  border-radius: var(--radius-full);
+  border-radius: 2px;
   background: var(--color-accent);
   flex-shrink: 0;
 }
@@ -546,9 +560,9 @@ onBeforeRouteLeave(() => {
 .config-no-match {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
-  padding: 32px 16px;
+  padding: 16px 0;
   color: var(--color-text-secondary);
   font-size: 14px;
 }
