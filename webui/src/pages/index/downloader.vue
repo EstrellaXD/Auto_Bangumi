@@ -372,8 +372,9 @@ const tableMinWidth = computed(() => columnsWidth(tableColumnsValue.value));
       </div>
 
       <!-- 单个虚拟滚动表：只渲染可见行；不放进 NCollapseItem，SSE 数据才能刷新行 -->
+      <!-- 量到内容宽度后再渲染：列按宽度取舍，首帧不先显示全部列再收起 -->
       <NDataTable
-        v-else
+        v-else-if="contentWidth"
         class="downloader-table"
         :columns="tableColumnsValue"
         :data="rows"

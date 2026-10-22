@@ -64,7 +64,10 @@ export async function completeFirstRunSetup(
   await page.getByLabel('Download Path').fill('/downloads/Bangumi');
   await page.getByRole('button', { name: 'Next' }).click();
 
+  // Steps swap through an out-in transition; wait for the notification step
+  // so the second Skip does not hit the RSS step while it fades out.
   await page.getByRole('button', { name: 'Skip' }).click();
+  await expect(page.getByLabel('Chat ID')).toBeVisible();
   await page.getByRole('button', { name: 'Skip' }).click();
 
   const completeResponse = page.waitForResponse(
