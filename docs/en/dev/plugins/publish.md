@@ -1,6 +1,6 @@
 # List a Plugin
 
-The source of a plugin stays in the author's own public GitHub repository. To list or update a plugin, the author opens a PR to `EstrellaXD/Auto_Bangumi` (base branch `4.0-dev`). The PR adds or edits one file: `plugins/registry/<id>.toml`.
+The source of a plugin stays in the author's own public GitHub repository. To list or update a plugin, the author opens a PR to `EstrellaXD/Auto_Bangumi` (base branch `main`). The PR adds or edits one file: `plugins/registry/<id>.toml`.
 
 CI checks the code that this file points to. A maintainer reads the code and merges. After the merge, CI packs and signs the plugin and publishes it to the signed catalog.
 
@@ -45,7 +45,7 @@ A PR can change several entries. We recommend one plugin per PR.
    git rev-parse HEAD
    ```
 
-5. Fork `EstrellaXD/Auto_Bangumi`, add `plugins/registry/<id>.toml`, and open a PR to `4.0-dev`. Change only files under `plugins/registry/`. In the PR description, use the plugin template (`?template=plugin.md`) and tick each item.
+5. Fork `EstrellaXD/Auto_Bangumi`, add `plugins/registry/<id>.toml`, and open a PR to `main`. Change only files under `plugins/registry/`. In the PR description, use the plugin template (`?template=plugin.md`) and tick each item.
 
 ## CI rules
 
@@ -82,7 +82,7 @@ A user sees the new plugin or version through `GET /api/v1/plugins/catalog`. For
 
 1. Change the code in your repository and raise `version` in `plugin.toml`.
 2. Push, then get the new full SHA with `git rev-parse HEAD`.
-3. Open a PR to `4.0-dev`. In `plugins/registry/<id>.toml`, change `commit` to the new SHA, then set `sha256` to the value from the CI summary.
+3. Open a PR to `main`. In `plugins/registry/<id>.toml`, change `commit` to the new SHA, then set `sha256` to the value from the CI summary.
 
 The version must be higher than the listed version. If not, CI rejects the PR.
 

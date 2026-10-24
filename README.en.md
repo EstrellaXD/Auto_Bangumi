@@ -99,7 +99,7 @@ Start the container:
 docker compose up -d
 ```
 
-Open `http://<host>:7892` and complete the setup wizard. For the 4.0 beta, use the `4.0.0-beta.N` or `dev-latest` tag. For other deployment methods, see the [deployment docs](https://www.autobangumi.org/en/deploy/quick-start.html).
+Open `http://<host>:7892` and complete the setup wizard. Before you upgrade from 3.3, read [Upgrade from 3.3 to 4.0](https://www.autobangumi.org/en/deploy/upgrade-4.0). For other deployment methods, see the [deployment docs](https://www.autobangumi.org/en/deploy/quick-start.html).
 
 ## Upgrade from 3.x
 
@@ -127,7 +127,7 @@ Issues and pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) be
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=EstrellaXD/Auto_Bangumi&type=Date)](https://star-history.com/#EstrellaXD/Auto_Bangumi)
+[![Star History Chart](https://star-history.dera.page/svg?repos=EstrellaXD/Auto_Bangumi&type=Date)](https://star-history.dera.page/#EstrellaXD/Auto_Bangumi)
 
 ## Licence
 

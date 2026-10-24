@@ -9,10 +9,10 @@ name: Plugin Registry
 #   并校验 sha256，核对每个新 zip 的 id 与来源，再签名发布。
 on:
   pull_request:
-    branches: ["4.0-dev"]
+    branches: ["main"]
     paths: ["plugins/**"]
   push:
-    branches: ["4.0-dev"]
+    branches: ["main"]
     paths: ["plugins/**"]
   workflow_dispatch:
     inputs:
@@ -84,8 +84,8 @@ jobs:
             --catalog old/catalog.json --out dist | tee -a "$GITHUB_STEP_SUMMARY"
 
   plan:
-    # 带着签名密钥的发布只从 4.0-dev 运行
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/4.0-dev'
+    # 带着签名密钥的发布只从 main 运行
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     outputs:
       build: ${{ steps.plan.outputs.build }}

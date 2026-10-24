@@ -131,10 +131,11 @@ webui/src/
 
 ## Git Branching
 
-- `main`: Stable releases only
-- `X.Y-dev` branches: Active development (e.g., `3.2-dev`)
+- `main`: Stable releases, plus plugin registry PRs (`plugins/registry/`)
+- `X.Y-dev` branches: Active development (e.g., `4.0-dev`)
 - Bug fixes → PR to current released version's `-dev` branch
 - New features → PR to next version's `-dev` branch
+- Plugin listings → PR to `main`; `plugin-registry.yml` and `docs.yml` publish from `main`. Merge `main` back into the `-dev` branch before each release
 
 ## Releasing
 

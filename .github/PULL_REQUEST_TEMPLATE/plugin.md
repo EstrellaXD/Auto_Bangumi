@@ -1,4 +1,4 @@
-<!-- Plugin listing PR. Base branch: 4.0-dev. Docs: https://autobangumi.org/dev/plugins/publish -->
+<!-- Plugin listing PR. Base branch: main. Docs: https://autobangumi.org/dev/plugins/publish -->
 
 ## Plugin
 

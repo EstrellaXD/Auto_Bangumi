@@ -2,8 +2,8 @@
 
 DSM 7.2 supports Docker Compose, so we recommend using Docker Compose for one-click deployment.
 
-::: tip 4.0 beta
-This page uses the `latest` tag, which installs the 3.3 stable release. To use the 4.0 beta, change the image tag to `4.0.0-beta.N` (for example `4.0.0-beta.1`). Before you upgrade from 3.3, read [Upgrade from 3.3 to 4.0](./upgrade-4.0).
+::: tip Upgrade from 3.3
+This page uses the `latest` tag, which installs the 4.0 stable release. If you use 3.3 now, read [Upgrade from 3.3 to 4.0](./upgrade-4.0) before you pull the new image. To stay on 3.3, set the tag to `3.3.7`.
 :::
 
 ## Create Configuration and Data Directories

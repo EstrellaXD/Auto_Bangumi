@@ -1,6 +1,6 @@
 # 上架插件
 
-插件的源码留在作者自己的公开 GitHub 仓库。要上架或更新插件，作者向 `EstrellaXD/Auto_Bangumi` 提交一个 PR（目标分支 `4.0-dev`），新增或修改一个文件：`plugins/registry/<id>.toml`。
+插件的源码留在作者自己的公开 GitHub 仓库。要上架或更新插件，作者向 `EstrellaXD/Auto_Bangumi` 提交一个 PR（目标分支 `main`），新增或修改一个文件：`plugins/registry/<id>.toml`。
 
 CI 自动检查这个文件指向的代码。维护者阅读代码后合并。合并后 CI 打包、签名并发布到签名目录。
 
@@ -45,7 +45,7 @@ sha256 = "<64 位>"   # PR 检查打出的 zip 的 sha256；先留空，CI 会�
    git rev-parse HEAD
    ```
 
-5. Fork `EstrellaXD/Auto_Bangumi`，新增 `plugins/registry/<id>.toml`，向 `4.0-dev` 提交 PR。PR 里只能改 `plugins/registry/` 下的文件。在 PR 描述中选用插件模板（`?template=plugin.md`），逐项勾选清单。
+5. Fork `EstrellaXD/Auto_Bangumi`，新增 `plugins/registry/<id>.toml`，向 `main` 提交 PR。PR 里只能改 `plugins/registry/` 下的文件。在 PR 描述中选用插件模板（`?template=plugin.md`），逐项勾选清单。
 
 ## CI 规则
 
@@ -82,7 +82,7 @@ sha256 = "<64 位>"   # PR 检查打出的 zip 的 sha256；先留空，CI 会�
 
 1. 在自己的仓库里改代码，并提高 `plugin.toml` 里的 `version`。
 2. 推送，用 `git rev-parse HEAD` 取得新的完整 SHA。
-3. 向 `4.0-dev` 提交 PR，把 `plugins/registry/<id>.toml` 里的 `commit` 改成新 SHA，再按 CI 摘要更新 `sha256`。
+3. 向 `main` 提交 PR，把 `plugins/registry/<id>.toml` 里的 `commit` 改成新 SHA，再按 CI 摘要更新 `sha256`。
 
 版本必须高于目录中已有的版本，否则 CI 拒绝。
 

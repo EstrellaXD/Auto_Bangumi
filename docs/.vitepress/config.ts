@@ -1,6 +1,6 @@
 import { defineConfig } from 'vitepress'
 
-const version = `v3.3.2`
+const version = `v4.0.0`
 
 // Shared configuration
 const sharedConfig = {

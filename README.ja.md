@@ -95,7 +95,7 @@ services:
 docker compose up -d
 ```
 
-`http://<ホスト>:7892` を開き、セットアップウィザードに従って設定します。4.0 ベータ版には `4.0.0-beta.N` または `dev-latest` タグを使用してください。その他のデプロイ方法は [デプロイドキュメント](https://www.autobangumi.org/ja/deploy/quick-start.html) を参照してください。
+`http://<ホスト>:7892` を開き、セットアップウィザードに従って設定します。3.3 からアップグレードする前に [3.3 から 4.0 へのアップグレード](https://www.autobangumi.org/ja/deploy/upgrade-4.0) を読んでください。その他のデプロイ方法は [デプロイドキュメント](https://www.autobangumi.org/ja/deploy/quick-start.html) を参照してください。
 
 ## 3.x からのアップグレード
 
@@ -123,7 +123,7 @@ Issue や PR を歓迎します。コードを提供する前に [CONTRIBUTING.m
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=EstrellaXD/Auto_Bangumi&type=Date)](https://star-history.com/#EstrellaXD/Auto_Bangumi)
+[![Star History Chart](https://star-history.dera.page/svg?repos=EstrellaXD/Auto_Bangumi&type=Date)](https://star-history.dera.page/#EstrellaXD/Auto_Bangumi)
 
 ## Licence
 

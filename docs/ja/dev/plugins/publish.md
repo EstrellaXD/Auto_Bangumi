@@ -1,6 +1,6 @@
 # プラグインを掲載する
 
-プラグインのソースは、作者自身の公開 GitHub リポジトリに置いたままにします。プラグインを掲載または更新するには、作者が `EstrellaXD/Auto_Bangumi`（ベースブランチ `4.0-dev`）に PR を作ります。PR では 1 つのファイル `plugins/registry/<id>.toml` を追加または編集します。
+プラグインのソースは、作者自身の公開 GitHub リポジトリに置いたままにします。プラグインを掲載または更新するには、作者が `EstrellaXD/Auto_Bangumi`（ベースブランチ `main`）に PR を作ります。PR では 1 つのファイル `plugins/registry/<id>.toml` を追加または編集します。
 
 CI はこのファイルが指すコードを検査します。メンテナーがコードを読んでマージします。マージ後、CI がプラグインをパックして署名し、署名付きカタログに公開します。
 
@@ -45,7 +45,7 @@ sha256 = "<64 桁>"   # PR チェックで作られる zip の sha256。最初�
    git rev-parse HEAD
    ```
 
-5. `EstrellaXD/Auto_Bangumi` を fork し、`plugins/registry/<id>.toml` を追加して、`4.0-dev` に PR を作ります。変更するのは `plugins/registry/` 以下のファイルだけです。PR の説明ではプラグイン用テンプレート（`?template=plugin.md`）を使い、各項目にチェックを入れます。
+5. `EstrellaXD/Auto_Bangumi` を fork し、`plugins/registry/<id>.toml` を追加して、`main` に PR を作ります。変更するのは `plugins/registry/` 以下のファイルだけです。PR の説明ではプラグイン用テンプレート（`?template=plugin.md`）を使い、各項目にチェックを入れます。
 
 ## CI のルール
 
@@ -82,7 +82,7 @@ sha256 = "<64 桁>"   # PR チェックで作られる zip の sha256。最初�
 
 1. 自分のリポジトリでコードを変更し、`plugin.toml` の `version` を上げます。
 2. push して、`git rev-parse HEAD` で新しい完全な SHA を取得します。
-3. `4.0-dev` に PR を作ります。`plugins/registry/<id>.toml` の `commit` を新しい SHA に変更し、CI サマリーの値で `sha256` を更新します。
+3. `main` に PR を作ります。`plugins/registry/<id>.toml` の `commit` を新しい SHA に変更し、CI サマリーの値で `sha256` を更新します。
 
 バージョンはカタログにあるバージョンより高くする必要があります。そうでない場合、CI は PR を拒否します。
 

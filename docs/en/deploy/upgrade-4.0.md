@@ -2,10 +2,6 @@
 
 4.0 is a large release that adds plugins. You can now have more than one downloader instance. Built-in plugins now supply rename, hard links, torrent filters, and media server refresh. At the first start, AB moves the 3.3 configuration to the new locations. This page tells what the migration changes, how to upgrade, what to check after the upgrade, and how to roll back to 3.3.
 
-::: warning 4.0 is a beta
-4.0 is only available as `4.0.0-beta.N` beta releases. Until the 4.0 stable release, the `latest` image tag continues to point to 3.3. Make the backups below before you upgrade a production system.
-:::
-
 ## Before you upgrade
 
 1. **Make sure that you use 3.3.x.** You can upgrade to 4.0 only from 3.3.x. AB does not start if it finds data from an older version: a version below 3.3 in `config/version.info`, or a 2.x `data/data.json` file. The log tells you to upgrade to the latest 3.3.x and start it once. At that time, AB can already have changed `config.json` to the 4.0 format. Copy `config.json.v3.bak` back to `config.json` before you go back to 3.3.x.
@@ -19,13 +15,13 @@ cp -a ${HOME}/AutoBangumi/data ${HOME}/AutoBangumi/data.bak-3.3
 
 ## Change the image tag
 
-Image tags for the 4.0 beta:
+Image tags for 4.0:
 
 | Tag | Meaning |
 | --- | --- |
-| `4.0.0-beta.N` | One specified beta, for example `4.0.0-beta.1`. **Recommended**: you control when you upgrade and roll back |
-| `dev-latest` | The most recent beta. Each `X.Y.Z-beta.N` release moves this tag, not only 4.0 releases |
-| `latest` | The most recent stable release. This is 3.3 until the 4.0 stable release |
+| `4.0.0` | One specified version. **Recommended**: you control when you upgrade and roll back |
+| `latest` | The most recent stable release, which is now 4.0. If a 3.3 installation uses `latest`, the next pull upgrades it to 4.0. Make the backups above first |
+| `3.3.7` | The last 3.3 release. Set the tag to it to stay on 3.3 for now |
 
 The images are on `ghcr.io/estrellaxd/auto_bangumi` and on Docker Hub as `estrellaxd/auto_bangumi`.
 
@@ -34,7 +30,7 @@ Docker Compose: change `image`, then create the container again.
 ```yaml
 services:
   AutoBangumi:
-    image: "ghcr.io/estrellaxd/auto_bangumi:4.0.0-beta.1"
+    image: "ghcr.io/estrellaxd/auto_bangumi:4.0.0"
 ```
 
 ```shell
@@ -46,9 +42,9 @@ Docker CLI: remove the old container. Then run `docker run` again with the new t
 
 The volumes (`/app/config`, `/app/data`), the port, and the environment variables do not change. 4.0 adds no environment variables. AB installs plugins in `config/plugins/`, which is in the `/app/config` volume.
 
-### In-app update (3.3 beta channel)
+### In-app update
 
-If you selected the beta update channel in 3.3, **Settings → Software Update** shows `4.0.0-beta.N`. 4.0 update bundles need image version `4.0.0-beta.1` or later. On a 3.3 image, **Update now** fails with a message that the image is too old and that you must pull a newer image. Change the image tag as the previous section tells you. Users on the stable channel do not see 4.0 betas.
+The in-app update cannot upgrade 3.3 to 4.0: 4.0 update bundles need image version `4.0.0-beta.1` or later. From 3.3.7, **Settings → Software Update** offers only 3.x versions, on the stable and on the beta channel. Earlier 3.3.x versions show 4.0, and **Update now** fails with a message that the image is too old and that you must pull a newer image. Change the image tag as the previous section tells you.
 
 ## First start: configuration migration
 

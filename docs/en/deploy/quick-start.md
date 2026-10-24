@@ -3,8 +3,8 @@
 We recommend deploying AutoBangumi in Docker.
 Before deployment, make sure you have [Docker Engine][docker-engine] or [Docker Desktop][docker-desktop] installed.
 
-::: tip 4.0 beta
-The commands on this page use the `latest` tag, which installs the 3.3 stable release. To use the 4.0 beta, change the image tag to `4.0.0-beta.N` (for example `4.0.0-beta.1`). The volumes and the environment variables do not change. Before you upgrade from 3.3, read [Upgrade from 3.3 to 4.0](./upgrade-4.0). The 4.0 hard link plugin also needs the media library directory mounted into the container. Refer to [Bangumi Manager](../config/manager).
+::: tip Upgrade from 3.3
+The commands on this page use the `latest` tag, which installs the 4.0 stable release. If you use 3.3 now, read [Upgrade from 3.3 to 4.0](./upgrade-4.0) before you pull the new image. To stay on 3.3, set the tag to `3.3.7`. The 4.0 hard link plugin also needs the media library directory mounted into the container. Refer to [Bangumi Manager](../config/manager).
 :::
 
 ## Create Data and Configuration Directories

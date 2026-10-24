@@ -95,7 +95,7 @@ services:
 docker compose up -d
 ```
 
-打开 `http://<主机地址>:7892`，按设置向导完成配置。4.0 测试版请使用 `4.0.0-beta.N` 或 `dev-latest` 标签。更多部署方式见 [部署文档](https://www.autobangumi.org/deploy/quick-start.html)。
+打开 `http://<主机地址>:7892`，按设置向导完成配置。从 3.3 升级前请阅读 [从 3.3 升级到 4.0](https://www.autobangumi.org/deploy/upgrade-4.0)。更多部署方式见 [部署文档](https://www.autobangumi.org/deploy/quick-start.html)。
 
 ## 从 3.x 升级
 
