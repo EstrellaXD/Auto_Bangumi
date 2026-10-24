@@ -217,7 +217,8 @@ class Updater:
 
     async def _fetch_releases(self) -> list[dict]:
         client = await self._get_client()
-        url = f"{_API_BASE}/repos/{self.owner}/{self.repo}/releases?per_page=20"
+        # ponytail: 只取第一页；之后的 4.x 发布超过 100 个时，再按页往后找 3.x
+        url = f"{_API_BASE}/repos/{self.owner}/{self.repo}/releases?per_page=100"
         resp = await client.get(url, headers=_API_HEADERS)
         resp.raise_for_status()
         data = resp.json()
@@ -269,6 +270,9 @@ class Updater:
         return bundle_url, sha_url, sig_url
 
     def _pick_release(self, releases: list[dict], channel: str) -> Optional[dict]:
+        # 只提供与镜像同一主版本的更新：下一个主版本的更新包要求新镜像
+        # （min_image_version），只能更换镜像标签升级
+        image = _parse_semver(self.image_version)
         candidates: list[tuple[semver.VersionInfo, dict]] = []
         for rel in releases:
             if rel.get("draft"):
@@ -277,6 +281,9 @@ class Updater:
                 continue
             ver = _parse_semver(rel.get("tag_name") or "")
             if ver is None:
+                continue
+            # 镜像版本无法解析（开发/本地构建）时 _image_supports 拒绝任何更新包
+            if image is None or ver.major != image.major:
                 continue
             candidates.append((ver, rel))
         if not candidates:
