@@ -1,4 +1,5 @@
 import logging
+import os
 import sqlite3
 from contextlib import closing
 from pathlib import Path
@@ -20,6 +21,8 @@ DATABASE_PATH = Path(DATA_PATH.removeprefix("sqlite:///"))
 
 # 4.0 只支持从 3.3.x 起跳升级；更早版本的跨版本迁移代码已移除。
 MIN_UPGRADE_FROM = (3, 3)
+# 3.3.x 的 schema 版本
+V3_SCHEMA_VERSION = 24
 
 
 class UnsupportedUpgradeError(RuntimeError):
@@ -83,17 +86,35 @@ def _read_v3_version() -> semver.Version | None:
         return None
 
 
+def _is_v3_schema(conn: sqlite3.Connection) -> bool:
+    """数据库仍是 3.x 结构（4.0 的迁移从 v25 开始）。"""
+    if not conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'schema_version'"
+    ).fetchone():
+        return True
+    row = conn.execute("SELECT version FROM schema_version WHERE id = 1").fetchone()
+    # 3.3 总会写入版本行；空表只会是 4.x 建库后迁移失败
+    return row is not None and row[0] <= V3_SCHEMA_VERSION
+
+
 def _backup_v3_database() -> None:
-    """首次以 4.x 启动 3.x 数据时备份数据库，供回退 3.3 时还原；已有备份不覆盖。"""
+    """数据库还是 3.x 结构时备份它，供回退 3.3 时还原。
+
+    回退 3.3 后再升级也会重新备份：当前库包含旧备份的全部内容，所以替换旧备份。
+    只留一份：迁移失败导致的重启循环不会堆积备份。
+    """
     backup = DATABASE_PATH.with_name(DATABASE_PATH.name + ".v3.bak")
-    if backup.exists():
-        return
-    # 用 SQLite 备份接口而不是复制文件：WAL 中未合并的数据也要带上
-    with (
-        closing(sqlite3.connect(DATABASE_PATH)) as src,
-        closing(sqlite3.connect(backup)) as dst,
-    ):
-        src.backup(dst)
+    tmp = backup.with_name(backup.name + ".tmp")
+    with closing(sqlite3.connect(DATABASE_PATH)) as src:
+        if not _is_v3_schema(src):
+            return
+        # 上次备份中途崩溃留下的半个文件会让 backup() 报错
+        tmp.unlink(missing_ok=True)
+        # 用 SQLite 备份接口而不是复制文件：WAL 中未合并的数据也要带上
+        with closing(sqlite3.connect(tmp)) as dst:
+            src.backup(dst)
+    # 写完再替换：中途崩溃不会破坏旧备份
+    os.replace(tmp, backup)
     logger.info(f"Backed up the 3.x database to {backup}.")
 
 
@@ -106,6 +127,8 @@ def version_check() -> semver.Version | None:
     if VERSION in ("DEV_VERSION", "local"):
         return None
     if VERSION_PATH.exists():
+        # 回退 3.3 并还原了 3.x 数据库后再升级，也走这里
+        _backup_v3_database()
         last_ver = _read_last_version()
         if last_ver is None:
             return None

@@ -251,6 +251,24 @@ class TestRenameAll:
         assert events == []
         assert [n.official_title for n in renamed] == ["Show"]
 
+    async def test_rename_all_failure_on_one_instance_still_renames_others(
+        self, two_instances
+    ):
+        _mock("b")._torrents["hb"] = _completed(
+            "[Sub] Show - 01 [1080p]", "hb", "/b/Bangumi/Show/Season 1"
+        )
+        original = Renamer.rename
+
+        async def fail_on_a(self):
+            if self.client.instance_id == "a":
+                raise RuntimeError("boom")
+            return await original(self)
+
+        with patch.object(Renamer, "rename", fail_on_a):
+            renamed, _ = await rename_all()
+
+        assert [n.official_title for n in renamed] == ["Show"]
+
     async def test_rename_all_unavailable_instance_skipped_and_notified_once(
         self, two_instances
     ):

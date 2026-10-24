@@ -959,10 +959,15 @@ async def rename_all() -> tuple[list[Notification], list[SystemEvent]]:
                 )
             continue
         _unavailable.discard(instance_id)
+        renamer: Renamer | None = None
         try:
             renamer = Renamer(client)
             renamed += await renamer.rename()
-            events += renamer.events
+        except Exception:
+            # 一个实例出错不能拖垮其它实例的重命名
+            logger.exception("Rename failed on downloader %s, skipped", instance_id)
         finally:
+            if renamer is not None:
+                events += renamer.events
             await client.__aexit__(None, None, None)
     return renamed, events

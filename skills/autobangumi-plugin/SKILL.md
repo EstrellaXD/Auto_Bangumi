@@ -82,4 +82,4 @@ Details, imports and field lists: `references/extension-points.md`.
 - `references/extension-points.md`: imports, dataclass fields and gotchas per extension point.
 - `references/testing.md`: contract suites, `create_plugin`, `ab-plugin` commands, the manifest.
 - `references/frontend.md`: `[[plugin.ui]]`, slots, `AbHost`, CSP, build template.
-- Examples (in the AB repo): `examples/plugins/` has `webhook-on-event`, `custom-rss-site`, `template-rename`, `nfo-writer`, `ntfy-notifier`, `manual-pick`.
+- Examples (in the AB repo): `examples/plugins/` has `webhook-on-event`, `custom-rss-site`, `template-rename`, `nfo-writer`, `manual-pick`, `run-command`, `strm-writer`, and the notifiers `ntfy-notifier`, `slack-notifier`, `synology-chat-notifier`, `apprise-notifier`, `onebot-notifier`, `wpush-notifier`.

@@ -120,7 +120,7 @@ AB 在读取 `config.json` 之前检查它是不是 3.3 格式。是 3.3 格式�
 - 已经是 4.0 格式的配置不会再迁移，也不会再生成备份。
 - 环境变量（`AB_DOWNLOADER_HOST`、`AB_METHOD` 等）照常生效，仍然只在没有 `config.json` 的首次启动时读取；它们的值写入默认下载器实例与 `plugins.slots`。
 
-数据库在同一次启动中自动升级到 schema v26：新增插件存储表 `plugin_kv`，番剧、电影、RSS 订阅与种子新增 `downloader_id` 列。已有种子归属 `default` 实例；已有规则与订阅的 `downloader_id` 为空，表示跟随默认实例。
+数据库在同一次启动中自动升级到 schema v28：新增插件存储表 `plugin_kv`，番剧、电影、RSS 订阅与种子新增 `downloader_id` 列；aria2 的任务映射表按下载器实例重建；从搜索结果建立的订阅，关键词中的集号被去掉（每条改动记入日志）。已有种子归属 `default` 实例；已有规则与订阅的 `downloader_id` 为空，表示跟随默认实例。
 
 ## 4.0 中改变的行为
 
@@ -174,7 +174,7 @@ AB 在读取 `config.json` 之前检查它是不是 3.3 格式。是 3.3 格式�
 
 ## 回滚到 3.3
 
-4.x 把运行版本写入 `config/version_v4.info`，不改动 `config/version.info`，所以 3.3 启动时不会误判数据版本。首次以 4.x 启动 3.3 的数据时，AB 把数据库备份为 `data/data.db.v3.bak`。
+4.x 把运行版本写入 `config/version_v4.info`，不改动 `config/version.info`，所以 3.3 启动时不会误判数据版本。4.x 每次启动时，如果数据库还是 3.3 的结构，AB 先把它备份为 `data/data.db.v3.bak`（替换旧的备份）。
 
 **有升级前的完整备份时**（推荐）：
 
@@ -187,11 +187,11 @@ AB 在读取 `config.json` 之前检查它是不是 3.3 格式。是 3.3 格式�
 **没有完整备份时：**
 
 1. 停止容器。
-2. 用 `config/config.json.v3.bak` 覆盖 `config/config.json`。3.3 不认识 `plugins.instances`，不还原时下载器设置会变成默认值。
-3. 用 `data/data.db.v3.bak` 覆盖 `data/data.db`。3.3 不认识 4.0 改动过的数据表，不能继续使用 4.0 的数据库。
+2. 用编号最大的 `config/config.json.v3.bak.N` 覆盖 `config/config.json`（只有一份时就是 `config.json.v3.bak`）。3.3 不认识 `plugins.instances`，不还原时下载器设置会变成默认值。
+3. 删除 `data/data.db-wal` 与 `data/data.db-shm`（如果存在），再用 `data/data.db.v3.bak` 覆盖 `data/data.db`。3.3 不认识 4.0 改动过的数据表，不能继续使用 4.0 的数据库。不删除这两个文件时，SQLite 会把其中 4.0 的改动重新写回还原的数据库。
 4. 如果在 4.0 中使用过应用内更新，删除 `config/updates/` 目录。否则 3.3 镜像启动时会加载其中更新的 4.0 代码。
 5. 把镜像标签改回 3.3（例如 `3.3.6`），重新创建容器。
 
 这种方式回到升级 4.0 时的状态：在 4.0 中新增的番剧、种子记录与修改的设置全部丢失。
 
-以后再次升级到 4.0 时，迁移会重新运行，新的备份另存为 `config.json.v3.bak.1`。
+以后再次升级到 4.0 时，迁移会重新运行：配置的新备份另存为 `config.json.v3.bak.1` 等，数据库备份 `data.db.v3.bak` 被替换为回滚后的 3.3 数据库。

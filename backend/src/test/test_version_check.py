@@ -64,25 +64,63 @@ def test_upgrade_from_33_keeps_v3_record_and_backs_up_database(paths, tmp_path):
     assert tables == {"bangumi", "rssitem"}
 
 
-def test_upgrade_does_not_replace_existing_database_backup(paths, tmp_path):
-    (tmp_path / "version.info").write_text("3.3.6\n")
-    backup = tmp_path / "data.db.v3.bak"
-    backup.write_text("older")
-    vc.version_check()
-    assert backup.read_text() == "older"
-
-
 def test_upgrade_from_33_prerelease_is_allowed(paths, tmp_path):
     (tmp_path / "version.info").write_text("3.3.0-beta.2\n")
     assert str(vc.version_check()) == "3.3.0-beta.2"
 
 
+def _set_schema(path, version: int) -> None:
+    with closing(sqlite3.connect(path)) as conn:
+        conn.execute("CREATE TABLE schema_version (id INTEGER, version INTEGER)")
+        conn.execute("INSERT INTO schema_version VALUES (1, ?)", (version,))
+        conn.commit()
+
+
 def test_later_4x_boot_makes_no_database_backup(paths, tmp_path):
     version_path, _ = paths
+    _set_schema(tmp_path / "data.db", 28)
     (tmp_path / "version.info").write_text("3.3.6\n")
     version_path.write_text("4.0.0-beta.1\n")
     assert str(vc.version_check()) == "4.0.0-beta.1"
     assert version_path.read_text() == "4.0.0-beta.1\n4.0.0\n"
+    assert not (tmp_path / "data.db.v3.bak").exists()
+
+
+@pytest.mark.parametrize("record_4x", [True, False])
+def test_upgrade_after_rollback_replaces_stale_database_backup(
+    paths, tmp_path, record_4x
+):
+    """回退 3.3 并还原 3.x 数据库后再升级：旧备份缺少回退后在 3.3 中的改动。"""
+    version_path, _ = paths
+    _set_schema(tmp_path / "data.db", 24)
+    (tmp_path / "version.info").write_text("3.3.6\n")
+    if record_4x:
+        version_path.write_text("4.0.0\n")
+    backup = tmp_path / "data.db.v3.bak"
+    _make_db(backup, "stale")
+    vc.version_check()
+    with closing(sqlite3.connect(backup)) as conn:
+        tables = {r[0] for r in conn.execute("SELECT name FROM sqlite_master")}
+    assert tables == {"bangumi", "rssitem", "schema_version"}
+    assert not (tmp_path / "data.db.v3.bak.tmp").exists()
+
+
+def test_backup_ignores_torn_temp_file_from_crashed_backup(paths, tmp_path):
+    (tmp_path / "version.info").write_text("3.3.6\n")
+    (tmp_path / "data.db.v3.bak.tmp").write_bytes(b"torn")
+    vc.version_check()
+    with closing(sqlite3.connect(tmp_path / "data.db.v3.bak")) as conn:
+        tables = {r[0] for r in conn.execute("SELECT name FROM sqlite_master")}
+    assert tables == {"bangumi", "rssitem"}
+
+
+def test_empty_schema_version_table_is_not_backed_up(paths, tmp_path):
+    """4.x 建库后迁移失败：表在、版本行还没写，这不是 3.3 的数据库。"""
+    version_path, _ = paths
+    with closing(sqlite3.connect(tmp_path / "data.db")) as conn:
+        conn.execute("CREATE TABLE schema_version (id INTEGER, version INTEGER)")
+    version_path.write_text("4.0.0\n")
+    vc.version_check()
     assert not (tmp_path / "data.db.v3.bak").exists()
 
 
