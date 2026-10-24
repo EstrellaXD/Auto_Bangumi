@@ -120,7 +120,7 @@ The example shows only the related fields. The other settings do not change.
 - AB does not migrate a configuration that already has the 4.0 format, and does not make a backup for it.
 - Environment variables (`AB_DOWNLOADER_HOST`, `AB_METHOD`, and others) continue to work. AB reads them only at the first start, when no `config.json` exists. AB writes their values to the default downloader instance and to `plugins.slots`.
 
-During the same start, AB upgrades the database to schema v26. It adds the plugin storage table `plugin_kv` and a `downloader_id` column to bangumi, movies, RSS subscriptions, and torrents. Existing torrents belong to the `default` instance. Existing rules and subscriptions have an empty `downloader_id`, which means that they use the default instance.
+During the same start, AB upgrades the database to schema v28. It adds the plugin storage table `plugin_kv` and a `downloader_id` column to bangumi, movies, RSS subscriptions, and torrents. It rebuilds the aria2 task map for each downloader instance. It removes the episode from the keywords of subscriptions made from search results, and writes each change to the log. Existing torrents belong to the `default` instance. Existing rules and subscriptions have an empty `downloader_id`, which means that they use the default instance.
 
 ## Behavior that changes in 4.0
 
@@ -174,7 +174,7 @@ Plugins from the local directory (`config/plugins/local/`) or from pip do not ha
 
 ## Roll back to 3.3
 
-4.x writes its version to `config/version_v4.info` and does not change `config/version.info`. Thus 3.3 reads the correct data version when it starts. When 4.x starts on 3.3 data for the first time, AB makes a backup of the database at `data/data.db.v3.bak`.
+4.x writes its version to `config/version_v4.info` and does not change `config/version.info`. Thus 3.3 reads the correct data version when it starts. Each time 4.x starts on a database that still has the 3.3 structure, AB makes a backup of it at `data/data.db.v3.bak` and replaces the old backup.
 
 **If you have a full backup from before the upgrade** (recommended):
 
@@ -187,11 +187,11 @@ All changes that you made in 4.0 (new bangumi, new subscriptions, new settings) 
 **If you do not have a full backup:**
 
 1. Stop the container.
-2. Copy `config/config.json.v3.bak` to `config/config.json`. 3.3 does not know `plugins.instances`. If you do not restore the file, the downloader settings go back to their default values.
-3. Copy `data/data.db.v3.bak` to `data/data.db`. 3.3 cannot use the database after 4.0 changed its tables.
+2. Copy the `config/config.json.v3.bak.N` with the largest number to `config/config.json` (`config.json.v3.bak` if there is only one). 3.3 does not know `plugins.instances`. If you do not restore the file, the downloader settings go back to their default values.
+3. Delete `data/data.db-wal` and `data/data.db-shm` if they exist. Then copy `data/data.db.v3.bak` to `data/data.db`. 3.3 cannot use the database after 4.0 changed its tables. If you keep the two files, SQLite writes the 4.0 changes in them back into the restored database.
 4. If you used the in-app update in 4.0, remove the `config/updates/` directory. If you do not, the 3.3 image loads the newer 4.0 code from that directory at startup.
 5. Change the image tag back to 3.3 (for example `3.3.6`). Create the container again.
 
 This procedure goes back to the state at the time of the upgrade. The bangumi, torrent records and settings that you added or changed in 4.0 are lost.
 
-When you upgrade to 4.0 again, the migration runs again and writes the new backup to `config.json.v3.bak.1`.
+When you upgrade to 4.0 again, the migration runs again. It writes the new configuration backup to `config.json.v3.bak.1` (and so on), and replaces `data.db.v3.bak` with the 3.3 database from after the rollback.

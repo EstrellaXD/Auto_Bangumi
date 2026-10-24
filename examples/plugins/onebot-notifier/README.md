@@ -32,7 +32,9 @@ cp -r examples/plugins/onebot-notifier config/plugins/local/
 ## 测试
 
 ```bash
-cd examples/plugins/onebot-notifier && uv run pytest
+cd examples/plugins/onebot-notifier
+uv add ../autobangumi_sdk-0.6.0-py3-none-any.whl   # SDK 不在 PyPI：换成下载的轮子的实际路径
+uv run pytest
 ```
 
 ---

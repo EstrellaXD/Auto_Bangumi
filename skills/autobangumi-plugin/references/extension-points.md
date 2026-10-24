@@ -19,7 +19,7 @@ from ab_sdk.notify import NotificationMessage, NotifierFactory, NotifierSettings
 ```
 - `NotificationMessage(kind="episode"|"event", title, body, official_title, season, episode, poster_url)`.
 - `NotifierSettings(template, extra)`. Put credentials in the plugin `config_model`, not in channel entries.
-- Non-ASCII header values: pass `bytes` to httpx (`str` headers must be ASCII).
+- Non-ASCII header values: pass `bytes` to httpx2 (`str` headers must be ASCII).
 - Test: `NotifierContract`; implement `create_failing()` for the backend-refusal case.
 
 ### llm_provider (`points.LLM_PROVIDER`)

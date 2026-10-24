@@ -29,7 +29,9 @@ cp -r examples/plugins/strm-writer config/plugins/local/
 ## 测试
 
 ```bash
-cd examples/plugins/strm-writer && uv run pytest
+cd examples/plugins/strm-writer
+uv add ../autobangumi_sdk-0.6.0-py3-none-any.whl   # SDK 不在 PyPI：换成下载的轮子的实际路径
+uv run pytest
 ```
 
 对应 issue：[#428](https://github.com/EstrellaXD/Auto_Bangumi/issues/428)

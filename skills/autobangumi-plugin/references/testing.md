@@ -46,7 +46,7 @@ def test_x(tmp_path):
 
 - `create_plugin` validates options through `config_model`, builds the plugin, does not call `setup()`. `ctx.kv` is an in-memory store; `await ctx.bus.deliver(event)` feeds the plugin's own subscriptions.
 - Keep tests synchronous with `asyncio.run` so plain pytest works (no pytest-asyncio needed).
-- Network: replace the HTTP client with `httpx.MockTransport` (expose a `client_factory` attribute on the plugin). Cover the backend-refusal path.
+- Network: replace the HTTP client with `httpx2.MockTransport` (expose a `client_factory` attribute on the plugin). Cover the backend-refusal path.
 - Contract suites (subclass, implement `create()`): `DownloaderContract`, `RenameStrategyContract`, `NotifierContract` (+ `create_failing()`), `SearchSiteContract`. Run them through the real provider method, e.g. `create_plugin(Cls)[0].strategy()`.
 - Write the failing test first; a contract failure usually points to a real bug (e.g. non-ASCII header values).
 
