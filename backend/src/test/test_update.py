@@ -233,6 +233,30 @@ class TestCheckUpdate:
         assert res.is_prerelease is True
         assert res.has_update is True
 
+    @pytest.mark.parametrize(
+        "channel, expected", [("stable", "3.3.7"), ("beta", "3.3.8-beta.1")]
+    )
+    def test_next_major_release_is_not_offered(self, tmp_path, channel, expected):
+        """4.x 的更新包要求 4.x 镜像，3.x 镜像只能更换镜像标签升级。"""
+        releases = [
+            {"tag_name": tag, "prerelease": "beta" in tag}
+            for tag in ("4.0.0", "4.0.0-beta.9", "3.3.8-beta.1", "3.3.7")
+        ]
+        up = Updater(
+            root=tmp_path / "u", current_version="3.3.6", image_version="3.3.6"
+        )
+        picked = up._pick_release(releases, channel)
+        assert picked is not None
+        assert picked["tag_name"] == expected
+
+    def test_unparseable_image_version_is_offered_nothing(self, tmp_path):
+        """开发/本地构建不能应用更新包，也不应提示有更新。"""
+        releases = [{"tag_name": "3.3.7", "prerelease": False}]
+        up = Updater(
+            root=tmp_path / "u", current_version="3.3.6", image_version="DEV_VERSION"
+        )
+        assert up._pick_release(releases, "stable") is None
+
     @pytest.mark.asyncio
     async def test_no_update_when_current_is_latest(self, tmp_path, bundle):
         data, sha = bundle
