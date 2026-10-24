@@ -1,0 +1,10 @@
+[plugin]
+id = "custom-rss-site"
+name = "自定义 RSS 站点"
+version = "0.1.0"
+sdk = ">=0.5,<1"
+entry = "custom_rss_site:CustomRssSite"
+description = "示例插件：给搜索框加一个站点，并为该站点的请求附带 Cookie。演示 search_site 与 http.request"
+authors = ["AutoBangumi"]
+permissions = ["network"]
+extension_points = ["search_site", "http.request"]

@@ -390,7 +390,7 @@ def runtime_metadata(repo_root: Path) -> dict[str, Any]:
             ).stdout
         )
         metadata.update({"git_commit": commit, "git_dirty": dirty})
-    except (OSError, subprocess.SubprocessError):
+    except OSError, subprocess.SubprocessError:
         metadata.update({"git_commit": None, "git_dirty": None})
     return metadata
 

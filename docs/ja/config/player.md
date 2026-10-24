@@ -2,7 +2,7 @@
 
 プレイヤー設定はサイドバーの **プレイヤー** ページで使われます。
 
-![player](/image/config/player.png){width=700}{class=ab-shadow-card}
+![player](/image/en/config/player.png){width=700}{class=ab-shadow-card}
 
 - **種類**：
   - `jump`：プレイヤーページを開くと外部メディアサーバーへ移動します。

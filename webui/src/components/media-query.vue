@@ -4,18 +4,18 @@ const { isMobile, isTablet } = useBreakpointQuery();
 
 <template>
   <template v-if="isMobile">
-    <slot name="mobile"></slot>
+    <slot name="mobile" />
   </template>
 
   <template v-else-if="isTablet">
     <slot name="tablet">
       <!-- Fallback: if no tablet slot provided, use mobile -->
-      <slot name="mobile"></slot>
+      <slot name="mobile" />
     </slot>
   </template>
 
   <template v-else>
-    <slot></slot>
+    <slot />
   </template>
 </template>
 

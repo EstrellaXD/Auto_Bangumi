@@ -1,12 +1,17 @@
 <script lang="ts" setup>
-import { Popover, PopoverButton, PopoverPanel } from '@headlessui/vue';
-import { Attention, CloseOne, Delete, Info, Remind } from '@icon-park/vue-next';
+import { NPopover } from 'naive-ui';
+import { createReusableTemplate } from '@vueuse/core';
+import { Bell, Trash } from '@lucide/vue';
 import type { InboxMessage } from '@/api/notification';
+import { relativeTime } from '@/utils/relative-time';
 
 const { t } = useMyI18n();
 const router = useRouter();
 const store = useNotificationStore();
 const { messages, unreadCount, panelOpen } = storeToRefs(store);
+// 手机上面板放进底部抽屉：贴着铃铛的浮层在窄屏两侧都放不下
+const { isMobile } = useBreakpointQuery();
+const [DefinePanelBody, PanelBody] = createReusableTemplate();
 
 // 点条目跳转的目标页面；未列出的 kind 不跳转
 const KIND_ROUTES: Record<string, string> = {
@@ -18,37 +23,38 @@ const KIND_ROUTES: Record<string, string> = {
   offset_review: '/bangumi',
   download_failure: '/bangumi',
   rename_conflict: '/downloader',
+  rename_skipped: '/downloader',
 };
 
-const SEVERITY_ICONS = {
-  error: CloseOne,
-  warning: Attention,
-  info: Info,
-} as const;
-
 const confirmClear = ref(false);
+const bell = useTemplateRef<HTMLButtonElement>('bell');
 
-// PopoverPanel 挂载/卸载即打开/关闭：打开时拉取列表，关闭时复位确认态。
-function onPanelRef(el: unknown) {
-  const isOpen = !!el;
-  if (isOpen && !panelOpen.value) {
+// 打开时拉取列表，关闭时复位确认态。
+function onShowChange(open: boolean) {
+  if (open) {
     store.fetchMessages();
-  }
-  if (!isOpen) {
+  } else {
     confirmClear.value = false;
   }
-  panelOpen.value = isOpen;
+  panelOpen.value = open;
 }
 
-function severityIcon(msg: InboxMessage) {
-  return SEVERITY_ICONS[msg.severity] ?? Info;
+// 跨断点时关闭面板：浮层与底部抽屉之间不交接焦点
+watch(isMobile, () => {
+  if (panelOpen.value) onShowChange(false);
+});
+
+// NPopover 不处理 Esc：关闭后把焦点还给铃铛
+function closeByEsc() {
+  onShowChange(false);
+  bell.value?.focus();
 }
 
-function onItemClick(msg: InboxMessage, close: () => void) {
+function onItemClick(msg: InboxMessage) {
   store.markRead(msg.id);
   const route = KIND_ROUTES[msg.kind];
   if (route) {
-    close();
+    onShowChange(false);
     router.push(route);
   }
 }
@@ -61,112 +67,127 @@ function onClearClick() {
   confirmClear.value = false;
   store.clearAll();
 }
-
-function relativeTime(iso: string): string {
-  const then = new Date(iso).getTime();
-  if (Number.isNaN(then)) return '';
-  const minutes = Math.floor((Date.now() - then) / 60000);
-  if (minutes < 1) return t('notifications.time.just_now');
-  if (minutes < 60) return t('notifications.time.minutes_ago', { n: minutes });
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return t('notifications.time.hours_ago', { n: hours });
-  const days = Math.floor(hours / 24);
-  if (days < 7) return t('notifications.time.days_ago', { n: days });
-  return new Date(iso).toLocaleDateString();
-}
 </script>
 
 <template>
-  <Popover class="notification-center">
-    <PopoverButton
-      class="notification-bell"
-      :aria-label="$t('notifications.title')"
-    >
-      <Remind theme="outline" size="1em" />
-      <ab-badge class="notification-badge" :count="unreadCount" />
-    </PopoverButton>
-
-    <PopoverPanel v-slot="{ close }" class="notification-panel">
-      <div :ref="onPanelRef" class="notification-panel-inner">
-        <div class="notification-head">
-          <span class="notification-head-title">
-            {{ $t('notifications.title') }}
-            <template v-if="unreadCount > 0">
-              · {{ $t('notifications.unread', { n: unreadCount }) }}
-            </template>
-          </span>
-          <div class="notification-head-actions">
-            <ab-button
-              v-if="unreadCount > 0"
-              variant="ghost"
-              size="sm"
-              @click="store.markAllRead()"
-            >
-              {{ $t('notifications.mark_all_read') }}
-            </ab-button>
-            <ab-button
-              v-if="messages.length > 0"
-              variant="danger"
-              size="sm"
-              @click="onClearClick"
-            >
-              {{
-                confirmClear
-                  ? $t('notifications.clear_confirm')
-                  : $t('notifications.clear_all')
-              }}
-            </ab-button>
-          </div>
-        </div>
-
-        <div v-if="messages.length === 0" class="notification-empty">
-          {{ $t('notifications.empty') }}
-        </div>
-
-        <div v-else class="notification-list">
-          <div
-            v-for="msg in messages"
-            :key="msg.id"
-            class="notification-item"
-            :class="{ 'notification-item--unread': !msg.read }"
-            role="button"
-            tabindex="0"
-            @click="onItemClick(msg, close)"
-            @keydown.enter="onItemClick(msg, close)"
+  <div class="notification-center">
+    <DefinePanelBody>
+      <div class="notification-head">
+        <span class="notification-head-title">
+          {{ $t('notifications.title') }}
+          <span
+            v-if="unreadCount > 0"
+            class="notification-head-unread"
+            :title="$t('notifications.unread', { n: unreadCount })"
+          >{{ unreadCount }}</span>
+        </span>
+        <div class="notification-head-actions">
+          <ab-button
+            v-if="unreadCount > 0"
+            variant="ghost"
+            size="sm"
+            @click="store.markAllRead()"
           >
-            <div class="notification-sev" :class="`is-${msg.severity}`">
-              <Component :is="severityIcon(msg)" theme="outline" size="14" />
-            </div>
-            <div class="notification-content">
-              <div class="notification-title">
-                {{ store.titleOf(msg) }}
-                <span v-if="msg.count > 1" class="notification-count"
-                  >×{{ msg.count }}</span
-                >
-              </div>
-              <div class="notification-body">{{ store.bodyOf(msg) }}</div>
-              <div class="notification-meta">
-                {{ relativeTime(msg.updated_at) }}
-              </div>
-            </div>
-            <ab-icon-button
-              size="sm"
-              class="notification-delete"
-              :label="$t('notifications.delete')"
-              @click.stop="store.remove(msg.id)"
-            >
-              <Delete theme="outline" size="13" />
-            </ab-icon-button>
-          </div>
+            {{ $t('notifications.mark_all_read') }}
+          </ab-button>
+          <ab-button
+            v-if="messages.length > 0"
+            variant="danger"
+            size="sm"
+            @click="onClearClick"
+          >
+            {{
+              confirmClear
+                ? $t('notifications.clear_confirm')
+                : $t('notifications.clear_all')
+            }}
+          </ab-button>
         </div>
       </div>
-    </PopoverPanel>
-  </Popover>
+
+      <div v-if="messages.length === 0" class="notification-empty">
+        {{ $t('notifications.empty') }}
+      </div>
+
+      <div v-else class="notification-list">
+        <div
+          v-for="msg in messages"
+          :key="msg.id"
+          class="notification-item"
+          :class="{ 'notification-item--unread': !msg.read }"
+          role="button"
+          tabindex="0"
+          @click="onItemClick(msg)"
+          @keydown.enter="onItemClick(msg)"
+        >
+          <span class="notification-sev" :class="`is-${msg.severity}`" />
+          <div class="notification-content">
+            <div class="notification-title">
+              {{ store.titleOf(msg) }}
+              <span v-if="msg.count > 1" class="notification-count">×{{ msg.count }}</span>
+            </div>
+            <div class="notification-body">
+              {{ store.bodyOf(msg) }}
+            </div>
+            <div class="notification-meta">
+              {{ relativeTime(t, msg.updated_at) }}
+            </div>
+          </div>
+          <ab-icon-button
+            size="sm"
+            class="notification-delete"
+            :label="$t('notifications.delete')"
+            @click.stop="store.remove(msg.id)"
+          >
+            <Trash :size="13" />
+          </ab-icon-button>
+        </div>
+      </div>
+    </DefinePanelBody>
+
+    <NPopover
+      trigger="click"
+      placement="bottom-end"
+      raw
+      :show-arrow="false"
+      :show="panelOpen && !isMobile"
+      @update:show="onShowChange"
+    >
+      <template #trigger>
+        <button
+          ref="bell"
+          type="button"
+          class="notification-bell"
+          :aria-label="$t('notifications.title')"
+          aria-haspopup="dialog"
+          :aria-expanded="panelOpen"
+          @keydown.esc="closeByEsc"
+        >
+          <Bell :size="18" />
+          <ab-badge class="notification-badge" :count="unreadCount" />
+        </button>
+      </template>
+
+      <div class="notification-panel" @keydown.esc="closeByEsc">
+        <PanelBody />
+      </div>
+    </NPopover>
+
+    <ab-bottom-sheet
+      v-if="isMobile"
+      class="notification-sheet"
+      :aria-label="$t('notifications.title')"
+      :show="panelOpen"
+      :show-close="false"
+      @update:show="onShowChange"
+    >
+      <PanelBody />
+    </ab-bottom-sheet>
+  </div>
 </template>
 
-<!-- 不加 scoped：@headlessui/vue 的 Popover/PopoverButton/PopoverPanel 渲染的
-     根元素不继承父组件的 scope 属性，scoped 选择器无法命中（position 等样式
-     会静默失效）。所有类名以 notification- 前缀隔离，避免全局冲突。 -->
+<!-- 不加 scoped：面板由 NPopover 传送到 body，trigger 插槽也经 naive-ui 克隆渲染，
+     scoped 选择器不可靠。所有类名以 notification- 前缀隔离，避免全局冲突。 -->
 <style lang="scss">
 .notification-center {
   position: relative;
@@ -180,7 +201,8 @@ function relativeTime(iso: string): string {
   cursor: pointer;
   user-select: none;
   color: var(--color-text-secondary);
-  transition: color var(--transition-fast), transform var(--transition-fast);
+  transition: color var(--transition-fast),
+    background-color var(--transition-fast);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -198,13 +220,10 @@ function relativeTime(iso: string): string {
     min-height: var(--touch-target);
   }
 
+  // 与 ab-icon-button ghost 一致：状态只靠底色与墨色表达
   &:hover {
-    color: var(--color-primary);
-    transform: scale(1.1);
-  }
-
-  &:active {
-    transform: scale(0.95);
+    background: var(--color-surface-2);
+    color: var(--color-text);
   }
 
   &:focus-visible {
@@ -220,16 +239,24 @@ function relativeTime(iso: string): string {
   pointer-events: none;
 }
 
+// 根元素同时带 .notification-sheet 与 .ab-bottom-sheet：比 ab-bottom-sheet 的
+// scoped 规则多一个类，不依赖样式表顺序。
+.notification-sheet.ab-bottom-sheet .ab-bottom-sheet__content {
+  padding: 0;
+}
+
+// 抽屉内容区已可滚动，去掉列表自身的高度上限，避免嵌套滚动
+.notification-sheet .notification-list {
+  max-height: none;
+  overflow-y: visible;
+}
+
 .notification-panel {
-  position: absolute;
-  top: 44px;
-  right: 0;
   width: min(340px, calc(100vw - 24px));
   border-radius: var(--radius-md);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   box-shadow: var(--shadow-lg);
-  z-index: 50;
   overflow: hidden;
   animation: notification-dropdown-in 150ms ease-out;
   transform-origin: top right;
@@ -256,13 +283,26 @@ function relativeTime(iso: string): string {
 }
 
 .notification-head-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 13px;
   font-weight: 600;
   color: var(--color-text);
 }
 
+.notification-head-unread {
+  margin-left: 6px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
 .notification-head-actions {
   display: flex;
+  flex-shrink: 0;
   gap: 4px;
 }
 
@@ -312,29 +352,21 @@ function relativeTime(iso: string): string {
   }
 }
 
+// 严重度 = 语义色方块标记（与 ab-tag/ab-status 一致），对齐标题首行中线
 .notification-sev {
   flex-shrink: 0;
-  width: 26px;
-  height: 26px;
-  margin-top: 2px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 8px;
+  height: 8px;
+  margin-top: 6px;
+  border-radius: 2px;
+  background: var(--color-primary);
 
   &.is-error {
-    color: var(--color-danger, #ef4444);
-    background: color-mix(in srgb, var(--color-danger) 14%, transparent);
+    background: var(--color-danger);
   }
 
   &.is-warning {
-    color: var(--color-warning, #f59e0b);
-    background: color-mix(in srgb, var(--color-warning) 16%, transparent);
-  }
-
-  &.is-info {
-    color: var(--color-primary);
-    background: var(--color-primary-light);
+    background: var(--color-warning);
   }
 }
 
@@ -353,12 +385,11 @@ function relativeTime(iso: string): string {
 }
 
 .notification-count {
-  background: var(--color-primary-light);
-  color: var(--color-primary);
-  font-size: 10.5px;
-  font-weight: 700;
-  border-radius: 8px;
-  padding: 0 6px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
 }
 
 .notification-body {

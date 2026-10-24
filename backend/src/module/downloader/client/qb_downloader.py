@@ -5,7 +5,7 @@ import logging
 import re
 from typing import ClassVar
 
-import httpx
+import httpx2
 
 from module.ab_decorator import qb_connect_failed_wait
 from module.downloader.base import (
@@ -57,7 +57,7 @@ def _torrent_infohash(data: bytes) -> str | None:
                 return hashlib.sha1(data[i:end]).hexdigest()
             i = end
         return None
-    except (ValueError, IndexError):
+    except ValueError, IndexError:
         return None
 
 
@@ -78,7 +78,7 @@ class QbDownloader:
         self.username = username
         self.password = password
         self.ssl = ssl
-        self._client: httpx.AsyncClient | None = None
+        self._client: httpx2.AsyncClient | None = None
         self._authed = False
         # 最近一次 auth 失败的原因（unreachable | credentials | banned），
         # 供上层（checker/startup 等待循环）区分故障类型；成功后清空。
@@ -97,21 +97,21 @@ class QbDownloader:
     def _url(self, endpoint: str) -> str:
         return f"{self.host}/api/v2/{endpoint}"
 
-    def _new_client(self) -> httpx.AsyncClient:
-        timeout = httpx.Timeout(connect=5.0, read=10.0, write=10.0, pool=10.0)
+    def _new_client(self) -> httpx2.AsyncClient:
+        timeout = httpx2.Timeout(connect=5.0, read=10.0, write=10.0, pool=10.0)
         # Keepalive_expiry keeps idle TCP sockets short-lived so they can't
         # outlive a proxy / NAS idle-reap, which would otherwise surface as
         # "Server disconnected without sending a response" when the next
         # renamer cycle reuses the pool (#984). max_connections caps parallel
         # load on the downloader and anything fronting it.
-        limits = httpx.Limits(
+        limits = httpx2.Limits(
             max_keepalive_connections=5,
             max_connections=10,
             keepalive_expiry=30.0,
         )
         # Never verify certificates - self-signed certs are the norm for
         # home-server / NAS / Docker qBittorrent setups.
-        return httpx.AsyncClient(timeout=timeout, limits=limits, verify=False)
+        return httpx2.AsyncClient(timeout=timeout, limits=limits, verify=False)
 
     async def auth(self, retry=3):
         # Session reuse: a live, already-authenticated client short-circuits so
@@ -191,7 +191,7 @@ class QbDownloader:
                     )
                     await asyncio.sleep(5)
                     times += 1
-            except httpx.ConnectError as e:
+            except httpx2.ConnectError as e:
                 self.last_auth_error = "unreachable"
                 if use_https:
                     logger.error(
@@ -216,7 +216,7 @@ class QbDownloader:
                 break
         return False
 
-    async def _request(self, method: str, endpoint: str, **kwargs) -> httpx.Response:
+    async def _request(self, method: str, endpoint: str, **kwargs) -> httpx2.Response:
         """Issue a request, re-authenticating once if the session expired.
 
         qBittorrent answers 403 when the session cookie is no longer valid
@@ -244,10 +244,10 @@ class QbDownloader:
             resp = await self._client.request(method, self._url(endpoint), **kwargs)
         return resp
 
-    async def _get(self, endpoint: str, **kwargs) -> httpx.Response:
+    async def _get(self, endpoint: str, **kwargs) -> httpx2.Response:
         return await self._request("GET", endpoint, **kwargs)
 
-    async def _post(self, endpoint: str, **kwargs) -> httpx.Response:
+    async def _post(self, endpoint: str, **kwargs) -> httpx2.Response:
         return await self._request("POST", endpoint, **kwargs)
 
     async def logout(self):
@@ -255,37 +255,14 @@ class QbDownloader:
             try:
                 await self._client.post(self._url("auth/logout"))
             except (
-                httpx.ConnectError,
-                httpx.RequestError,
-                httpx.TimeoutException,
+                httpx2.ConnectError,
+                httpx2.RequestError,
+                httpx2.TimeoutException,
             ) as e:
                 logger.debug("Logout request failed (non-critical): %s", e)
             await self._client.aclose()
             self._client = None
         self._authed = False
-
-    async def check_host(self):
-        try:
-            resp = await self._get("app/version")
-            return resp.status_code == 200
-        except (httpx.ConnectError, httpx.RequestError):
-            return False
-
-    def check_rss(self, rss_link: str):
-        pass
-
-    @qb_connect_failed_wait
-    async def prefs_init(self, prefs):
-        resp = await self._post(
-            "app/setPreferences",
-            data={"json": json.dumps(prefs)},
-        )
-        return resp
-
-    @qb_connect_failed_wait
-    async def get_app_prefs(self):
-        resp = await self._get("app/preferences")
-        return resp.json()
 
     async def add_category(self, category):
         await self._post(
@@ -329,7 +306,7 @@ class QbDownloader:
                 )
                 return None
             payload = resp.json()
-        except (ConnectionError, OSError, ValueError, httpx.RequestError) as e:
+        except (ConnectionError, OSError, ValueError, httpx2.RequestError) as e:
             logger.warning("Could not verify qBittorrent task %s: %s", torrent_hash, e)
             return None
         return isinstance(payload, list) and any(
@@ -341,6 +318,15 @@ class QbDownloader:
     @qb_connect_failed_wait
     async def torrents_files(self, torrent_hash: str):
         resp = await self._get("torrents/files", params={"hash": torrent_hash})
+        # 任务在 info 与 files 两次请求之间被删除时 qB 返回 404 纯文本：按无文件处理，
+        # 只跳过这一个任务，不让整轮重命名失败
+        if resp.status_code >= 300:
+            logger.warning(
+                "Could not list files of qBittorrent task %s: HTTP %s",
+                torrent_hash,
+                resp.status_code,
+            )
+            return []
         return resp.json()
 
     async def _urls_already_added(self, torrent_urls) -> bool:
@@ -352,7 +338,9 @@ class QbDownloader:
         urls = (
             torrent_urls
             if isinstance(torrent_urls, list)
-            else [torrent_urls] if torrent_urls else []
+            else [torrent_urls]
+            if torrent_urls
+            else []
         )
         if not urls:
             return False
@@ -397,11 +385,11 @@ class QbDownloader:
             resp = await self._get("torrents/info", params={"hashes": "|".join(hashes)})
             found = {t.get("hash", "").lower() for t in resp.json()}
             return set(hashes) <= found
-        except (httpx.RequestError, ValueError):
+        except httpx2.RequestError, ValueError:
             return False
 
     @staticmethod
-    def _parse_add_response_json(resp: httpx.Response) -> dict | None:
+    def _parse_add_response_json(resp: httpx2.Response) -> dict | None:
         """qB >= 5.2 的 torrents/add 回 JSON 计数；旧版本回 "Ok."/"Fails."。
         不是该结构（如代理返回的 HTML 错误页）时返回 None，走通用失败路径。
         """
@@ -506,7 +494,7 @@ class QbDownloader:
                     "qBittorrent rejected torrent add: "
                     f"HTTP {resp.status_code} {resp.text!r}"
                 )
-            except (httpx.ReadError, httpx.ConnectError, httpx.RequestError) as e:
+            except (httpx2.ReadError, httpx2.ConnectError, httpx2.RequestError) as e:
                 if attempt < max_retries - 1:
                     logger.warning(
                         f"Network error adding torrent (attempt {attempt + 1}/{max_retries}): {e}"
@@ -517,10 +505,6 @@ class QbDownloader:
                         f"Failed to add torrent after {max_retries} attempts: {e}"
                     )
                     raise
-
-    async def get_torrents_by_tag(self, tag: str) -> list[dict]:
-        resp = await self._get("torrents/info", params={"tag": tag})
-        return resp.json()
 
     @staticmethod
     def _normalize_hashes(hashes: str | list[str] | tuple[str, ...]) -> str:
@@ -618,8 +602,7 @@ class QbDownloader:
                 # (#754/#749)。返回 False 由调用方走 _PENDING_RENAME_COOLDOWN 退避。
                 if attempt == 2:
                     logger.debug(
-                        "Rename API returned 200 but %s never appeared "
-                        "(rename of %s)",
+                        "Rename API returned 200 but %s never appeared (rename of %s)",
                         new_path,
                         old_path,
                     )
@@ -627,29 +610,9 @@ class QbDownloader:
                 RenameOutcome.RETRYABLE_FAILURE,
                 detail="qBittorrent did not expose the target path after rename",
             )
-        except (httpx.ConnectError, httpx.RequestError, httpx.TimeoutException) as e:
+        except (httpx2.ConnectError, httpx2.RequestError, httpx2.TimeoutException) as e:
             logger.warning(f"Failed to rename file {old_path}: {e}")
             return RenameResult(RenameOutcome.RETRYABLE_FAILURE, detail=str(e))
-
-    async def rss_add_feed(self, url, item_path):
-        resp = await self._post(
-            "rss/addFeed",
-            data={"url": url, "path": item_path},
-        )
-        if resp.status_code == 409:
-            logger.warning(f"RSS feed {url} already exists")
-
-    async def rss_remove_item(self, item_path):
-        resp = await self._post(
-            "rss/removeItem",
-            data={"path": item_path},
-        )
-        if resp.status_code == 409:
-            logger.warning(f"RSS item {item_path} does not exist")
-
-    async def rss_get_feeds(self):
-        resp = await self._get("rss/items")
-        return resp.json()
 
     async def rss_set_rule(self, rule_name, rule_def):
         await self._post(
@@ -662,17 +625,6 @@ class QbDownloader:
             "torrents/setLocation",
             data={"hashes": self._normalize_hashes(hashes), "location": new_location},
         )
-
-    async def get_download_rule(self):
-        resp = await self._get("rss/rules")
-        return resp.json()
-
-    async def get_torrent_path(self, _hash):
-        resp = await self._get("torrents/info", params={"hashes": _hash})
-        torrents = resp.json()
-        if torrents:
-            return torrents[0].get("save_path", "")
-        return ""
 
     async def set_category(self, _hash, category):
         hashes = self._normalize_hashes(_hash)
@@ -687,16 +639,6 @@ class QbDownloader:
                 "torrents/setCategory",
                 data={"hashes": hashes, "category": category},
             )
-
-    async def check_connection(self):
-        resp = await self._get("app/version")
-        return resp.text
-
-    async def remove_rule(self, rule_name):
-        await self._post(
-            "rss/removeRule",
-            data={"ruleName": rule_name},
-        )
 
     async def add_tag(self, _hash, tag):
         await self._post(

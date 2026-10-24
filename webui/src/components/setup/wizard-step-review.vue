@@ -44,7 +44,9 @@ function maskPassword(pwd: string): string {
 <template>
   <ab-container :title="t('setup.review.title')" class="wizard-step">
     <div class="step-content">
-      <p class="step-subtitle">{{ t('setup.review.subtitle') }}</p>
+      <p class="step-subtitle">
+        {{ t('setup.review.subtitle') }}
+      </p>
 
       <div class="review-sections">
         <div class="review-section">
@@ -160,7 +162,9 @@ function maskPassword(pwd: string): string {
 .review-item {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  // 长值换行时标签对齐值的首行
+  align-items: baseline;
+  gap: 12px;
   padding: 4px 0;
   font-size: 12px;
 
@@ -170,16 +174,19 @@ function maskPassword(pwd: string): string {
 }
 
 .review-label {
+  flex-shrink: 0;
   color: var(--color-text-muted);
 }
 
 .review-value {
+  flex: 1;
+  min-width: 0;
   color: var(--color-text);
-  font-family: monospace;
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  // 提交前要能看到完整地址，长值换行而不截断
+  overflow-wrap: anywhere;
 }
 
 .wizard-actions {

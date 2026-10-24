@@ -1,8 +1,9 @@
 <script lang="ts" setup>
-import { Close, Delete, FullSelection } from '@icon-park/vue-next';
+import { ListChecks, Trash, X } from '@lucide/vue';
 import { useConfirm } from '@/hooks/useConfirm';
 import type { Torrent } from '#/torrent';
 import { useTorrentList } from '@/hooks/useTorrentList';
+import { useDownloaderInstances } from '@/hooks/useDownloaderInstances';
 
 const props = defineProps<{
   title: string;
@@ -22,6 +23,8 @@ const {
 } = useTorrentList(props.loadFn);
 
 const { t } = useI18n();
+// 多个下载器实例时标出种子所在的实例
+const downloaders = useDownloaderInstances();
 const { confirm } = useConfirm();
 
 async function handleDeleteOne(id: number) {
@@ -56,11 +59,13 @@ onActivated(load);
 <template>
   <div class="page-torrents">
     <div class="toolbar">
-      <h2 class="toolbar-title">{{ title }}</h2>
+      <h2 class="toolbar-title">
+        {{ title }}
+      </h2>
       <div class="toolbar-actions">
         <ab-button v-if="torrents.length > 0" size="sm" @click="toggleAll">
           <template #icon>
-            <FullSelection :size="14" />
+            <ListChecks :size="14" />
           </template>
           {{
             allSelected
@@ -75,9 +80,11 @@ onActivated(load);
           @click="handleDeleteSelected"
         >
           <template #icon>
-            <Delete :size="14" />
+            <Trash :size="14" />
           </template>
-          {{ $t('homepage.torrents.delete_selected', { count: selectedIds.size }) }}
+          {{
+            $t('homepage.torrents.delete_selected', { count: selectedIds.size })
+          }}
         </ab-button>
         <ab-button
           v-if="torrents.length > 0"
@@ -86,7 +93,7 @@ onActivated(load);
           @click="handleClearAll"
         >
           <template #icon>
-            <Delete :size="14" />
+            <Trash :size="14" />
           </template>
           {{ $t('homepage.torrents.deleteAll') }}
         </ab-button>
@@ -125,6 +132,15 @@ onActivated(load);
               type="success"
               :title="$t('homepage.torrents.downloaded')"
             />
+            <ab-tag
+              v-if="torrent.downloaded && downloaders.multiple.value"
+              type="neutral"
+              :title="
+                $t('homepage.torrents.downloader_tag', {
+                  id: torrent.downloader_id,
+                })
+              "
+            />
             <ab-tag v-if="torrent.rss_id" type="info" title="RSS" />
             <ab-tag
               v-else
@@ -139,7 +155,7 @@ onActivated(load);
           :label="$t('homepage.torrents.delete')"
           @click.stop="handleDeleteOne(torrent.id)"
         >
-          <Close :size="14" />
+          <X :size="14" />
         </ab-icon-button>
       </div>
     </div>
@@ -198,17 +214,29 @@ onActivated(load);
   align-items: center;
   padding: 8px 12px;
   border-radius: var(--radius-sm);
-  background: var(--color-surface-hover);
+  background: var(--color-surface-2);
   cursor: pointer;
   transition: background-color var(--transition-fast);
 
   &:hover {
-    background: color-mix(in srgb, var(--color-surface-hover) 80%, var(--color-primary));
+    background: color-mix(
+      in srgb,
+      var(--color-surface-2) 85%,
+      var(--color-primary)
+    );
   }
 
-  &--selected {
+  // 行底色（含悬停混色）接近 --color-border，行内标签描边提一级
+  :deep(.ab-tag) {
+    border-color: var(--color-border-hover);
+  }
+
+  &--selected,
+  &--selected:hover {
     background: color-mix(in srgb, var(--color-primary) 12%, transparent);
     outline: 1px solid var(--color-primary);
+    // 首行贴着滚动容器顶边，外描边会被裁掉，改为内描边
+    outline-offset: -1px;
   }
 }
 
@@ -217,7 +245,7 @@ onActivated(load);
   width: 18px;
   height: 18px;
   border-radius: 4px;
-  border: 2px solid var(--color-border);
+  border: 2px solid var(--color-border-hover);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -237,10 +265,11 @@ onActivated(load);
 }
 
 .torrent-name {
-  display: block;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
   font-size: 13px;
   color: var(--color-text);
 }

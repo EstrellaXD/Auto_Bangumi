@@ -1,14 +1,26 @@
 import asyncio
 import logging
 from collections import defaultdict
+from contextlib import AsyncExitStack
 from urllib.parse import urlparse
 
+from ab_sdk import points
+from ab_sdk.ingest import AddRequest
 from module.conf import settings
 from module.models import Bangumi, Torrent
+from module.models.config import DOWNLOADER_POINT, DownloaderInstance
 from module.network import RequestContent
+from module.plugin import host as plugin_host
+from module.plugin.views import bangumi_info, torrent_info
 
-from .base import AddResult, DownloaderClient, RenameOutcome, RenameResult
-from .path import gen_save_path
+from .base import (
+    AddResult,
+    DownloaderClient,
+    DownloaderConnection,
+    RenameOutcome,
+    RenameResult,
+)
+from .path import save_path_for
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +54,52 @@ async def _fetch_torrent_files(
     return [f for group in groups for f in group]
 
 
+def _valid_add_request(request: AddRequest) -> bool:
+    """宿主直接使用这些字段；类型不对的结果按钩子失败处理（str 标签也拒绝）。"""
+    return (
+        isinstance(request.save_path, (str, type(None)))
+        and isinstance(request.category, str)
+        and isinstance(request.tags, (tuple, list))
+        and all(isinstance(t, str) for t in request.tags)
+    )
+
+
+async def _apply_adding_hooks(
+    torrent: Torrent | list[Torrent],
+    bangumi: Bangumi,
+    save_path: str,
+    category: str,
+    tags: str | None,
+) -> tuple[str, str, str | None]:
+    """``torrent.adding``：插件修改保存路径、分类与标签。
+
+    ``ab:<id>`` 标签是重命名时定位番剧的依据，钩子删掉时补回并告警。
+    """
+    runner = plugin_host.hook_runner(points.TORRENT_ADDING)
+    if runner is None:
+        return save_path, category, tags
+    torrents = torrent if isinstance(torrent, list) else [torrent]
+    request = AddRequest(
+        bangumi=bangumi_info(bangumi),
+        torrents=tuple(torrent_info(t) for t in torrents),
+        save_path=save_path,
+        category=category,
+        tags=tuple(tags.split(",")) if tags else (),
+    )
+    result = await runner.transform(
+        points.TORRENT_ADDING, request, expect=AddRequest, check=_valid_add_request
+    )
+    new_tags = [t.strip() for t in result.tags if t.strip()]
+    if tags and tags not in new_tags:
+        logger.warning(
+            "torrent.adding removed required tag %s for %s; restored",
+            tags,
+            bangumi.official_title,
+        )
+        new_tags.insert(0, tags)
+    return result.save_path, result.category, ",".join(new_tags) or None
+
+
 # ---------------------------------------------------------------------------
 # Module-level concrete-client cache (session reuse, #1039 / #900)
 #
@@ -60,31 +118,53 @@ async def _fetch_torrent_files(
 # `_bookkeeping_lock` serializes reads/writes of this shared state across the
 # awaits in ``__aenter__``/``__aexit__``.
 # ---------------------------------------------------------------------------
-_client_cache: tuple[tuple, DownloaderClient] | None = None
+# 实例 id → (连接设置 key, 具体客户端)。每个下载器实例各缓存一个客户端。
+_client_cache: dict[str, tuple[tuple, DownloaderClient]] = {}
 _stale_clients: list[DownloaderClient] = []
 _active_holders: dict[int, int] = {}
 _pending_close: set[int] = set()
 _bookkeeping_lock = asyncio.Lock()
-# 凭据被服务端明确拒绝后的闩锁：记录失败时的连接设置 key。命中时 enter 直接
-# 失败、不再发 login POST——每个 tick 重试一次登录，约 5 次即触发 qB 的
+# 凭据被服务端明确拒绝后的闩锁：实例 id → 失败时的连接设置 key。命中时 enter
+# 直接失败、不再发 login POST——每个 tick 重试一次登录，约 5 次即触发 qB 的
 # WebUI IP ban。设置变更（key 不同）自然解锁；同值重存经
 # clear_credential_latch()（AppContext.reload_settings）解锁。
-_credential_failed_key: tuple | None = None
+_credential_failed: dict[str, tuple] = {}
 
 # Warn at most once per (client type, operation) when a backend cannot perform
 # an operation, so aria2 users are not spammed every rename cycle.
 _warned_unsupported: set[tuple[str, str]] = set()
 
 
-def _settings_key() -> tuple:
-    d = settings.downloader
-    return (d.type, d.host, d.username, d.password, d.ssl)
+def downloader_ids() -> list[str]:
+    """所有下载器实例 id（配置顺序）。"""
+    return [i.id for i in settings.plugins.instances if i.point == DOWNLOADER_POINT]
+
+
+def resolve_downloader_id(*candidates: str | None) -> str:
+    """取第一个指向已配置实例的候选 id；都为空时用默认实例（slots.downloader）。
+
+    指向已删除实例的候选记录告警后跳过，不让一条规则卡住整轮。
+    """
+    known = downloader_ids()
+    for candidate in candidates:
+        if not candidate:
+            continue
+        if candidate in known:
+            return candidate
+        logger.warning("Downloader instance %r no longer exists; skipped", candidate)
+    return settings.plugins.slots.downloader
+
+
+def _settings_key(d: DownloaderInstance) -> tuple:
+    # 带上 Provider 登记项：插件重载后登记项换新，旧客户端随之退役
+    entry = plugin_host.get_registry().providers(points.DOWNLOADER).get(d.type)
+    return (d.type, d.host, d.username, d.password, d.ssl, entry)
 
 
 def _reset_client_cache() -> None:
     """Drop the cached/stale concrete clients and refcount state (used by tests)."""
-    global _client_cache, _stale_clients, _active_holders, _pending_close
-    _client_cache = None
+    global _stale_clients, _active_holders, _pending_close
+    _client_cache.clear()
     _stale_clients = []
     _active_holders = {}
     _pending_close = set()
@@ -92,9 +172,8 @@ def _reset_client_cache() -> None:
 
 
 def clear_credential_latch() -> None:
-    """解除凭据失败闩锁（配置保存后调用，允许用户重试同值凭据）。"""
-    global _credential_failed_key
-    _credential_failed_key = None
+    """解除所有实例的凭据失败闩锁（配置保存后调用，允许用户重试同值凭据）。"""
+    _credential_failed.clear()
 
 
 async def _close_client(client) -> None:
@@ -105,15 +184,13 @@ async def _close_client(client) -> None:
 
 
 async def shutdown() -> None:
-    """Log out and close the cached concrete client.
+    """Log out and close every cached concrete client.
 
     Invoked by the composition root (`AppContext`) on application shutdown.
     """
-    global _client_cache, _stale_clients
-    clients = list(_stale_clients)
-    if _client_cache is not None:
-        clients.append(_client_cache[1])
-    _client_cache = None
+    global _stale_clients
+    clients = list(_stale_clients) + [c for _, c in _client_cache.values()]
+    _client_cache.clear()
     _stale_clients = []
     for client in clients:
         await _close_client(client)
@@ -129,52 +206,53 @@ class DownloadClient:
     down by :func:`shutdown`.
     """
 
-    def __init__(self):
-        global _client_cache
-        key = _settings_key()
+    def __init__(self, instance_id: str | None = None):
+        # None：默认实例（slots.downloader）
+        self.instance: DownloaderInstance = (
+            settings.downloader
+            if instance_id is None
+            else settings.downloader_instance(instance_id)
+        )
+        self.instance_id = self.instance.id
+        key = _settings_key(self.instance)
         self.client: DownloaderClient
         self._cache_key = key
-        if _client_cache is not None and _client_cache[0] == key:
-            self.client = _client_cache[1]
+        cached = _client_cache.get(self.instance_id)
+        if cached is not None and cached[0] == key:
+            self.client = cached[1]
         else:
-            if _client_cache is not None:
+            if cached is not None:
                 # Settings changed: retire the previous client, close it later.
                 # 用列表累积——连续两次改设置（期间没有 enter）不得把第一个
                 # 被撤下的客户端顶掉，否则它的连接池泄漏到进程结束。
-                _stale_clients.append(_client_cache[1])
-            self.client = self.__getClient()
-            _client_cache = (key, self.client)
+                _stale_clients.append(cached[1])
+            self.client = self.__getClient(self.instance)
+            _client_cache[self.instance_id] = (key, self.client)
         self.authed = False
 
     @staticmethod
-    def __getClient() -> DownloaderClient:
-        """Instantiate the configured downloader client (qbittorrent | aria2 | mock)."""
-        downloader_type = settings.downloader.type
-        host = settings.downloader.host
-        username = settings.downloader.username
-        password = settings.downloader.password
-        ssl = settings.downloader.ssl
-        if downloader_type == "qbittorrent":
-            from .client.qb_downloader import QbDownloader
+    def __getClient(instance: DownloaderInstance) -> DownloaderClient:
+        """按实例的 Provider id 从扩展注册表取下载器工厂并实例化。
 
-            return QbDownloader(host, username, password, ssl)
-        elif downloader_type == "aria2":
-            from .client.aria2_downloader import Aria2Downloader
-
-            # Aria2Downloader implements query/rename/manage for real (see its
-            # `capabilities`), but has no qB-native RSS-rule/prefs surface
-            # (can_rss_rules=False), so it stays structurally narrower than
-            # the full `DownloaderClient` protocol -- the facade skips the
-            # rss/prefs methods it never calls on this backend.
-            return Aria2Downloader(host, username, password)  # type: ignore[return-value]
-        elif downloader_type == "mock":
-            from .client.mock_downloader import MockDownloader
-
-            logger.debug("Using MockDownloader for local development")
-            return MockDownloader()
-        else:
+        内置的 qbittorrent / aria2 / mock 与插件提供的下载器走同一条路径。
+        """
+        downloader_type = instance.type
+        factory = plugin_host.provider(points.DOWNLOADER, downloader_type)
+        if factory is None:
             logger.error("Unsupported downloader type: %s", downloader_type)
             raise Exception(f"Unsupported downloader type: {downloader_type}")
+        if downloader_type == "mock":
+            logger.debug("Using MockDownloader for local development")
+        conn = DownloaderConnection(
+            host=instance.host,
+            username=instance.username,
+            password=instance.password,
+            ssl=instance.ssl,
+            instance_id=instance.id,
+        )
+        # 只实现 CoreDownloaderClient 的后端（如 aria2 没有 qB 的 RSS 规则）
+        # 由 _supports() 按 capabilities 跳过不支持的操作
+        return factory(conn)  # type: ignore[no-any-return]
 
     @property
     def last_auth_error(self) -> str | None:
@@ -200,11 +278,7 @@ class DownloadClient:
         return False
 
     async def __aenter__(self):
-        global _client_cache, _credential_failed_key
-        if (
-            _credential_failed_key is not None
-            and _credential_failed_key == self._cache_key
-        ):
+        if _credential_failed.get(self.instance_id) == self._cache_key:
             # 凭据上次已被服务端明确拒绝且设置未变：不再发 login POST，
             # 避免逐 tick 累积到 qB 的 IP ban。checker/等待循环读的是
             # 具体客户端上的失败原因，这里补齐。
@@ -246,15 +320,16 @@ class DownloadClient:
                 raise
             if not self.authed:
                 if self.last_auth_error == "credentials":
-                    _credential_failed_key = self._cache_key
+                    _credential_failed[self.instance_id] = self._cache_key
                 # Release our slot and close the concrete client's connection
                 # pool now or it leaks on every failed connect (#1043) --
                 # unless another already-entered block still holds it, in
                 # which case defer to its __aexit__ instead of yanking the
                 # pool out from under it.
                 async with _bookkeeping_lock:
-                    if _client_cache is not None and _client_cache[1] is self.client:
-                        _client_cache = None
+                    cached = _client_cache.get(self.instance_id)
+                    if cached is not None and cached[1] is self.client:
+                        del _client_cache[self.instance_id]
                     _pending_close.add(id(self.client))
                 await self._release_holder()
                 raise ConnectionError("Download client authentication failed")
@@ -389,8 +464,10 @@ class DownloadClient:
         返回 :class:`AddResult`，区分"新增成功 / 已添加过 / 投递失败"，
         调用方据此决定是否重试或发送失败通知。
         """
-        if not bangumi.save_path:
-            bangumi.save_path = gen_save_path(bangumi)
+        bangumi.save_path = save_path_for(bangumi, self.instance.path)
+        # 种子行记录实际投递的实例，之后的重命名 / 删除按它路由
+        for t in torrent if isinstance(torrent, list) else [torrent]:
+            t.downloader_id = self.instance_id
         torrent_url: str | list[str] | None
         async with RequestContent() as req:
             if isinstance(torrent, list):
@@ -422,12 +499,17 @@ class DownloadClient:
                     torrent_url = None
         # Create tag with bangumi_id for offset lookup during rename
         tags = f"ab:{bangumi.id}" if bangumi.id else None
+        save_path, category = bangumi.save_path, "Bangumi"
+        if plugin_host.hook_runner(points.TORRENT_ADDING) is not None:
+            save_path, category, tags = await _apply_adding_hooks(
+                torrent, bangumi, save_path, category, tags
+            )
         try:
             result = await self.client.add_torrents(
                 torrent_urls=torrent_url,
                 torrent_files=torrent_file,
-                save_path=bangumi.save_path,
-                category="Bangumi",
+                save_path=save_path,
+                category=category,
                 tags=tags,
             )
             if result is AddResult.ADDED:
@@ -457,3 +539,67 @@ class DownloadClient:
             return
         await self.client.add_tag(torrent_hash, tag)
         logger.debug("Added tag '%s' to torrent %s...", tag, torrent_hash[:8])
+
+
+class DownloaderPool:
+    """一次操作内按实例 id 惰性进入 :class:`DownloadClient`，退出时全部释放。
+
+    进入失败的实例在本池内记住、直接抛 ``ConnectionError``，不再重复登录
+    （一轮 RSS 可能有很多种子指向同一个不可用实例）。
+    """
+
+    def __init__(self) -> None:
+        self._stack = AsyncExitStack()
+        self._clients: dict[str, DownloadClient] = {}
+        self._failed: set[str] = set()
+
+    async def __aenter__(self) -> "DownloaderPool":
+        return self
+
+    async def __aexit__(self, *_: object) -> None:
+        await self._stack.aclose()
+
+    async def get(self, instance_id: str) -> DownloadClient:
+        if instance_id in self._failed:
+            raise ConnectionError(f"Downloader instance {instance_id} is unavailable")
+        if instance_id not in self._clients:
+            try:
+                self._clients[instance_id] = await self._stack.enter_async_context(
+                    DownloadClient(instance_id)
+                )
+            except Exception as e:
+                self._failed.add(instance_id)
+                raise ConnectionError(
+                    f"Downloader instance {instance_id} is unavailable: {e}"
+                ) from e
+        return self._clients[instance_id]
+
+
+async def list_torrents(
+    status_filter: str | None = None, timeout: float | None = None
+) -> list[dict] | None:
+    """所有下载器实例中 Bangumi 分类的种子，每条带 ``downloader_id``。
+
+    不可用（或超过 ``timeout`` 秒）的实例跳过；全部实例都不可用时返回 None。
+    """
+
+    async def one(instance_id: str) -> list[dict]:
+        async with DownloadClient(instance_id) as client:
+            torrents = await client.get_torrent_info(
+                category="Bangumi", status_filter=status_filter
+            )
+        return [{**t, "downloader_id": instance_id} for t in torrents]
+
+    ids = downloader_ids()
+    results = await asyncio.gather(
+        *(asyncio.wait_for(one(i), timeout) for i in ids), return_exceptions=True
+    )
+    listed: list[dict] = []
+    reachable = False
+    for instance_id, result in zip(ids, results):
+        if isinstance(result, BaseException):
+            logger.debug("Downloader instance %s unavailable: %s", instance_id, result)
+            continue
+        reachable = True
+        listed.extend(result)
+    return listed if reachable else None

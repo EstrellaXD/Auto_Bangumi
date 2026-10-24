@@ -1,6 +1,17 @@
 import { mount } from '@vue/test-utils';
-import { defineComponent, nextTick } from 'vue';
+import { defineComponent, nextTick, ref } from 'vue';
 import ConfigManage from '../config-manage.vue';
+
+vi.mock('@/hooks/usePluginProviders', () => ({
+  usePluginProviders: () =>
+    ref({
+      downloader: [],
+      notifier: [],
+      search_site: [],
+      metadata_provider: [],
+      rename_strategy: ['advance', 'pn', 'template'],
+    }),
+}));
 
 vi.mock('@/hooks/useMyI18n', () => ({
   useMyI18n: () => ({ t: (key: string) => key }),
@@ -11,16 +22,18 @@ vi.mock('@/store/config', async () => {
   const manageState = {
     enable: true,
     eps_complete: false,
-    rename_method: 'pn',
-    revision_conflict_policy: 'hold',
     group_tag: false,
     remove_bad_torrent: false,
     track_orphans: true,
   };
+  const pluginsState = {
+    slots: { rename_strategy: 'pn', conflict_policy: 'hold' },
+  };
   return {
-    __manageState: manageState,
+    __pluginsState: pluginsState,
     useConfigStore: () => ({
-      getSettingGroup: () => computed(() => manageState),
+      getSettingGroup: (key: string) =>
+        computed(() => (key === 'plugins' ? pluginsState : manageState)),
     }),
   };
 });
@@ -76,8 +89,33 @@ describe('config-manage', () => {
     await policy.vm.$emit('update:data', 'replace');
     await nextTick();
     const store = (await import('@/store/config')) as unknown as {
-      __manageState: { revision_conflict_policy: string };
+      __pluginsState: { slots: { conflict_policy: string } };
     };
-    expect(store.__manageState.revision_conflict_policy).toBe('replace');
+    expect(store.__pluginsState.slots.conflict_policy).toBe('replace');
+  });
+
+  it('should append plugin rename strategies when the rename plugin provides them', () => {
+    const wrapper = mount(ConfigManage, {
+      global: {
+        stubs: {
+          'ab-fold-panel': { template: '<section><slot /></section>' },
+          'ab-setting': AbSettingStub,
+        },
+      },
+    });
+    const method = wrapper
+      .findAllComponents(AbSettingStub)
+      .find(
+        (setting) =>
+          (setting.props('label') as () => string)() ===
+          'config.manage_set.method'
+      );
+
+    expect(method?.props('prop')?.items).toEqual([
+      'pn',
+      'advance',
+      'none',
+      'template',
+    ]);
   });
 });

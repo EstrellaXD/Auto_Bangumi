@@ -12,7 +12,7 @@ import zipfile
 from pathlib import Path
 from unittest.mock import AsyncMock
 
-import httpx
+import httpx2
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
@@ -66,20 +66,20 @@ async def _install(tmp_path, keypair, plugin_id):
     def handler(request):
         url = str(request.url)
         if url.endswith("catalog.json"):
-            return httpx.Response(200, content=catalog_bytes)
+            return httpx2.Response(200, content=catalog_bytes)
         if url.endswith("catalog.json.sig"):
-            return httpx.Response(
+            return httpx2.Response(
                 200, text=base64.b64encode(priv.sign(catalog_bytes)).decode()
             )
         if url.endswith(".zip"):
-            return httpx.Response(200, content=zip_bytes)
+            return httpx2.Response(200, content=zip_bytes)
         if url.endswith(".zip.sig"):
-            return httpx.Response(
+            return httpx2.Response(
                 200, text=base64.b64encode(priv.sign(zip_bytes)).decode()
             )
-        return httpx.Response(404)
+        return httpx2.Response(404)
 
-    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    client = httpx2.AsyncClient(transport=httpx2.MockTransport(handler))
     installer = PluginInstaller(
         root=tmp_path / "plugins",
         pubkey_path=pubkey_path,
@@ -95,7 +95,7 @@ def _ctx(handler, credentials=None, model=""):
     """构造注入 MockTransport-http-client 的 AdapterContext。"""
 
     def build_client(_timeout):
-        return httpx.AsyncClient(transport=httpx.MockTransport(handler))
+        return httpx2.AsyncClient(transport=httpx2.MockTransport(handler))
 
     return AdapterContext(
         model=model,
@@ -127,7 +127,7 @@ class TestGithubCopilot:
 
         def handler(request):
             assert "login/device/code" in str(request.url)
-            return httpx.Response(
+            return httpx2.Response(
                 200,
                 json={
                     "device_code": "DC-secret",
@@ -155,7 +155,7 @@ class TestGithubCopilot:
         cls = registry.resolve("github-copilot")
 
         def handler(request):
-            return httpx.Response(200, json={"error": "authorization_pending"})
+            return httpx2.Response(200, json={"error": "authorization_pending"})
 
         adapter = cls(_ctx(handler))
         with pytest.raises(AuthExpiredError):
@@ -189,13 +189,13 @@ class TestGithubCopilot:
             if "copilot_internal/v2/token" in url:
                 seen["copilot_token_fetched"] = True
                 assert request.headers["authorization"].startswith("token ghu_")
-                return httpx.Response(
+                return httpx2.Response(
                     200, json={"token": "cop_tok", "expires_at": 9e18}
                 )
             if "chat/completions" in url:
                 seen["editor_header"] = "editor-version" in request.headers
                 assert request.headers["authorization"] == "Bearer cop_tok"
-                return httpx.Response(
+                return httpx2.Response(
                     200,
                     json={
                         "choices": [
@@ -209,7 +209,7 @@ class TestGithubCopilot:
                         ]
                     },
                 )
-            return httpx.Response(404)
+            return httpx2.Response(404)
 
         creds = AsyncMock()
         creds.load = AsyncMock(return_value=TokenSet(access_token="ghu_abc"))
@@ -228,7 +228,7 @@ class TestGithubCopilot:
         cls = registry.resolve("github-copilot")
         creds = AsyncMock()
         creds.load = AsyncMock(return_value=None)
-        adapter = cls(_ctx(lambda r: httpx.Response(404), credentials=creds))
+        adapter = cls(_ctx(lambda r: httpx2.Response(404), credentials=creds))
         with pytest.raises(AuthExpiredError):
             await adapter.parse("raw")
         await adapter.aclose()
@@ -267,7 +267,7 @@ class TestCodexChatgpt:
         fake_jwt = f"{header}.{claims}.sig"
 
         def handler(request):
-            return httpx.Response(
+            return httpx2.Response(
                 200,
                 json={
                     "access_token": fake_jwt,
@@ -308,7 +308,7 @@ class TestCodexChatgpt:
         def handler(request):
             seen["originator"] = request.headers.get("originator")
             seen["account"] = request.headers.get("chatgpt-account-id")
-            return httpx.Response(
+            return httpx2.Response(
                 200,
                 json={"output": [{"content": [{"text": json.dumps(episode)}]}]},
             )
@@ -338,10 +338,10 @@ class TestCodexChatgpt:
         def handler(request):
             url = str(request.url)
             if url.endswith("oauth/token"):
-                return httpx.Response(
+                return httpx2.Response(
                     200, json={"access_token": "new-at", "expires_in": 3600}
                 )
-            return httpx.Response(
+            return httpx2.Response(
                 200,
                 json={
                     "output": [

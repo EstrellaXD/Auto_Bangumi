@@ -7,34 +7,31 @@ type ListItem = Record<string, any>;
 
 // Soft Ink 列表（取代 ab-data-list）：surface-2 填充行、悬停/聚焦态、
 // 受控选择、加载骨架、i18n 空状态；density 供桌面数据页用紧凑行。
-const props = withDefaults(
-  defineProps<{
-    items: ListItem[];
-    keyField?: string;
-    selectable?: boolean;
-    /** 受控选择：v-model:selected */
-    selected?: unknown[];
-    loading?: boolean;
-    density?: 'comfortable' | 'compact';
-  }>(),
-  {
-    keyField: 'id',
-    selectable: false,
-    selected: () => [],
-    loading: false,
-    density: 'comfortable',
-  }
-);
+const {
+  items,
+  keyField = 'id',
+  selectable = false,
+  loading = false,
+  density = 'comfortable',
+} = defineProps<{
+  items: ListItem[];
+  keyField?: string;
+  selectable?: boolean;
+  loading?: boolean;
+  density?: 'comfortable' | 'compact';
+}>();
 
 const emit = defineEmits<{
-  'update:selected': [keys: unknown[]];
   'row-click': [item: ListItem];
 }>();
 
-const selectedSet = computed(() => new Set(props.selected));
+/** 受控选择：v-model:selected */
+const selected = defineModel<unknown[]>('selected', { default: () => [] });
+
+const selectedSet = computed(() => new Set(selected.value));
 
 const allSelected = computed(
-  () => props.items.length > 0 && selectedSet.value.size === props.items.length
+  () => items.length > 0 && selectedSet.value.size === items.length
 );
 
 const someSelected = computed(
@@ -45,18 +42,13 @@ function toggle(key: unknown) {
   const next = new Set(selectedSet.value);
   if (next.has(key)) next.delete(key);
   else next.add(key);
-  emit('update:selected', Array.from(next));
+  selected.value = Array.from(next);
 }
 
 function toggleAll() {
-  if (allSelected.value) {
-    emit('update:selected', []);
-  } else {
-    emit(
-      'update:selected',
-      props.items.map((item) => item[props.keyField])
-    );
-  }
+  selected.value = allSelected.value
+    ? []
+    : items.map((item) => item[keyField]);
 }
 </script>
 
@@ -70,12 +62,10 @@ function toggleAll() {
           :checked="allSelected"
           :indeterminate="someSelected"
           @change="toggleAll"
-        />
+        >
         <span>{{ $t('common.selectAll') }}</span>
       </label>
-      <span class="ab-list-count"
-        >{{ items.length }} {{ $t('common.items') }}</span
-      >
+      <span class="ab-list-count">{{ items.length }} {{ $t('common.items') }}</span>
     </div>
 
     <!-- 加载骨架 -->
@@ -102,7 +92,7 @@ function toggleAll() {
             :checked="selectedSet.has(item[keyField])"
             :aria-label="$t('common.select')"
             @change="toggle(item[keyField])"
-          />
+          >
         </label>
 
         <div class="ab-list-row-content">
@@ -115,7 +105,7 @@ function toggleAll() {
       <!-- 空状态 -->
       <div v-if="items.length === 0" class="ab-list-empty">
         <slot name="empty">
-          <AbEmpty :title="$t('common.empty')"></AbEmpty>
+          <AbEmpty :title="$t('common.empty')" />
         </slot>
       </div>
     </template>
@@ -170,8 +160,11 @@ function toggleAll() {
   cursor: pointer;
   transition: background-color var(--transition-fast);
 
-  &:hover {
-    background: var(--color-surface-hover);
+  // 触屏点按后不保留悬停态
+  @media (hover: hover) {
+    &:hover {
+      background: var(--color-surface-hover);
+    }
   }
 
   &:focus-visible {

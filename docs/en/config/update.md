@@ -1,6 +1,6 @@
 # Software Update
 
-![update](/image/config/update.png){width=700}{class=ab-shadow-card}
+![update](/image/en/config/update.png){width=700}{class=ab-shadow-card}
 
 The Software Update panel checks, applies and rolls back AutoBangumi updates.
 

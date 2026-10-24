@@ -128,7 +128,12 @@ AutoBangumi 使用"分支开发，主干发布"模式。
 
 ## 发布流程
 
-目前，发布是在开发团队手动合并特定的"发布 PR"后自动触发的。
+发布只由维护者手动推送版本标签触发，合并 PR 本身不会发布。
+
+- **beta**：在开发分支上打 `X.Y.Z-beta.N` 形式的标签（如 `4.0.0-beta.1`）。CI 构建 Docker 镜像，镜像标签为该版本号与 `dev-latest`，并创建预发布的 GitHub Release。
+- **正式版**：开发分支经 PR 合并到 `main` 后，在 `main` 的合并提交上打 `X.Y.Z` 形式的标签。CI 校验标签格式，并确认该提交在 `main` 上，然后构建镜像（标签为版本号与 `latest`），创建 GitHub Release，发布说明取自 `docs/changelog/<X.Y>.md`。
+
+每个 Release 的附件包括 WebUI、在线更新包、插件 SDK 轮子与插件开发 skill（见 [获取 SDK](/dev/plugins/sdk)）。
 
 Bug 修复 PR 通常会快速发布，一般在一周内。
 

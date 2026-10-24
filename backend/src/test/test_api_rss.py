@@ -395,7 +395,7 @@ class TestSubscribe:
                 new_callable=AsyncMock,
                 return_value=resp_model,
             ) as mock_subscribe,
-            patch("module.api.rss.get_provider", return_value=self._PROVIDERS),
+            patch("module.api.rss.available_sites", return_value=self._PROVIDERS),
         ):
             response = authed_client.post(
                 "/api/v1/rss/subscribe",
@@ -420,7 +420,7 @@ class TestSubscribe:
                 new_callable=AsyncMock,
                 return_value=resp_model,
             ) as mock_subscribe,
-            patch("module.api.rss.get_provider", return_value=self._PROVIDERS),
+            patch("module.api.rss.available_sites", return_value=self._PROVIDERS),
         ):
             response = authed_client.post(
                 "/api/v1/rss/subscribe",
@@ -452,7 +452,7 @@ class TestSubscribe:
                 new_callable=AsyncMock,
                 return_value=resp_model,
             ) as mock_subscribe,
-            patch("module.api.rss.get_provider", return_value=customized),
+            patch("module.api.rss.available_sites", return_value=customized),
         ):
             response = authed_client.post(
                 "/api/v1/rss/subscribe",

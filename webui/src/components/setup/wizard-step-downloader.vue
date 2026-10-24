@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { NSelect, NSwitch } from 'naive-ui';
+import { NSwitch } from 'naive-ui';
 
 const { t } = useMyI18n();
 const setupStore = useSetupStore();
@@ -79,15 +79,16 @@ const canProceed = computed(() => Boolean(downloaderData.value.host));
 <template>
   <ab-container :title="t('setup.downloader.title')" class="wizard-step">
     <div class="step-content">
-      <p class="step-subtitle">{{ t('setup.downloader.subtitle') }}</p>
+      <p class="step-subtitle">
+        {{ t('setup.downloader.subtitle') }}
+      </p>
 
       <div class="form-fields">
         <ab-field :label="t('config.downloader_set.type')">
-          <NSelect
-            v-model:value="downloaderData.type"
+          <ab-select
+            v-model="downloaderData.type"
             :options="downloaderTypeOptions"
             :aria-label="t('config.downloader_set.type')"
-            class="type-select"
           />
         </ab-field>
 
@@ -96,43 +97,36 @@ const canProceed = computed(() => Boolean(downloaderData.value.host));
         </p>
 
         <ab-field :label="t('config.downloader_set.host')">
-          <input
+          <ab-input
             v-model="downloaderData.host"
-            type="text"
             :aria-label="t('config.downloader_set.host')"
             placeholder="172.17.0.1:8080"
-            class="setup-input"
           />
         </ab-field>
 
         <ab-field :label="t('config.downloader_set.username')">
-          <input
+          <ab-input
             v-model="downloaderData.username"
-            type="text"
             :aria-label="t('config.downloader_set.username')"
             autocomplete="username"
             placeholder="admin"
-            class="setup-input"
           />
         </ab-field>
 
         <ab-field :label="t('config.downloader_set.password')">
-          <input
+          <ab-input
             v-model="downloaderData.password"
             type="password"
             :aria-label="t('config.downloader_set.password')"
             autocomplete="current-password"
-            class="setup-input"
           />
         </ab-field>
 
         <ab-field :label="t('config.downloader_set.path')">
-          <input
+          <ab-input
             v-model="downloaderData.path"
-            type="text"
             :aria-label="t('config.downloader_set.path')"
             placeholder="/downloads/Bangumi"
-            class="setup-input"
           />
         </ab-field>
 
@@ -210,31 +204,6 @@ const canProceed = computed(() => Boolean(downloaderData.value.host));
   gap: 12px;
 }
 
-.setup-input {
-  outline: none;
-  min-width: 0;
-  width: 200px;
-  height: 28px;
-  padding: 0 12px;
-  font-size: 12px;
-  text-align: right;
-  border-radius: 6px;
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-  color: var(--color-text);
-  transition: border-color var(--transition-fast),
-    box-shadow var(--transition-fast);
-
-  &:hover {
-    border-color: var(--color-primary);
-  }
-
-  &:focus {
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 2px rgba(108, 74, 182, 0.2);
-  }
-}
-
 .test-section {
   display: flex;
   align-items: center;
@@ -243,11 +212,11 @@ const canProceed = computed(() => Boolean(downloaderData.value.host));
 
 .test-message {
   font-size: 11px;
-  color: var(--color-error, #e53935);
+  color: var(--color-danger);
   margin: 0;
 
   &.success {
-    color: var(--color-success, #43a047);
+    color: var(--color-success);
   }
 }
 
@@ -255,10 +224,6 @@ const canProceed = computed(() => Boolean(downloaderData.value.host));
   font-size: 11px;
   color: var(--color-text-muted);
   margin: 0;
-}
-
-.type-select {
-  max-width: 200px;
 }
 
 .aria2-hint {

@@ -25,7 +25,7 @@ export async function loginThroughUI(
 ): Promise<Response> {
   await page.goto('/#/login');
   await page.getByLabel('Username').fill(credentials.username);
-  await page.getByLabel('Password').fill(credentials.password);
+  await page.getByLabel('Password', { exact: true }).fill(credentials.password);
   const responsePromise = page.waitForResponse(
     (response) =>
       response.url().endsWith('/api/v1/auth/login') &&
@@ -60,11 +60,14 @@ export async function completeFirstRunSetup(
 
   await page.getByLabel('Host').fill(environment.downloaderURL);
   await page.getByLabel('Username').fill(environment.downloaderUsername);
-  await page.getByLabel('Password').fill(environment.downloaderPassword);
+  await page.getByLabel('Password', { exact: true }).fill(environment.downloaderPassword);
   await page.getByLabel('Download Path').fill('/downloads/Bangumi');
   await page.getByRole('button', { name: 'Next' }).click();
 
+  // Steps swap through an out-in transition; wait for the notification step
+  // so the second Skip does not hit the RSS step while it fades out.
   await page.getByRole('button', { name: 'Skip' }).click();
+  await expect(page.getByLabel('Chat ID')).toBeVisible();
   await page.getByRole('button', { name: 'Skip' }).click();
 
   const completeResponse = page.waitForResponse(

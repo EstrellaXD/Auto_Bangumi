@@ -3,9 +3,10 @@ import logging
 import re
 from collections import defaultdict
 from datetime import datetime, timezone
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 from urllib.parse import urlparse
 
+from ab_sdk import points
 from module.conf import settings
 from module.database import Database
 from module.database.bangumi import (
@@ -13,8 +14,13 @@ from module.database.bangumi import (
     match_bangumi_in_list,
     release_fits_bangumi,
 )
-from module.downloader import AddResult, DownloadClient
-from module.models import Bangumi, Movie, ResponseModel, RSSItem, Torrent
+from module.downloader import (
+    AddResult,
+    DownloadClient,
+    DownloaderPool,
+    resolve_downloader_id,
+)
+from module.models import Bangumi, ResponseModel, RSSItem, Torrent
 from module.network import RequestContent
 from module.notification.events import (
     DownloadFailureEvent,
@@ -30,6 +36,12 @@ from module.parser.analyser.tokenizer import (
     ParsedRelease,
 )
 from module.parser.release_policy import preference_identity, preference_revision
+from module.parser.title_parser import _apply_title_hooks
+from module.plugin import host as plugin_host
+from module.plugin.views import bangumi_info, torrent_info
+
+if TYPE_CHECKING:
+    from .analyser import RSSAnalyser
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +79,6 @@ def _preference_score(release: ParsedRelease, bangumi: Bangumi) -> int:
 class RSSEngine:
     def __init__(self, db: Database):
         self.db = db
-        self._to_refresh = False
         self._filter_cache: dict[str, re.Pattern] = {}
 
     @staticmethod
@@ -92,6 +103,7 @@ class RSSEngine:
         name: str | None = None,
         aggregate: bool = True,
         parser: str = "mikan",
+        downloader_id: str | None = None,
     ):
         if not name:
             async with RequestContent() as req:
@@ -103,7 +115,13 @@ class RSSEngine:
                         msg_en="Failed to get RSS title.",
                         msg_zh="无法获取 RSS 标题。",
                     )
-        rss_data = RSSItem(name=name, url=rss_link, aggregate=aggregate, parser=parser)
+        rss_data = RSSItem(
+            name=name,
+            url=rss_link,
+            aggregate=aggregate,
+            parser=parser,
+            downloader_id=downloader_id,
+        )
         if await self.db.rss.add(rss_data):
             return ResponseModel(
                 status=True,
@@ -147,16 +165,12 @@ class RSSEngine:
             msg_zh="删除 RSS 成功。",
         )
 
-    async def pull_rss(self, rss_item: RSSItem) -> list[Torrent]:
-        torrents = await self._get_torrents(rss_item)
-        new_torrents = await self.db.torrent.check_new(torrents)
-        return new_torrents
-
     async def _pull_rss_with_status(
         self, rss_item: RSSItem
     ) -> tuple[list[Torrent], Optional[str]]:
+        """拉取订阅的全部条目（不去重），聚合分析与下载匹配共用这一份结果。"""
         try:
-            torrents = await self.pull_rss(rss_item)
+            torrents = await self._get_torrents(rss_item)
             return torrents, None
         except Exception as e:
             logger.warning(f"Failed to fetch RSS {rss_item.name}: {e}")
@@ -197,6 +211,50 @@ class RSSEngine:
         return None
 
     @staticmethod
+    async def plugin_accepts(torrent: Torrent, bangumi: Bangumi) -> bool:
+        """``torrent.filter``：在规则自带的排除过滤之后，由插件决定是否下载。
+
+        没有插件钩子时直接放行，不做任何额外解析。
+        """
+        runner = plugin_host.hook_runner(points.TORRENT_FILTER)
+        if runner is None:
+            return True
+        try:
+            release = parse_configured_release_title(torrent.name)
+        except Exception as e:
+            # 解析失败不应让过滤阶段中断整轮刷新，钩子收到 None
+            logger.debug("Cannot parse %s for plugin filters: %s", torrent.name, e)
+            release = None
+        if release is not None:
+            # 与建规则时一致：过滤钩子收到经 title.parsed 修正后的解析结果
+            release = await _apply_title_hooks(release)
+        verdict = await runner.filter(
+            points.TORRENT_FILTER,
+            torrent_info(torrent),
+            release,
+            bangumi_info(bangumi),
+        )
+        if not verdict.accept:
+            logger.debug(
+                "Plugin filter rejected %s: %s", torrent.name, verdict.reason or ""
+            )
+        return verdict.accept
+
+    async def _apply_plugin_filters(
+        self, torrents: list[Torrent], matches: list[Optional[Bangumi]]
+    ) -> list[Optional[Bangumi]]:
+        if plugin_host.hook_runner(points.TORRENT_FILTER) is None:
+            return matches
+        result: list[Optional[Bangumi]] = []
+        for torrent, matched in zip(torrents, matches):
+            if matched is not None and not await self.plugin_accepts(torrent, matched):
+                # 与排除过滤一致：被拒的种子不关联番剧（见 match_torrent）
+                torrent.bangumi_id = None
+                matched = None
+            result.append(matched)
+        return result
+
+    @staticmethod
     def _select_preference_skips(
         matched: list[tuple[Torrent, Bangumi]],
         preference_bangumi: dict[int, Bangumi],
@@ -220,12 +278,17 @@ class RSSEngine:
         ``refresh_rss`` 内部过滤，不做跨请求持久化。
         """
         skip_ids: set[int] = set()
+        candidate_ids = {b.id for _, b in matched if b.id in preference_bangumi}
+        if not candidate_ids:
+            # 本批次没有偏好番剧的候选：无需解析已下载版本
+            return skip_ids
 
         # 已下载版本：按完整内容身份记录当前最高 (偏好得分, 修订号)。
+        # 只解析本批次有候选的番剧。
         existing_best: dict[_PreferenceKey, _PreferenceRank] = {}
         for bangumi_id, torrents in existing_downloaded.items():
             bangumi = preference_bangumi.get(bangumi_id)
-            if not bangumi:
+            if not bangumi or bangumi_id not in candidate_ids:
                 continue
             for torrent in torrents:
                 release = parse_configured_release_title(torrent.name)
@@ -276,14 +339,55 @@ class RSSEngine:
         return skip_ids
 
     async def refresh_rss(
-        self, client: DownloadClient, rss_id: Optional[int] = None
+        self,
+        downloaders: DownloaderPool,
+        rss_id: Optional[int] = None,
+        analyser: "RSSAnalyser | None" = None,
     ) -> list[SystemEvent]:
-        """Refresh feeds with one parser engine for the complete workflow."""
+        """Refresh feeds with one parser engine for the complete workflow.
+
+        匹配到的种子投递到规则的下载器实例，规则未指定时用订阅的，再退回默认实例。
+        给出 ``analyser`` 时，先用同一次拉取的结果为聚合订阅生成新规则。
+        """
         with parser_engine_snapshot():
-            return await self._refresh_rss(client, rss_id)
+            return await self._refresh_rss(downloaders, rss_id, analyser)
+
+    async def _analyse_aggregate(
+        self,
+        analyser: "RSSAnalyser",
+        item_results: list[tuple[RSSItem, tuple[list[Torrent], Optional[str]]]],
+        bangumi_list: list[Bangumi],
+    ) -> list[Bangumi]:
+        """为聚合订阅生成新规则，返回之后用于匹配的番剧列表。"""
+        for rss_item, (torrents, error) in item_results:
+            if not rss_item.aggregate or error:
+                continue
+            try:
+                if await analyser.rss_to_data(rss_item, torrents, self, bangumi_list):
+                    # 新规则要能被后续订阅与本轮下载匹配到
+                    bangumi_list = await self.db.bangumi.search_all()
+            except Exception:
+                # 仅当该 RSS 确实已在遍历期间被 API 删除时才视为预期情况；
+                # 其余异常可能是真实 bug，需在 WARNING 级别带完整堆栈。
+                if await self.db.rss.search_id(rss_item.id) is None:
+                    logger.debug(
+                        "Skipping RSS id=%s, deleted during iteration",
+                        rss_item.id,
+                    )
+                else:
+                    logger.warning(
+                        "Error analysing RSS id=%s (%s)",
+                        rss_item.id,
+                        rss_item.url,
+                        exc_info=True,
+                    )
+        return bangumi_list
 
     async def _refresh_rss(
-        self, client: DownloadClient, rss_id: Optional[int] = None
+        self,
+        downloaders: DownloaderPool,
+        rss_id: Optional[int] = None,
+        analyser: "RSSAnalyser | None" = None,
     ) -> list[SystemEvent]:
         # Get All RSS Items
         if not rss_id:
@@ -322,6 +426,10 @@ class RSSEngine:
         # torrent against it in memory (this is the job the old module-level
         # TTL cache existed to do).
         bangumi_list = await self.db.bangumi.search_all()
+        if analyser is not None:
+            bangumi_list = await self._analyse_aggregate(
+                analyser, item_results, bangumi_list
+            )
         events: list[SystemEvent] = []
 
         # Bangumi with a release-group/resolution preference need per-episode
@@ -331,13 +439,6 @@ class RSSEngine:
             for b in bangumi_list
             if b.id is not None and (b.preferred_group or b.preferred_resolution)
         }
-        existing_downloaded: dict[int, list[Torrent]] = {}
-        if preference_bangumi:
-            existing_downloaded = (
-                await self.db.torrent.search_downloaded_by_bangumi_ids(
-                    list(preference_bangumi)
-                )
-            )
 
         # First pass: match every torrent against the bangumi list (this also
         # tags torrent.bangumi_id as a side effect) without downloading yet,
@@ -346,19 +447,38 @@ class RSSEngine:
         item_matches: list[
             tuple[RSSItem, list[Torrent], Optional[str], list[Optional[Bangumi]]]
         ] = []
-        for rss_item, (new_torrents, error) in item_results:
+        for rss_item, (torrents, error) in item_results:
+            try:
+                new_torrents = await self.db.torrent.check_new(torrents)
+            except Exception as e:
+                # 查库出错只算该订阅失败，其余订阅照常处理
+                logger.warning(f"Failed to dedup RSS {rss_item.name}: {e}")
+                new_torrents, error = [], str(e)
             matches = [self.match_torrent(t, bangumi_list) for t in new_torrents]
+            matches = await self._apply_plugin_filters(new_torrents, matches)
             item_matches.append((rss_item, new_torrents, error, matches))
 
+        matched_pairs = [
+            (torrent, matched)
+            for _, new_torrents, _, matches in item_matches
+            for torrent, matched in zip(new_torrents, matches)
+            if matched is not None
+        ]
+        # 只为本批次有候选的偏好番剧加载已下载版本；没有候选时不查库
+        candidate_ids = {
+            b.id
+            for _, b in matched_pairs
+            if b.id is not None and b.id in preference_bangumi
+        }
+        existing_downloaded: dict[int, list[Torrent]] = {}
+        if candidate_ids:
+            existing_downloaded = (
+                await self.db.torrent.search_downloaded_by_bangumi_ids(
+                    list(candidate_ids)
+                )
+            )
         skip_ids = self._select_preference_skips(
-            [
-                (torrent, matched)
-                for _, new_torrents, _, matches in item_matches
-                for torrent, matched in zip(new_torrents, matches)
-                if matched is not None
-            ],
-            preference_bangumi,
-            existing_downloaded,
+            matched_pairs, preference_bangumi, existing_downloaded
         )
 
         # Process results sequentially (DB operations)
@@ -389,6 +509,17 @@ class RSSEngine:
                             torrent.name,
                             matched_data.official_title,
                         )
+                        continue
+                    try:
+                        client = await downloaders.get(
+                            resolve_downloader_id(
+                                matched_data.downloader_id, rss_item.downloader_id
+                            )
+                        )
+                    except ConnectionError as e:
+                        # 实例不可用：不入库，下一轮重试；不可用由重命名轮次通知
+                        logger.warning("Skip %s: %s", torrent.name, e)
+                        failed_ids.add(id(torrent))
                         continue
                     result = await client.add_torrent(torrent, matched_data)
                     if result is AddResult.FAILED:
@@ -421,54 +552,20 @@ class RSSEngine:
         await self.db.commit()
         return events
 
-    async def download_movie(self, movie: Movie):
-        if not movie.rss_link:
-            return ResponseModel(
-                status=False,
-                status_code=406,
-                msg_en=f"Download movie {movie.official_title} failed: no RSS link.",
-                msg_zh=f"下载剧场版 {movie.official_title} 失败：缺少 RSS 链接。",
-            )
-        async with RequestContent() as req:
-            filter_pattern = movie.filter.replace(",", "|") if movie.filter else ""
-            torrents = await req.get_torrents(movie.rss_link, filter_pattern)
-            if torrents:
-                async with DownloadClient() as client:
-                    result = await client.add_torrent(
-                        torrents, movie  # type: ignore[arg-type]
-                    )
-                    if result is AddResult.FAILED:
-                        return ResponseModel(
-                            status=False,
-                            status_code=502,
-                            msg_en=f"Download movie {movie.official_title} failed.",
-                            msg_zh=f"下载剧场版 {movie.official_title} 失败。",
-                        )
-                    for torrent in torrents:
-                        torrent.downloaded = True
-                    await self.db.torrent.add_all(torrents)
-                    return ResponseModel(
-                        status=True,
-                        status_code=200,
-                        msg_en=f"Download movie {movie.official_title} successfully.",
-                        msg_zh=f"下载剧场版 {movie.official_title} 成功。",
-                    )
-            else:
-                return ResponseModel(
-                    status=False,
-                    status_code=406,
-                    msg_en=f"[Engine] Download movie {movie.official_title} failed.",
-                    msg_zh=f"下载剧场版 {movie.official_title} 失败。",
-                )
-
     async def download_bangumi(self, bangumi: Bangumi):
         async with RequestContent() as req:
             torrents = await req.get_torrents(
                 bangumi.rss_link, bangumi.filter.replace(",", "|")
             )
             torrents = [t for t in torrents if release_fits_bangumi(t.name, bangumi)]
+            if plugin_host.hook_runner(points.TORRENT_FILTER) is not None:
+                torrents = [
+                    t for t in torrents if await self.plugin_accepts(t, bangumi)
+                ]
             if torrents:
-                async with DownloadClient() as client:
+                async with DownloadClient(
+                    resolve_downloader_id(bangumi.downloader_id)
+                ) as client:
                     result = await client.add_torrent(torrents, bangumi)
                     if result is AddResult.FAILED:
                         return ResponseModel(

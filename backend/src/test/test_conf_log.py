@@ -1,5 +1,8 @@
 """启动时日志轮转（rotate_boot_log）：历史进备份而非被删除。"""
 
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -66,3 +69,21 @@ class TestRotateBootLog:
         conf_log.rotate_boot_log()
 
         assert log_path.read_text() == "content"
+
+
+def test_setup_logger_replaces_handlers_installed_by_earlier_imports(tmp_path: Path):
+    """生产导入顺序里 mcp 早于 setup_logger 导入；根日志器已有处理器时
+    basicConfig 不能被静默跳过，日志必须落到 data/log.txt。"""
+    code = (
+        "import logging, main\n"
+        "assert [type(h).__name__ for h in logging.getLogger().handlers]"
+        " == ['QueueHandler']\n"
+        "logging.getLogger('probe').info('probe-marker')\n"
+    )
+    src = Path(__file__).resolve().parents[1]
+    env = {**os.environ, "PYTHONPATH": str(src)}
+    subprocess.run(
+        [sys.executable, "-c", code], cwd=tmp_path, env=env, check=True, timeout=60
+    )
+    # 子进程退出时 atexit 会排空日志队列
+    assert "probe-marker" in (tmp_path / "data" / "log.txt").read_text()

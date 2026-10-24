@@ -1,16 +1,14 @@
-"""Tests for module.mcp.resources - await handle_resource() and _bangumi_to_dict()."""
+"""Tests for module.mcp.resources - reads via mcp.read_resource() and _bangumi_to_dict()."""
 
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from mcp.server.lowlevel.helper_types import ReadResourceContents
+from mcp.server.mcpserver.exceptions import ResourceNotFoundError
 
-from module.mcp.resources import (
-    RESOURCE_TEMPLATES,
-    RESOURCES,
-    _bangumi_to_dict,
-    handle_resource,
-)
+from module.mcp import mcp
+from module.mcp.tools import _bangumi_to_dict
 from module.models import Bangumi, ResponseModel
 from test.factories import make_bangumi
 
@@ -53,36 +51,38 @@ def _mock_sync_manager(bangumi_list=None, single=None):
     return mock_mgr, mock_mgr
 
 
+async def handle_resource(uri: str) -> str:
+    """经 ``mcp.read_resource`` 读取资源，返回文本内容。"""
+    [content] = await mcp.read_resource(uri)
+    assert isinstance(content, ReadResourceContents)
+    assert isinstance(content.content, str)
+    return content.content
+
+
 def _parse(raw: str) -> dict | list:
     return json.loads(raw)
 
 
 # ---------------------------------------------------------------------------
-# Static metadata (RESOURCES / RESOURCE_TEMPLATES)
+# Static metadata (list_resources / list_resource_templates)
 # ---------------------------------------------------------------------------
 
 
 class TestResourceMetadata:
-    """Verify the static resource and template lists."""
-
-    async def test_resources_is_list(self):
-        assert isinstance(RESOURCES, list)
-
-    async def test_resources_not_empty(self):
-        assert len(RESOURCES) > 0
+    """Verify the registered resources and templates."""
 
     async def test_resource_uris_present(self):
-        uris = {str(r.uri) for r in RESOURCES}
-        assert "autobangumi://anime/list" in uris
-        assert "autobangumi://status" in uris
-        assert "autobangumi://rss/feeds" in uris
-
-    async def test_resource_templates_is_list(self):
-        assert isinstance(RESOURCE_TEMPLATES, list)
+        resources = await mcp.list_resources()
+        assert {r.uri for r in resources} == {
+            "autobangumi://anime/list",
+            "autobangumi://status",
+            "autobangumi://rss/feeds",
+        }
+        assert all(r.mime_type == "application/json" for r in resources)
 
     async def test_anime_id_template_present(self):
-        templates = [str(t.uriTemplate) for t in RESOURCE_TEMPLATES]
-        assert "autobangumi://anime/{id}" in templates
+        templates = [t.uri_template for t in await mcp.list_resource_templates()]
+        assert templates == ["autobangumi://anime/{id}"]
 
 
 # ---------------------------------------------------------------------------
@@ -214,8 +214,8 @@ class TestHandleResourceStatus:
 
     async def test_returns_json_string(self, mock_program):
         with (
-            patch("module.mcp.resources.VERSION", "3.2.0-test"),
-            patch("module.mcp.resources.get_context", return_value=mock_program),
+            patch("module.mcp.tools.VERSION", "3.2.0-test"),
+            patch("module.mcp.tools.get_context", return_value=mock_program),
         ):
             raw = await handle_resource("autobangumi://status")
         assert isinstance(raw, str)
@@ -223,8 +223,8 @@ class TestHandleResourceStatus:
 
     async def test_version_in_output(self, mock_program):
         with (
-            patch("module.mcp.resources.VERSION", "3.2.0-test"),
-            patch("module.mcp.resources.get_context", return_value=mock_program),
+            patch("module.mcp.tools.VERSION", "3.2.0-test"),
+            patch("module.mcp.tools.get_context", return_value=mock_program),
         ):
             result = _parse(await handle_resource("autobangumi://status"))
         assert isinstance(result, dict)
@@ -233,8 +233,8 @@ class TestHandleResourceStatus:
     async def test_running_true(self, mock_program):
         mock_program.is_running = True
         with (
-            patch("module.mcp.resources.VERSION", "3.2.0-test"),
-            patch("module.mcp.resources.get_context", return_value=mock_program),
+            patch("module.mcp.tools.VERSION", "3.2.0-test"),
+            patch("module.mcp.tools.get_context", return_value=mock_program),
         ):
             result = _parse(await handle_resource("autobangumi://status"))
         assert isinstance(result, dict)
@@ -243,8 +243,8 @@ class TestHandleResourceStatus:
     async def test_first_run_false(self, mock_program):
         mock_program.first_run = False
         with (
-            patch("module.mcp.resources.VERSION", "3.2.0-test"),
-            patch("module.mcp.resources.get_context", return_value=mock_program),
+            patch("module.mcp.tools.VERSION", "3.2.0-test"),
+            patch("module.mcp.tools.get_context", return_value=mock_program),
         ):
             result = _parse(await handle_resource("autobangumi://status"))
         assert isinstance(result, dict)
@@ -252,8 +252,8 @@ class TestHandleResourceStatus:
 
     async def test_all_keys_present(self, mock_program):
         with (
-            patch("module.mcp.resources.VERSION", "3.2.0-test"),
-            patch("module.mcp.resources.get_context", return_value=mock_program),
+            patch("module.mcp.tools.VERSION", "3.2.0-test"),
+            patch("module.mcp.tools.get_context", return_value=mock_program),
         ):
             result = _parse(await handle_resource("autobangumi://status"))
         assert isinstance(result, dict)
@@ -374,26 +374,15 @@ class TestHandleResourceAnimeById:
 class TestHandleResourceUnknown:
     """Tests for unrecognised resource URIs."""
 
-    async def test_unknown_uri_returns_json_error(self):
-        """An unrecognised URI produces a JSON object with 'error'."""
-        result = _parse(await handle_resource("autobangumi://does/not/exist"))
-        assert "error" in result
-
-    async def test_unknown_uri_mentions_uri_in_error(self):
-        """The error message includes the unrecognised URI."""
-        uri = "autobangumi://does/not/exist"
-        result = _parse(await handle_resource(uri))
-        assert isinstance(result, dict)
-        assert uri in result["error"]
-
-    async def test_empty_uri_returns_error(self):
-        """An empty string URI returns a JSON error."""
-        result = _parse(await handle_resource(""))
-        assert "error" in result
-
-    async def test_completely_different_scheme_returns_error(self):
-        """A URI with a wrong scheme returns a JSON error."""
-        result = _parse(
-            await handle_resource("https://autobangumi.example.com/anime/list")
-        )
-        assert "error" in result
+    @pytest.mark.parametrize(
+        "uri",
+        [
+            "autobangumi://does/not/exist",
+            "",
+            "https://autobangumi.example.com/anime/list",
+        ],
+    )
+    async def test_unknown_uri_raises_not_found(self, uri):
+        """未知 URI 抛出 ResourceNotFoundError（客户端收到 JSON-RPC 错误），消息带上 URI。"""
+        with pytest.raises(ResourceNotFoundError, match=f"Unknown resource: {uri}"):
+            await mcp.read_resource(uri)

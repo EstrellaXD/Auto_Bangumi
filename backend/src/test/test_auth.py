@@ -1,115 +1,11 @@
-"""Tests for authentication: JWT tokens, password hashing, login flow."""
+"""Tests for authentication: password hashing, login flow."""
 
-from datetime import timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from module.models.user import User
-from module.security.jwt import (
-    create_access_token,
-    decode_token,
-    get_password_hash,
-    verify_password,
-    verify_token,
-)
-
-# ---------------------------------------------------------------------------
-# JWT Token Creation
-# ---------------------------------------------------------------------------
-
-
-class TestCreateAccessToken:
-    def test_creates_valid_token(self):
-        """create_access_token returns a decodable JWT with sub claim."""
-        token = create_access_token(data={"sub": "testuser"})
-        assert token is not None
-        assert isinstance(token, str)
-        assert len(token) > 0
-
-    def test_token_contains_sub_claim(self):
-        """Decoded token contains the 'sub' field."""
-        token = create_access_token(data={"sub": "myuser"})
-        payload = decode_token(token)
-        assert payload is not None
-        assert payload["sub"] == "myuser"
-
-    def test_token_contains_exp_claim(self):
-        """Decoded token contains 'exp' expiration field."""
-        token = create_access_token(data={"sub": "user"})
-        payload = decode_token(token)
-        assert "exp" in payload
-
-    def test_custom_expiry(self):
-        """Custom expires_delta is respected."""
-        token = create_access_token(
-            data={"sub": "user"}, expires_delta=timedelta(hours=2)
-        )
-        payload = decode_token(token)
-        assert payload is not None
-
-
-# ---------------------------------------------------------------------------
-# Token Decoding
-# ---------------------------------------------------------------------------
-
-
-class TestDecodeToken:
-    def test_valid_token(self):
-        """decode_token returns payload for valid token."""
-        token = create_access_token(data={"sub": "testuser"})
-        result = decode_token(token)
-        assert result is not None
-        assert result["sub"] == "testuser"
-
-    def test_invalid_token(self):
-        """decode_token returns None for invalid/garbage token."""
-        result = decode_token("not.a.valid.jwt.token")
-        assert result is None
-
-    def test_empty_token(self):
-        """decode_token returns None for empty string."""
-        result = decode_token("")
-        assert result is None
-
-    def test_missing_sub_claim(self):
-        """decode_token returns None when 'sub' claim is missing."""
-        token = create_access_token(data={"other": "data"})
-        result = decode_token(token)
-        # sub is None so decode_token returns None
-        assert result is None
-
-
-# ---------------------------------------------------------------------------
-# Token Verification
-# ---------------------------------------------------------------------------
-
-
-class TestVerifyToken:
-    def test_valid_fresh_token(self):
-        """verify_token succeeds for a fresh token."""
-        token = create_access_token(
-            data={"sub": "user"}, expires_delta=timedelta(hours=1)
-        )
-        result = verify_token(token)
-        assert result is not None
-        assert result["sub"] == "user"
-
-    def test_expired_token_returns_none(self):
-        """verify_token returns None for expired token (caught by decode_token)."""
-        token = create_access_token(
-            data={"sub": "user"}, expires_delta=timedelta(seconds=-10)
-        )
-        # PyJWT catches expired tokens during decode, so decode_token
-        # returns None, and verify_token propagates that as None
-        result = verify_token(token)
-        assert result is None
-
-    def test_invalid_token_returns_none(self):
-        """verify_token returns None for invalid token (decode fails)."""
-        result = verify_token("garbage.token.string")
-        assert result is None
-
+from module.security.password import get_password_hash, verify_password
 
 # ---------------------------------------------------------------------------
 # Password Hashing

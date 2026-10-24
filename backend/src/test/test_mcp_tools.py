@@ -1,22 +1,31 @@
-"""Tests for module.mcp.tools - _bangumi_to_dict helper and _dispatch routing."""
+"""Tests for module.mcp.tools - _bangumi_to_dict helper and tool calls via AutoBangumiMCP."""
 
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from mcp import types
 
-from module.mcp.tools import (
-    TOOLS,
-    _bangumi_to_dict,
-    _dispatch,
-    handle_tool,
-)
+from module.mcp import mcp
+from module.mcp.tools import _bangumi_to_dict
 from module.models import Bangumi, ResponseModel
 from test.factories import make_bangumi
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+def _json(result: types.CallToolResult):
+    """结果只有一段 JSON 文本，返回解析后的值。"""
+    [content] = result.content
+    assert isinstance(content, types.TextContent)
+    return json.loads(content.text)
+
+
+async def _call(name: str, args: dict):
+    """经 ``mcp.call_tool`` 调用工具，返回解析后的 JSON 文本。"""
+    return _json(await mcp.call_tool(name, args))
 
 
 def _make_response(status: bool = True, msg: str = "OK") -> ResponseModel:
@@ -171,47 +180,56 @@ class TestBangumiToDict:
 
 
 # ---------------------------------------------------------------------------
-# TOOLS list
+# tool definitions
 # ---------------------------------------------------------------------------
 
 
 class TestToolsDefinitions:
-    """Sanity-check the static TOOLS list."""
+    """内置工具的名称与参数名必须与旧的手写 schema 一致，已有客户端才能继续使用。"""
 
-    def test_tools_is_list(self):
-        assert isinstance(TOOLS, list)
-
-    def test_tools_not_empty(self):
-        assert len(TOOLS) > 0
-
-    def test_all_tools_have_names(self):
-        for tool in TOOLS:
-            assert tool.name, f"Tool missing name: {tool}"
-
-    def test_expected_tool_names_present(self):
-        names = {t.name for t in TOOLS}
-        required = {
-            "list_anime",
-            "get_anime",
-            "search_anime",
-            "subscribe_anime",
-            "unsubscribe_anime",
-            "list_downloads",
-            "list_rss_feeds",
-            "get_program_status",
-            "refresh_feeds",
-            "update_anime",
+    async def test_tool_names_and_arguments_unchanged(self):
+        tools = {t.name: t for t in await mcp.list_tools()}
+        expected = {
+            "list_anime": {"active_only"},
+            "get_anime": {"id"},
+            "search_anime": {"keywords", "site"},
+            "subscribe_anime": {"rss_link", "parser"},
+            "unsubscribe_anime": {"id", "delete"},
+            "list_downloads": {"status"},
+            "list_rss_feeds": set(),
+            "get_program_status": set(),
+            "refresh_feeds": set(),
+            "update_anime": {
+                "id",
+                "episode_offset",
+                "season_offset",
+                "season",
+                "filter",
+            },
         }
-        assert required.issubset(names)
+        assert set(tools) == set(expected)
+        for name, args in expected.items():
+            assert set(tools[name].input_schema["properties"]) == args, name
+            assert tools[name].description
+            # 结果是 JSON 文本，不声明 outputSchema
+            assert tools[name].output_schema is None
+
+    async def test_required_and_enum_from_type_hints(self):
+        tools = {t.name: t for t in await mcp.list_tools()}
+        search = tools["search_anime"].input_schema
+        assert search["required"] == ["keywords"]
+        assert search["properties"]["site"]["enum"] == ["mikan", "dmhy", "nyaa"]
+        assert search["properties"]["site"]["default"] == "mikan"
+        assert tools["update_anime"].input_schema["required"] == ["id"]
 
 
 # ---------------------------------------------------------------------------
-# _dispatch routing
+# tool routing
 # ---------------------------------------------------------------------------
 
 
 class TestDispatch:
-    """Verify _dispatch delegates to the correct handler for each tool name."""
+    """Verify mcp.call_tool delegates to the correct handler for each tool name."""
 
     # --- list_anime ---
 
@@ -221,7 +239,7 @@ class TestDispatch:
         ctx = _mock_db(bangumi_list=bangumi)
 
         with patch("module.mcp.tools.Database", return_value=ctx):
-            result = await _dispatch("list_anime", {})
+            result = await _call("list_anime", {})
 
         assert isinstance(result, list)
         assert len(result) == 2
@@ -232,7 +250,7 @@ class TestDispatch:
         ctx, mock_mgr = _mock_sync_manager(bangumi_list=bangumi)
 
         with patch("module.mcp.tools.TorrentManager", return_value=ctx):
-            result = await _dispatch("list_anime", {"active_only": True})
+            result = await _call("list_anime", {"active_only": True})
 
         mock_mgr.search_all_bangumi.assert_called_once()
         assert len(result) == 1
@@ -245,7 +263,7 @@ class TestDispatch:
         ctx, _ = _mock_sync_manager(single=bangumi)
 
         with patch("module.mcp.tools.TorrentManager", return_value=ctx):
-            result = await _dispatch("get_anime", {"id": 5})
+            result = await _call("get_anime", {"id": 5})
 
         assert isinstance(result, dict)
         assert result["id"] == 5
@@ -262,7 +280,7 @@ class TestDispatch:
         ctx, _ = _mock_sync_manager(single=not_found)
 
         with patch("module.mcp.tools.TorrentManager", return_value=ctx):
-            result = await _dispatch("get_anime", {"id": 999})
+            result = await _call("get_anime", {"id": 999})
 
         assert isinstance(result, dict)
         assert "error" in result
@@ -285,7 +303,7 @@ class TestDispatch:
         mock_st.__aexit__ = AsyncMock(return_value=False)
 
         with patch("module.mcp.tools.SearchTorrent", return_value=mock_st):
-            result = await _dispatch(
+            result = await _call(
                 "search_anime", {"keywords": "One Piece", "site": "mikan"}
             )
 
@@ -308,7 +326,7 @@ class TestDispatch:
         mock_st.__aexit__ = AsyncMock(return_value=False)
 
         with patch("module.mcp.tools.SearchTorrent", return_value=mock_st):
-            await _dispatch("search_anime", {"keywords": "Bleach"})
+            await _call("search_anime", {"keywords": "Bleach"})
 
         assert captured_site == ["mikan"]
 
@@ -329,7 +347,7 @@ class TestDispatch:
                 new=AsyncMock(return_value=fake_resp),
             ),
         ):
-            result = await _dispatch(
+            result = await _call(
                 "subscribe_anime",
                 {"rss_link": "https://mikanani.me/RSS/test", "parser": "mikan"},
             )
@@ -348,7 +366,7 @@ class TestDispatch:
         mock_analyser.link_to_data = AsyncMock(return_value=fake_error)
 
         with patch("module.mcp.tools.RSSAnalyser", return_value=mock_analyser):
-            result = await _dispatch(
+            result = await _call(
                 "subscribe_anime",
                 {"rss_link": "https://bad-rss.example.com", "parser": "mikan"},
             )
@@ -363,7 +381,7 @@ class TestDispatch:
         mock_mgr.disable_rule = AsyncMock(return_value=_make_response(True, "Disabled"))
 
         with patch("module.mcp.tools.TorrentManager", return_value=ctx):
-            result = await _dispatch("unsubscribe_anime", {"id": 3, "delete": False})
+            result = await _call("unsubscribe_anime", {"id": 3, "delete": False})
 
         mock_mgr.disable_rule.assert_called_once_with(3)
         assert isinstance(result, dict)
@@ -375,7 +393,7 @@ class TestDispatch:
         mock_mgr.delete_rule = AsyncMock(return_value=_make_response(True, "Deleted"))
 
         with patch("module.mcp.tools.TorrentManager", return_value=ctx):
-            result = await _dispatch("unsubscribe_anime", {"id": 3, "delete": True})
+            result = await _call("unsubscribe_anime", {"id": 3, "delete": True})
 
         mock_mgr.delete_rule.assert_called_once_with(3)
         assert isinstance(result, dict)
@@ -401,8 +419,10 @@ class TestDispatch:
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=False)
 
-        with patch("module.mcp.tools.DownloadClient", return_value=mock_client):
-            result = await _dispatch("list_downloads", {"status": "all"})
+        with patch(
+            "module.downloader.download_client.DownloadClient", return_value=mock_client
+        ):
+            result = await _call("list_downloads", {"status": "all"})
 
         mock_client.get_torrent_info.assert_called_once_with(
             status_filter=None, category="Bangumi"
@@ -417,8 +437,10 @@ class TestDispatch:
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=False)
 
-        with patch("module.mcp.tools.DownloadClient", return_value=mock_client):
-            await _dispatch("list_downloads", {"status": "downloading"})
+        with patch(
+            "module.downloader.download_client.DownloadClient", return_value=mock_client
+        ):
+            await _call("list_downloads", {"status": "downloading"})
 
         mock_client.get_torrent_info.assert_called_once_with(
             status_filter="downloading", category="Bangumi"
@@ -443,8 +465,10 @@ class TestDispatch:
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=False)
 
-        with patch("module.mcp.tools.DownloadClient", return_value=mock_client):
-            result = await _dispatch("list_downloads", {})
+        with patch(
+            "module.downloader.download_client.DownloadClient", return_value=mock_client
+        ):
+            result = await _call("list_downloads", {})
 
         expected_keys = {
             "name",
@@ -454,6 +478,7 @@ class TestDispatch:
             "dlspeed",
             "upspeed",
             "eta",
+            "downloader",
         }
         assert set(result[0].keys()) == expected_keys
 
@@ -475,7 +500,7 @@ class TestDispatch:
         ctx = _mock_db(feeds=[fake_feed])
 
         with patch("module.mcp.tools.Database", return_value=ctx):
-            result = await _dispatch("list_rss_feeds", {})
+            result = await _call("list_rss_feeds", {})
 
         assert isinstance(result, list)
         assert result[0]["name"] == "Mikan"
@@ -491,18 +516,11 @@ class TestDispatch:
 
         with (
             patch("module.mcp.tools.VERSION", "3.2.0-beta"),
-            patch("module.mcp.tools._get_program_status") as mock_fn,
+            patch("module.mcp.tools.get_context", return_value=mock_program),
         ):
-            mock_fn.return_value = {
-                "version": "3.2.0-beta",
-                "running": True,
-                "first_run": False,
-            }
-            result = await _dispatch("get_program_status", {})
+            result = await _call("get_program_status", {})
 
-        assert "version" in result
-        assert "running" in result
-        assert "first_run" in result
+        assert result == {"version": "3.2.0-beta", "running": True, "first_run": False}
 
     # --- refresh_feeds ---
 
@@ -516,10 +534,10 @@ class TestDispatch:
         mock_engine.refresh_rss = AsyncMock(return_value=None)
 
         with (
-            patch("module.mcp.tools.DownloadClient", return_value=mock_client),
+            patch("module.mcp.tools.DownloaderPool", return_value=mock_client),
             patch("module.mcp.tools.RSSEngine", return_value=mock_engine),
         ):
-            result = await _dispatch("refresh_feeds", {})
+            result = await _call("refresh_feeds", {})
 
         assert isinstance(result, dict)
         assert result["status"] is True
@@ -540,7 +558,7 @@ class TestDispatch:
             patch("module.mcp.tools.Database", return_value=db_ctx),
             patch("module.mcp.tools.TorrentManager", return_value=ctx),
         ):
-            result = await _dispatch(
+            result = await _call(
                 "update_anime",
                 {"id": 7, "episode_offset": 12, "season": 2},
             )
@@ -555,7 +573,7 @@ class TestDispatch:
         mock_mgr.bangumi.search_id.return_value = None
 
         with patch("module.mcp.tools.TorrentManager", return_value=ctx):
-            result = await _dispatch("update_anime", {"id": 9999})
+            result = await _call("update_anime", {"id": 9999})
 
         assert isinstance(result, dict)
         assert "error" in result
@@ -564,60 +582,44 @@ class TestDispatch:
     # --- unknown tool ---
 
     async def test_dispatch_unknown_tool(self):
-        """An unrecognised tool name returns an error dict."""
-        result = await _dispatch("does_not_exist", {})
-        assert isinstance(result, dict)
-        assert "error" in result
-        assert "does_not_exist" in result["error"]
+        """An unrecognised tool name returns an is_error result."""
+        result = await mcp.call_tool("does_not_exist", {})
+        assert result.is_error
+        body = _json(result)
+        assert body == {"error": "Unknown tool: does_not_exist"}
 
 
 # ---------------------------------------------------------------------------
-# handle_tool wrapper
+# CallToolResult
 # ---------------------------------------------------------------------------
 
 
-class TestHandleTool:
-    """Verify handle_tool wraps results correctly and handles exceptions."""
+class TestCallToolResult:
+    """Verify call_tool wraps results in one JSON text block and turns errors into is_error."""
 
-    async def test_handle_tool_returns_text_content_list(self):
-        """handle_tool always returns a list of TextContent objects."""
-        from mcp import types
-
-        bangumi = [make_bangumi(id=1)]
+    async def test_result_is_single_json_text_block(self):
+        """列表结果也只有一段 JSON 文本（MCPServer 默认会拆成每项一段）。"""
+        bangumi = [make_bangumi(id=1), make_bangumi(id=2, title_raw="Another")]
         ctx = _mock_db(bangumi_list=bangumi)
 
         with patch("module.mcp.tools.Database", return_value=ctx):
-            result = await handle_tool("list_anime", {})
+            result = await mcp.call_tool("list_anime", {})
 
-        assert isinstance(result, list)
-        assert all(isinstance(item, types.TextContent) for item in result)
+        assert not result.is_error
+        assert [b["id"] for b in _json(result)] == [1, 2]
 
-    async def test_handle_tool_result_is_valid_json(self):
-        """The text in TextContent is valid JSON."""
-        bangumi = [make_bangumi(id=1)]
-        ctx = _mock_db(bangumi_list=bangumi)
-
-        with patch("module.mcp.tools.Database", return_value=ctx):
-            result = await handle_tool("list_anime", {})
-
-        parsed = json.loads(result[0].text)
-        assert isinstance(parsed, list)
-
-    async def test_handle_tool_exception_returns_error_json(self):
-        """If the underlying handler raises, handle_tool returns a JSON error."""
+    async def test_exception_returns_is_error_with_message(self):
+        """处理函数抛出异常时返回 is_error 结果，错误文本保留原始消息。"""
         with patch(
-            "module.mcp.tools._dispatch",
-            new=AsyncMock(side_effect=RuntimeError("something broke")),
+            "module.mcp.tools.Database",
+            side_effect=RuntimeError("something broke"),
         ):
-            result = await handle_tool("list_anime", {})
+            result = await mcp.call_tool("list_anime", {})
 
-        assert len(result) == 1
-        body = json.loads(result[0].text)
-        assert "error" in body
-        assert "something broke" in body["error"]
+        assert result.is_error
+        assert _json(result) == {"error": "something broke"}
 
-    async def test_handle_tool_unknown_name_returns_error_json(self):
-        """An unknown tool name bubbles up as a JSON error via handle_tool."""
-        result = await handle_tool("totally_unknown_tool", {})
-        body = json.loads(result[0].text)
-        assert "error" in body
+    async def test_invalid_arguments_return_is_error(self):
+        result = await mcp.call_tool("get_anime", {"id": "abc"})
+        assert result.is_error
+        assert "id" in _json(result)["error"]

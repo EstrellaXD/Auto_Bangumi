@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { Fingerprint, Lock, User } from '@icon-park/vue-next';
+import { FingerprintPattern, Lock, User } from '@lucide/vue';
 
 definePage({
   name: 'Login',
@@ -50,8 +50,8 @@ async function handleLogin() {
   <div class="page-login">
     <!-- Animated background -->
     <div class="login-bg">
-      <div class="login-bg-gradient"></div>
-      <div class="login-bg-pattern"></div>
+      <div class="login-bg-gradient" />
+      <div class="login-bg-pattern" />
     </div>
 
     <!-- Login card -->
@@ -60,15 +60,19 @@ async function handleLogin() {
       <div class="login-header">
         <div class="login-logo">
           <!-- Light mode: colored logo, Dark mode: light logo -->
-          <img src="/images/logo.svg" alt="AutoBangumi" class="logo-dark" />
+          <img src="/images/logo.svg" alt="AutoBangumi" class="logo-dark">
           <img
             src="/images/logo-light.svg"
             alt="AutoBangumi"
             class="logo-light"
-          />
+          >
         </div>
-        <h1 class="login-title">AutoBangumi</h1>
-        <p class="login-subtitle">{{ $t('login.title') }}</p>
+        <h1 class="login-title">
+          AutoBangumi
+        </h1>
+        <p class="login-subtitle">
+          {{ $t('login.title') }}
+        </p>
       </div>
 
       <!-- Form -->
@@ -78,7 +82,7 @@ async function handleLogin() {
             {{ $t('login.username') }}
           </label>
           <div class="input-wrapper">
-            <User class="input-icon" size="18" />
+            <User class="input-icon" :size="18" />
             <input
               id="login-username"
               v-model="user.username"
@@ -86,7 +90,7 @@ async function handleLogin() {
               autocomplete="username"
               :placeholder="$t('login.username')"
               class="login-input"
-            />
+            >
           </div>
         </div>
 
@@ -95,7 +99,7 @@ async function handleLogin() {
             {{ $t('login.password') }}
           </label>
           <div class="input-wrapper">
-            <Lock class="input-icon" size="18" />
+            <Lock class="input-icon" :size="18" />
             <input
               id="login-password"
               v-model="user.password"
@@ -103,7 +107,7 @@ async function handleLogin() {
               autocomplete="current-password"
               :placeholder="$t('login.password')"
               class="login-input"
-            />
+            >
           </div>
         </div>
 
@@ -121,16 +125,18 @@ async function handleLogin() {
             {{ $t('login.login_btn') }}
           </ab-button>
 
-          <button
+          <ab-button
             v-if="isSupported"
-            type="button"
-            class="passkey-btn"
+            variant="secondary"
+            block
             :disabled="isPasskeyLoading"
             @click="handlePasskeyLogin()"
           >
-            <Fingerprint size="20" />
-            <span>{{ $t('login.passkey_btn') }}</span>
-          </button>
+            <template #icon>
+              <FingerprintPattern :size="16" />
+            </template>
+            {{ $t('login.passkey_btn') }}
+          </ab-button>
         </div>
       </form>
     </div>
@@ -140,19 +146,21 @@ async function handleLogin() {
 <style lang="scss" scoped>
 .page-login {
   position: relative;
-  width: 100vw;
-  height: 100vh;
+  // 内容高于视口（横屏手机）时可滚动，safe center 避免上溢被裁
+  min-height: 100dvh;
   display: flex;
-  align-items: center;
+  align-items: safe center;
   justify-content: center;
-  overflow: hidden;
+  padding: 24px 0;
+  overflow-x: hidden;
 }
 
 // Animated background
 .login-bg {
-  position: absolute;
+  position: fixed;
   inset: 0;
   z-index: 0;
+  overflow: hidden;
 }
 
 .login-bg-gradient {
@@ -330,14 +338,19 @@ async function handleLogin() {
 
 .login-input {
   width: 100%;
-  height: 44px;
+  height: 34px;
   padding: 0 14px 0 44px;
   font-size: 14px;
   color: var(--color-text);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   outline: none;
+
+  // 与 ab-button 同高：桌面 34px，触屏 44px
+  @include forTouch {
+    height: var(--touch-target);
+  }
   transition: border-color var(--transition-fast),
     box-shadow var(--transition-fast), background-color var(--transition-fast);
 
@@ -379,40 +392,5 @@ async function handleLogin() {
   flex-direction: column;
   gap: 12px;
   margin-top: 8px;
-}
-
-.passkey-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-  height: 44px;
-  padding: 0 16px;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--color-text-secondary);
-  background: transparent;
-  border: 1px dashed var(--color-border);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-
-  &:hover:not(:disabled) {
-    color: var(--color-primary);
-    border-color: var(--color-primary);
-    border-style: solid;
-    background: color-mix(in srgb, var(--color-primary) 5%, transparent);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--color-primary);
-    outline-offset: 2px;
-  }
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
 }
 </style>

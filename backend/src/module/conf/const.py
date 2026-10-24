@@ -1,91 +1,9 @@
 # -*- encoding: utf-8 -*-
 from typing import Any
 
-# DEFAULT_SETTINGS: factory defaults written to config.json on first run.
 # ENV_TO_ATTR: maps AB_* environment variables to Config model attribute paths.
 #   Values are either a string attr name, a (attr_name, converter) tuple, or a
 #   list of such tuples when a single env var sets multiple attributes.
-DEFAULT_SETTINGS: dict[str, dict[str, Any]] = {
-    "program": {
-        "rss_time": 900,
-        "rename_time": 60,
-        "webui_port": 7892,
-    },
-    "downloader": {
-        "type": "qbittorrent",
-        "host": "172.17.0.1:8080",
-        "username": "admin",
-        "password": "adminadmin",
-        "path": "/downloads/Bangumi",
-        "ssl": False,
-    },
-    "rss_parser": {
-        "enable": True,
-        "filter": ["720", "\\d+-\\d+"],
-        "language": "zh",
-        "engine": "classic",
-    },
-    "bangumi_manage": {
-        "enable": True,
-        "eps_complete": False,
-        "rename_method": "pn",
-        "group_tag": False,
-        "remove_bad_torrent": False,
-        "revision_conflict_policy": "hold",
-    },
-    "log": {
-        "debug_enable": False,
-    },
-    "proxy": {
-        "enable": False,
-        "type": "http",
-        "host": "",
-        "port": 0,
-        "username": "",
-        "password": "",
-    },
-    "notification": {"enable": False, "providers": [], "base_url": ""},
-    "llm": {
-        "enable": False,
-        "provider": "openai",
-        "api_key": "",
-        "model": "gpt-5-mini",
-        "base_url": "",
-        "mode": "fallback",
-    },
-    # [Deprecated] 旧版 OpenAI 解析配置，仅保留向后兼容
-    "experimental_openai": {
-        "enable": False,
-        "api_key": "",
-        "api_base": "https://api.openai.com/v1",
-        "api_type": "openai",
-        "api_version": "2023-05-15",
-        "model": "gpt-3.5-turbo",
-        "deployment_id": "",
-    },
-    "security": {
-        "login_whitelist": [],
-        "login_tokens": [],
-        "mcp_whitelist": [
-            "127.0.0.0/8",
-            "10.0.0.0/8",
-            "172.16.0.0/12",
-            "192.168.0.0/16",
-            "::1/128",
-            "fe80::/10",
-            "fc00::/7",
-        ],
-        "mcp_tokens": [],
-        "webauthn_rp_id": "",
-        "webauthn_origin": "",
-    },
-    "update": {
-        "channel": "stable",
-        "auto_check": True,
-    },
-}
-
-
 ENV_TO_ATTR: dict[str, dict[str, Any]] = {
     "program": {
         "AB_INTERVAL_TIME": ("rss_time", lambda e: int(e)),
@@ -138,23 +56,3 @@ ENV_TO_ATTR: dict[str, dict[str, Any]] = {
         ],
     },
 }
-
-
-class BCOLORS:
-    """ANSI colour helpers for terminal output."""
-
-    @staticmethod
-    def _(color: str, *args: Any) -> str:
-        """Wrap *args* in the given ANSI colour code and reset at the end."""
-        strings = [str(s) for s in args]
-        return f"{color}{', '.join(strings)}{BCOLORS.ENDC}"
-
-    HEADER = "\033[95m"
-    OKBLUE = "\033[94m"
-    OKCYAN = "\033[96m"
-    OKGREEN = "\033[92m"
-    WARNING = "\033[93m"
-    FAIL = "\033[91m"
-    ENDC = "\033[0m"
-    BOLD = "\033[1m"
-    UNDERLINE = "\033[4m"

@@ -8,6 +8,8 @@ export interface RSS {
   connection_status: string | null;
   last_checked_at: string | null;
   last_error: string | null;
+  /** 由此订阅新建的规则继承；null 为默认实例 */
+  downloader_id: string | null;
 }
 
 export const rssTemplate: RSS = {
@@ -20,4 +22,5 @@ export const rssTemplate: RSS = {
   connection_status: null,
   last_checked_at: null,
   last_error: null,
+  downloader_id: null,
 };

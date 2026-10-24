@@ -30,14 +30,6 @@ class Resolution:
     evidence: tuple[str, ...]
     warnings: tuple[ResolutionWarning, ...] = ()
 
-    @property
-    def selected_candidate_ids(self) -> tuple[str, ...]:
-        return tuple(
-            decision.candidate_id
-            for decision in self.decisions
-            if decision.status is DecisionStatus.SELECTED
-        )
-
     def decision_for(self, candidate_id: str) -> Decision:
         for decision in self.decisions:
             if decision.candidate_id == candidate_id:

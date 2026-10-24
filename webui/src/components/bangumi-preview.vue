@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ErrorPicture } from '@icon-park/vue-next';
+import { ImageOff } from '@lucide/vue';
 import type { BangumiRule } from '#/bangumi';
 
 /**
@@ -17,11 +17,11 @@ const rule = defineModel<BangumiRule>('rule', { required: true });
   <div class="bangumi-info">
     <div class="bangumi-poster">
       <template v-if="rule.poster_link">
-        <img :src="posterSrc" :alt="rule.official_title" />
+        <img :src="posterSrc" :alt="rule.official_title">
       </template>
       <template v-else>
         <div class="poster-placeholder">
-          <ErrorPicture theme="outline" size="32" />
+          <ImageOff :size="32" />
         </div>
       </template>
     </div>
@@ -32,8 +32,10 @@ const rule = defineModel<BangumiRule>('rule', { required: true });
         :aria-label="$t('homepage.rule.official_title')"
         class="title-input"
         :placeholder="$t('homepage.rule.official_title')"
-      />
-      <p v-if="rule.title_raw" class="bangumi-subtitle">{{ rule.title_raw }}</p>
+      >
+      <p v-if="rule.title_raw" class="bangumi-subtitle">
+        {{ rule.title_raw }}
+      </p>
       <div class="meta-row">
         <input
           :value="rule.year ?? ''"
@@ -43,7 +45,7 @@ const rule = defineModel<BangumiRule>('rule', { required: true });
           :class="{ 'year-input--empty': !rule.year }"
           :placeholder="$t('homepage.rule.year')"
           @input="(e) => (rule.year = (e.target as HTMLInputElement).value || null)"
-        />
+        >
         <span class="meta-separator">·</span>
         <label class="season-label">S</label>
         <input
@@ -52,7 +54,7 @@ const rule = defineModel<BangumiRule>('rule', { required: true });
           :aria-label="$t('homepage.rule.season')"
           class="season-input"
           min="1"
-        />
+        >
       </div>
     </div>
   </div>
@@ -62,7 +64,6 @@ const rule = defineModel<BangumiRule>('rule', { required: true });
 .bangumi-info {
   display: flex;
   gap: 16px;
-  margin-bottom: 20px;
 }
 
 .bangumi-poster {
@@ -167,15 +168,9 @@ const rule = defineModel<BangumiRule>('rule', { required: true });
     color: var(--color-text-muted);
   }
 
+  // 缺年份：只用警示色下划线标记，不着底色、不改内边距（与标题左缘对齐）
   &--empty {
-    background: color-mix(in srgb, var(--color-warning) 15%, transparent);
     border-bottom-color: var(--color-warning);
-    border-radius: var(--radius-xs) var(--radius-xs) 0 0;
-    padding: 2px 4px;
-
-    &::placeholder {
-      color: var(--color-warning);
-    }
   }
 }
 
@@ -190,7 +185,7 @@ const rule = defineModel<BangumiRule>('rule', { required: true });
 }
 
 .season-input {
-  width: 40px;
+  width: 4ch;
   font-size: 13px;
   color: var(--color-text-secondary);
   background: transparent;
@@ -198,7 +193,6 @@ const rule = defineModel<BangumiRule>('rule', { required: true });
   border-bottom: 1px solid transparent;
   padding: 2px 0;
   outline: none;
-  text-align: center;
   transition: border-color var(--transition-fast);
 
   &:hover,

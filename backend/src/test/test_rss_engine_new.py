@@ -1,20 +1,26 @@
-"""Tests for RSS engine: pull_rss, match_torrent, refresh_rss, add_rss."""
+"""Tests for RSS engine: aggregate analysis, match_torrent, refresh_rss, add_rss."""
 
 import asyncio
 from unittest.mock import AsyncMock, patch
 
 import pytest
 import pytest_asyncio
+from sqlalchemy.exc import OperationalError
 
 from module.conf import settings
 from module.database import Database
+from module.database.bangumi import BangumiDatabase
+from module.database.movie import MovieDatabase
+from module.database.torrent import TorrentDatabase
 from module.downloader import AddResult
 from module.models import Torrent
+from module.network import RequestContent
 from module.notification.events import DownloadFailureEvent, RssFailureEvent
 from module.parser.analyser.selector import parse_configured_release_title
 from module.parser.analyser.tokenizer import ReleaseKind
+from module.rss.analyser import RSSAnalyser
 from module.rss.engine import RSSEngine
-from test.factories import make_bangumi, make_rss_item, make_torrent
+from test.factories import SingleClientPool, make_bangumi, make_rss_item, make_torrent
 
 
 @pytest_asyncio.fixture
@@ -24,68 +30,135 @@ async def rss_engine(db_engine):
 
 
 # ---------------------------------------------------------------------------
-# pull_rss
+# 聚合订阅分析（refresh_rss 带 analyser，即 rss_tick）
 # ---------------------------------------------------------------------------
 
+FEED_A = "https://mikanani.me/RSS/MyBangumi?token=a"
+FEED_B = "https://mikanani.me/RSS/MyBangumi?token=b"
+KNOWN_URL = "https://example.com/known.torrent"
 
-class TestPullRss:
-    async def test_returns_only_new_torrents(self, rss_engine):
-        """pull_rss filters out torrents already in the database."""
-        rss_item = make_rss_item()
-        await rss_engine.db.rss.add(rss_item)
-        rss_item = await rss_engine.db.rss.search_id(1)
 
-        # Pre-insert one torrent into DB
-        existing = make_torrent(url="https://example.com/existing.torrent", rss_id=1)
-        await rss_engine.db.torrent.add(existing)
-
-        # Mock _get_torrents to return 3 torrents (1 existing + 2 new)
-        all_torrents = [
-            Torrent(name="existing", url="https://example.com/existing.torrent"),
-            Torrent(name="new1", url="https://example.com/new1.torrent"),
-            Torrent(name="new2", url="https://example.com/new2.torrent"),
+async def _tick_with_feeds(
+    engine: RSSEngine, items: dict[str, list[Torrent]]
+) -> AsyncMock:
+    """按订阅 URL 返回 items 跑一轮刷新，返回 HTTP 层 get_torrents 的替身。"""
+    client = AsyncMock()
+    client.add_torrent = AsyncMock(return_value=AddResult.ADDED)
+    get = AsyncMock(
+        side_effect=lambda url, *_a, **_k: [
+            Torrent(name=t.name, url=t.url) for t in items[url]
         ]
-        with patch.object(
-            RSSEngine, "_get_torrents", new_callable=AsyncMock
-        ) as mock_get:
-            mock_get.return_value = all_torrents
-            result = await rss_engine.pull_rss(rss_item)
+    )
+    with (
+        patch.object(RequestContent, "get_torrents", get),
+        patch("module.rss.engine.RSS_PER_HOST_DELAY", 0),
+        patch("module.rss.analyser.enrich_bangumi", AsyncMock()),
+        patch("module.rss.analyser.enrich_movie", AsyncMock()),
+    ):
+        await engine.refresh_rss(SingleClientPool(client), analyser=RSSAnalyser())
+    return get
 
-        assert len(result) == 2
-        assert all(t.url != "https://example.com/existing.torrent" for t in result)
 
-    async def test_all_existing_returns_empty(self, rss_engine):
-        """When all torrents already exist, returns empty list."""
-        rss_item = make_rss_item()
-        await rss_engine.db.rss.add(rss_item)
-        rss_item = await rss_engine.db.rss.search_id(1)
+class TestAggregateAnalysis:
+    async def test_item_matched_for_same_feed_skips_matching(self, rss_engine):
+        """本订阅已匹配入库、番剧 rss_link 已含本订阅 URL 的种子不再匹配。"""
+        await rss_engine.db.rss.add(make_rss_item(url=FEED_A))
+        await rss_engine.db.bangumi.add(
+            make_bangumi(title_raw="Dungeon Meshi", filter="", rss_link=FEED_A)
+        )
+        await rss_engine.db.torrent.add(
+            make_torrent(
+                name="[Sub] Dungeon Meshi - 01 [1080p].mkv",
+                url=KNOWN_URL,
+                rss_id=1,
+                bangumi_id=1,
+            )
+        )
+        known = Torrent(name="[Sub] Dungeon Meshi - 01 [1080p].mkv", url=KNOWN_URL)
 
-        existing = make_torrent(url="https://example.com/only.torrent", rss_id=1)
-        await rss_engine.db.torrent.add(existing)
+        with (
+            patch.object(
+                BangumiDatabase, "match_list", new_callable=AsyncMock
+            ) as bangumi_match,
+            patch.object(
+                MovieDatabase, "match_list", new_callable=AsyncMock
+            ) as movie_match,
+        ):
+            await _tick_with_feeds(rss_engine, {FEED_A: [known]})
 
-        with patch.object(
-            RSSEngine, "_get_torrents", new_callable=AsyncMock
-        ) as mock_get:
-            mock_get.return_value = [
-                Torrent(name="only", url="https://example.com/only.torrent")
-            ]
-            result = await rss_engine.pull_rss(rss_item)
+        bangumi_match.assert_not_awaited()
+        movie_match.assert_not_awaited()
+        assert len(await rss_engine.db.bangumi.search_all()) == 1
 
-        assert result == []
+    async def test_edited_feed_url_appends_to_rss_link(self, rss_engine):
+        """订阅改了 URL（rss_id 不变）：本订阅已匹配的种子仍要匹配，
+        把新 URL 追加到 rss_link，补下载才不会用过期链接（#1053）。"""
+        await rss_engine.db.rss.add(make_rss_item(url=FEED_B))
+        await rss_engine.db.bangumi.add(
+            make_bangumi(title_raw="Mushoku Tensei", filter="", rss_link=FEED_A)
+        )
+        name = "[Sub] Mushoku Tensei - 12 [1080p].mkv"
+        await rss_engine.db.torrent.add(
+            make_torrent(name=name, url=KNOWN_URL, rss_id=1, bangumi_id=1)
+        )
 
-    async def test_empty_feed_returns_empty(self, rss_engine):
-        """When RSS feed has no torrents, returns empty list."""
-        rss_item = make_rss_item()
-        await rss_engine.db.rss.add(rss_item)
-        rss_item = await rss_engine.db.rss.search_id(1)
+        await _tick_with_feeds(
+            rss_engine, {FEED_B: [Torrent(name=name, url=KNOWN_URL)]}
+        )
 
-        with patch.object(
-            RSSEngine, "_get_torrents", new_callable=AsyncMock
-        ) as mock_get:
-            mock_get.return_value = []
-            result = await rss_engine.pull_rss(rss_item)
+        bangumi = await rss_engine.db.bangumi.search_id(1)
+        assert bangumi is not None
+        assert bangumi.rss_link.split(",") == [FEED_A, FEED_B]
 
-        assert result == []
+    async def test_orphan_for_same_feed_is_analysed_again(self, rss_engine):
+        """本订阅记录的未匹配种子（孤儿）每轮仍参与分析，新番能生成规则。"""
+        await rss_engine.db.rss.add(make_rss_item(url=FEED_A))
+        name = "[Sub] Dungeon Meshi - 01 [1080p].mkv"
+        await rss_engine.db.torrent.add(
+            make_torrent(name=name, url=KNOWN_URL, rss_id=1)
+        )
+
+        await _tick_with_feeds(
+            rss_engine, {FEED_A: [Torrent(name=name, url=KNOWN_URL)]}
+        )
+
+        rules = await rss_engine.db.bangumi.search_all()
+        assert [b.title_raw for b in rules] == ["Dungeon Meshi"]
+
+    async def test_known_torrent_in_second_feed_appends_rss_link(self, rss_engine):
+        """其他订阅已知的种子出现在新聚合订阅里：仍把新订阅追加到 rss_link（#1053）。"""
+        await rss_engine.db.rss.add(make_rss_item(url=FEED_A))
+        await rss_engine.db.rss.add(make_rss_item(url=FEED_B))
+        await rss_engine.db.bangumi.add(
+            make_bangumi(title_raw="Mushoku Tensei", filter="", rss_link=FEED_A)
+        )
+        name = "[Sub] Mushoku Tensei - 12 [1080p].mkv"
+        await rss_engine.db.torrent.add(
+            make_torrent(name=name, url=KNOWN_URL, rss_id=1, bangumi_id=1)
+        )
+        known = Torrent(name=name, url=KNOWN_URL)
+
+        await _tick_with_feeds(rss_engine, {FEED_A: [known], FEED_B: [known]})
+
+        bangumi = await rss_engine.db.bangumi.search_id(1)
+        assert bangumi is not None
+        assert bangumi.rss_link.split(",") == [FEED_A, FEED_B]
+
+    async def test_each_feed_fetched_once_per_tick(self, rss_engine):
+        """聚合订阅不再单独请求：每轮每个订阅只有一次 HTTP GET。"""
+        await rss_engine.db.rss.add(make_rss_item(url=FEED_A))
+        await rss_engine.db.rss.add(make_rss_item(url=FEED_B, aggregate=False))
+        await rss_engine.db.bangumi.add(
+            make_bangumi(title_raw="Mushoku Tensei", filter="", rss_link=FEED_A)
+        )
+        items = {
+            FEED_A: [Torrent(name="[Sub] Mushoku Tensei - 12 [1080p].mkv", url="a")],
+            FEED_B: [Torrent(name="[Sub] Mushoku Tensei - 13 [1080p].mkv", url="b")],
+        }
+
+        get = await _tick_with_feeds(rss_engine, items)
+
+        assert sorted(c.args[0] for c in get.await_args_list) == [FEED_A, FEED_B]
 
 
 # ---------------------------------------------------------------------------
@@ -281,7 +354,7 @@ class TestRefreshRss:
             client = AsyncMock()
             client.add_torrent = AsyncMock(return_value=AddResult.ADDED)
 
-            await rss_engine.refresh_rss(client)
+            await rss_engine.refresh_rss(SingleClientPool(client))
 
         # Verify download was attempted
         client.add_torrent.assert_called_once()
@@ -305,7 +378,7 @@ class TestRefreshRss:
         ) as mock_get:
             mock_get.return_value = [unmatched]
             client = AsyncMock()
-            await rss_engine.refresh_rss(client)
+            await rss_engine.refresh_rss(SingleClientPool(client))
 
         client.add_torrent.assert_not_called()
         all_torrents = await rss_engine.db.torrent.search_all()
@@ -341,7 +414,7 @@ class TestRefreshRss:
             mock_get.return_value = [matched, unmatched]
             client = AsyncMock()
             client.add_torrent = AsyncMock(return_value=AddResult.ADDED)
-            await rss_engine.refresh_rss(client)
+            await rss_engine.refresh_rss(SingleClientPool(client))
 
         all_torrents = await rss_engine.db.torrent.search_all()
         assert len(all_torrents) == 1
@@ -372,7 +445,7 @@ class TestRefreshRss:
             mock_get.return_value = [matched, unmatched]
             client = AsyncMock()
             client.add_torrent = AsyncMock(return_value=AddResult.ADDED)
-            await rss_engine.refresh_rss(client)
+            await rss_engine.refresh_rss(SingleClientPool(client))
 
         all_torrents = await rss_engine.db.torrent.search_all()
         assert len(all_torrents) == 2
@@ -390,7 +463,7 @@ class TestRefreshRss:
         ) as mock_get:
             mock_get.return_value = []
             client = AsyncMock()
-            await rss_engine.refresh_rss(client, rss_id=2)
+            await rss_engine.refresh_rss(SingleClientPool(client), rss_id=2)
 
         # Only called once (for rss_id=2)
         mock_get.assert_called_once()
@@ -401,7 +474,7 @@ class TestRefreshRss:
             RSSEngine, "_get_torrents", new_callable=AsyncMock
         ) as mock_get:
             client = AsyncMock()
-            await rss_engine.refresh_rss(client, rss_id=999)
+            await rss_engine.refresh_rss(SingleClientPool(client), rss_id=999)
 
         mock_get.assert_not_called()
 
@@ -426,7 +499,7 @@ class TestRefreshRssEvents:
         ) as mock_pull:
             mock_pull.return_value = ([], "connection refused")
             client = AsyncMock()
-            events = await rss_engine.refresh_rss(client)
+            events = await rss_engine.refresh_rss(SingleClientPool(client))
 
         assert len(events) == 1
         assert isinstance(events[0], RssFailureEvent)
@@ -443,8 +516,8 @@ class TestRefreshRssEvents:
         ) as mock_pull:
             mock_pull.return_value = ([], "connection refused")
             client = AsyncMock()
-            first_events = await rss_engine.refresh_rss(client)
-            second_events = await rss_engine.refresh_rss(client)
+            first_events = await rss_engine.refresh_rss(SingleClientPool(client))
+            second_events = await rss_engine.refresh_rss(SingleClientPool(client))
 
         assert len(first_events) == 1
         assert second_events == []
@@ -459,7 +532,7 @@ class TestRefreshRssEvents:
         ) as mock_pull:
             mock_pull.return_value = ([], None)
             client = AsyncMock()
-            events = await rss_engine.refresh_rss(client)
+            events = await rss_engine.refresh_rss(SingleClientPool(client))
 
         assert events == []
 
@@ -481,7 +554,7 @@ class TestRefreshRssEvents:
             client = AsyncMock()
             client.add_torrent = AsyncMock(return_value=AddResult.FAILED)
 
-            events = await rss_engine.refresh_rss(client)
+            events = await rss_engine.refresh_rss(SingleClientPool(client))
 
         assert len(events) == 1
         assert isinstance(events[0], DownloadFailureEvent)
@@ -512,7 +585,7 @@ class TestRefreshRssEvents:
             client = AsyncMock()
             client.add_torrent = AsyncMock(return_value=AddResult.ADDED)
 
-            events = await rss_engine.refresh_rss(client)
+            events = await rss_engine.refresh_rss(SingleClientPool(client))
 
         assert events == []
 
@@ -537,7 +610,7 @@ class TestRefreshRssEvents:
             client = AsyncMock()
             client.add_torrent = AsyncMock(return_value=AddResult.DUPLICATE)
 
-            events = await rss_engine.refresh_rss(client)
+            events = await rss_engine.refresh_rss(SingleClientPool(client))
 
         assert events == []
         all_torrents = await rss_engine.db.torrent.search_all()
@@ -573,14 +646,14 @@ class TestRefreshRssRetry:
             # Tick 1: transient failure
             mock_get.return_value = [feed_torrent()]
             client.add_torrent = AsyncMock(return_value=AddResult.FAILED)
-            await rss_engine.refresh_rss(client)
+            await rss_engine.refresh_rss(SingleClientPool(client))
             client.add_torrent.assert_called_once()
             assert await rss_engine.db.torrent.search_all() == []
 
             # Tick 2: same feed item is still there, add now succeeds
             mock_get.return_value = [feed_torrent()]
             client.add_torrent = AsyncMock(return_value=AddResult.ADDED)
-            await rss_engine.refresh_rss(client)
+            await rss_engine.refresh_rss(SingleClientPool(client))
             client.add_torrent.assert_called_once()
 
         all_torrents = await rss_engine.db.torrent.search_all()
@@ -610,9 +683,9 @@ class TestRefreshRssRetry:
             client.add_torrent = AsyncMock(return_value=AddResult.ADDED)
 
             mock_get.return_value = [feed_torrent()]
-            await rss_engine.refresh_rss(client)
+            await rss_engine.refresh_rss(SingleClientPool(client))
             mock_get.return_value = [feed_torrent()]
-            await rss_engine.refresh_rss(client)
+            await rss_engine.refresh_rss(SingleClientPool(client))
 
         client.add_torrent.assert_not_called()
         all_torrents = await rss_engine.db.torrent.search_all()
@@ -811,7 +884,7 @@ class TestRefreshRssConcurrency:
             rss_engine, "_pull_rss_with_status", side_effect=track_concurrency
         ):
             client = AsyncMock()
-            await rss_engine.refresh_rss(client)
+            await rss_engine.refresh_rss(SingleClientPool(client))
 
         assert max_active <= 5
 
@@ -855,7 +928,7 @@ class TestRefreshRssPerHostThrottle:
             ),
             patch("module.rss.engine.RSS_PER_HOST_DELAY", 0),
         ):
-            await rss_engine.refresh_rss(client)
+            await rss_engine.refresh_rss(SingleClientPool(client))
 
         assert max_active["nyaa.example"] == 1
         assert max_active["mikan.example"] == 1
@@ -878,11 +951,45 @@ class TestRefreshRssPerHostThrottle:
             ),
             patch("module.rss.engine.RSS_PER_HOST_DELAY", 0),
         ):
-            await rss_engine.refresh_rss(client)
+            await rss_engine.refresh_rss(SingleClientPool(client))
 
         for rss_id in (1, 2):
             item = await rss_engine.db.rss.search_id(rss_id)
             assert item.connection_status == "healthy"
+
+    async def test_dedup_error_marks_only_that_feed_failed(self, rss_engine):
+        """某订阅去重查库出错只把该订阅标为失败，其余订阅照常下载。"""
+        await rss_engine.db.rss.add(make_rss_item(url=FEED_A, aggregate=False))
+        await rss_engine.db.rss.add(make_rss_item(url=FEED_B, aggregate=False))
+        await rss_engine.db.bangumi.add(
+            make_bangumi(title_raw="Mushoku Tensei", filter="", rss_link=FEED_B)
+        )
+        items = {
+            FEED_A: [Torrent(name="[Sub] Mushoku Tensei - 12 [1080p].mkv", url="a")],
+            FEED_B: [Torrent(name="[Sub] Mushoku Tensei - 13 [1080p].mkv", url="b")],
+        }
+        check_new = TorrentDatabase.check_new
+
+        async def flaky_check_new(self, torrents, rss=None):
+            if any(t.url == "a" for t in torrents):
+                raise OperationalError("SELECT", {}, Exception("disk I/O error"))
+            return await check_new(self, torrents, rss)
+
+        client = AsyncMock()
+        client.add_torrent = AsyncMock(return_value=AddResult.ADDED)
+        get = AsyncMock(side_effect=lambda url, *_a, **_k: items[url])
+        with (
+            patch.object(RequestContent, "get_torrents", get),
+            patch.object(TorrentDatabase, "check_new", flaky_check_new),
+            patch("module.rss.engine.RSS_PER_HOST_DELAY", 0),
+        ):
+            await rss_engine.refresh_rss(SingleClientPool(client))
+
+        feed_a = await rss_engine.db.rss.search_id(1)
+        feed_b = await rss_engine.db.rss.search_id(2)
+        assert feed_a.connection_status == "error"
+        assert feed_b.connection_status == "healthy"
+        assert [c.args[0].url for c in client.add_torrent.await_args_list] == ["b"]
 
 
 # ---------------------------------------------------------------------------
@@ -1334,7 +1441,7 @@ class TestRefreshRssPreferenceDedup:
             client = AsyncMock()
             client.add_torrent = AsyncMock(return_value=AddResult.ADDED)
 
-            await rss_engine.refresh_rss(client)
+            await rss_engine.refresh_rss(SingleClientPool(client))
 
             parsed_after_refresh = parse_configured_release_title(torrent.name)
             assert parsed_after_refresh is not None
@@ -1365,7 +1472,7 @@ class TestRefreshRssPreferenceDedup:
             client = AsyncMock()
             client.add_torrent = AsyncMock(return_value=AddResult.ADDED)
 
-            await rss_engine.refresh_rss(client)
+            await rss_engine.refresh_rss(SingleClientPool(client))
 
         client.add_torrent.assert_called_once()
         called_torrent = client.add_torrent.call_args[0][0]
@@ -1400,6 +1507,62 @@ class TestRefreshRssPreferenceDedup:
             client = AsyncMock()
             client.add_torrent = AsyncMock(return_value=AddResult.ADDED)
 
-            await rss_engine.refresh_rss(client)
+            await rss_engine.refresh_rss(SingleClientPool(client))
 
         assert client.add_torrent.call_count == 2
+
+
+class TestPreferencePreload:
+    @pytest.fixture(autouse=True)
+    def use_preview_engine(self):
+        with patch.object(settings.rss_parser, "engine", "tokenizer"):
+            yield
+
+    @pytest.mark.parametrize(
+        ("name", "expected_ids"),
+        [
+            ("[GroupA] Dungeon Meshi - 01 [1080p].mkv", None),
+            ("[GroupA] Mushoku Tensei - 12 [1080p].mkv", [1]),
+        ],
+        ids=["no-preference-candidate", "one-preference-candidate"],
+    )
+    async def test_downloaded_loaded_only_for_candidate_bangumi(
+        self, rss_engine, name, expected_ids
+    ):
+        """只为本批次有候选的偏好番剧加载已下载版本；没有候选时不查库。"""
+        await rss_engine.db.rss.add(make_rss_item(aggregate=False))
+        for title_raw, preferred_group in (
+            ("Mushoku Tensei", "GroupA"),
+            ("Dungeon Meshi", None),
+            ("Sousou no Frieren", "GroupA"),
+        ):
+            await rss_engine.db.bangumi.add(
+                make_bangumi(
+                    official_title=title_raw,
+                    title_raw=title_raw,
+                    filter="",
+                    preferred_group=preferred_group,
+                )
+            )
+        client = AsyncMock()
+        client.add_torrent = AsyncMock(return_value=AddResult.ADDED)
+
+        with (
+            patch.object(
+                RSSEngine,
+                "_get_torrents",
+                AsyncMock(return_value=[Torrent(name=name, url="https://x/1")]),
+            ),
+            patch.object(
+                rss_engine.db.torrent,
+                "search_downloaded_by_bangumi_ids",
+                AsyncMock(return_value={}),
+            ) as preload,
+        ):
+            await rss_engine.refresh_rss(SingleClientPool(client))
+
+        client.add_torrent.assert_awaited_once()
+        if expected_ids is None:
+            preload.assert_not_awaited()
+        else:
+            preload.assert_awaited_once_with(expected_ids)

@@ -1,43 +1,41 @@
 [project]
 name = "auto-bangumi"
-version = "3.3.7"
+version = "4.0.0"
 description = "AutoBangumi - Automated anime download manager"
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 dependencies = [
-    "fastapi>=0.109.0",
-    "uvicorn>=0.27.0",
-    "httpx[socks]>=0.25.0",
-    "httpx-socks>=0.9.0",
-    "beautifulsoup4>=4.12.0",
-    "sqlmodel>=0.0.14",
-    "sqlalchemy[asyncio]>=2.0.0",
-    "aiosqlite>=0.19.0",
-    "pydantic>=2.0.0",
-    "pyjwt>=2.11.0",
+    "fastapi>=0.150.0",
+    "uvicorn>=0.54",
+    "httpx2[socks]>=2.15",
+    "beautifulsoup4>=4.15.0",
+    "sqlmodel>=0.0.48",
+    "sqlalchemy[aiosqlite]>=2.1.5",
+    "pydantic>=2.14.1",
     "bcrypt>=4.1",
-    "cryptography>=42.0.0",
-    "python-multipart>=0.0.6",
-    "python-dotenv>=1.0.0",
+    "cryptography>=50.0.2",
+    "python-multipart>=0.0.30",
+    "python-dotenv>=1.2.4",
     "Jinja2>=3.1.2",
-    "openai>=1.54.3",
-    "semver>=3.0.1",
-    "sse-starlette>=1.6.5",
-    "webauthn>=2.0.0",
-    "urllib3>=2.0.3",
-    "mcp>=1.8.0",
-    "anthropic>=0.116.0",
-    "google-genai>=2.10.0",
+    "openai>=3.35.1",
+    "semver>=3.1.0",
+    "webauthn>=2.8.0",
+    "mcp>=2.3.0",
+    "anthropic>=1.15.0",
+    "google-genai>=2.31.0",
+    "packaging>=26.3",
+    "jsonschema>=4.20.0",
 ]
 
 [dependency-groups]
 dev = [
-    "pytest>=8.0.0",
-    "pytest-asyncio>=0.23.0",
-    "pytest-mock>=3.12.0",
-    "ruff>=0.1.0",
-    "black>=24.0.0",
-    "pre-commit>=3.0.0",
-    "mypy>=2.1.0",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "pytest-mock>=3.17.0",
+    "ruff>=0.17.1",
+    "mypy>=2.4.0",
+    "vulture>=2.16",
+    # ab-plugin 命令行与 ab_sdk 轮子的打包配置（sdk/），可编辑安装，源码仍在 src/ab_sdk
+    "autobangumi-sdk",
 ]
 
 [tool.pytest.ini_options]
@@ -50,7 +48,7 @@ markers = [
 
 [tool.ruff]
 line-length = 88
-target-version = "py313"
+target-version = "py314"
 exclude = [".venv", "venv", "build", "dist"]
 
 [tool.ruff.lint]
@@ -65,12 +63,11 @@ max-complexity = 10
 [tool.uv]
 package = false
 
-[tool.black]
-line-length = 88
-target-version = ['py313']
+[tool.uv.sources]
+autobangumi-sdk = { path = "sdk", editable = true }
 
 [tool.mypy]
-python_version = "3.13"
+python_version = "3.14"
 # 非严格基线：先打开对未标注函数体的检查（能捕获协程未 await 等真实 bug），
 # 暂不强制所有函数都标注类型。
 check_untyped_defs = true
@@ -81,14 +78,14 @@ disallow_untyped_defs = false
 module = "module.__version__"
 ignore_missing_imports = true
 
-# httpx_socks 已安装但未发布类型存根
-[[tool.mypy.overrides]]
-module = "httpx_socks.*"
-ignore_missing_imports = true
-
 # aiohttp 仅用于 e2e mock server（在独立 Docker 容器中安装，不在本项目依赖中）
 [[tool.mypy.overrides]]
 module = "aiohttp"
+ignore_missing_imports = true
+
+# jsonschema 不带类型信息（无 py.typed）
+[[tool.mypy.overrides]]
+module = "jsonschema"
 ignore_missing_imports = true
 
 # 测试代码惯用 `obj.method = AsyncMock()` 直接打桩实例方法，这是标准、安全的
@@ -97,3 +94,20 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = "test.*"
 disable_error_code = ["method-assign"]
+
+[tool.vulture]
+# 死代码检查：新的未使用函数/类/方法会让 CI 失败。框架通过装饰器注册的入口
+# （路由、校验器等）由 ignore_decorators 排除；仅测试使用的辅助方法和 pydantic
+# 字段等误报登记在 vulture_whitelist.py。
+paths = ["src/module", "src/main.py", "vulture_whitelist.py"]
+min_confidence = 60
+ignore_decorators = [
+    "@router.*",
+    "@*_router.*",
+    "@model_validator",
+    "@field_validator",
+    "@property",
+    "@app.*",
+    "@server.*",
+    "@mcp.*",
+]

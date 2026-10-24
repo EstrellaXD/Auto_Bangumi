@@ -496,7 +496,8 @@ def _extract_numbers(working: list[_WorkingSegment], state: _State) -> None:
                 work.consume(match)
                 _extract_episode_title(work, match, state)
                 state.season = int(match.group(1))
-                state.season_raw = match.group(0)
+                # 只记季的写法（S03 / Season 2），不带集数（#1138）
+                state.season_raw = match.string[match.start() : match.end(1)]
                 state.set_episode(
                     _number(match.group(2)),
                     priority=100,
@@ -817,7 +818,9 @@ def _split_mixed_title(text: str) -> list[str]:
             language = (
                 "en"
                 if _LATIN.match(char)
-                else "cjk" if (_HAN.match(char) or _KANA.match(char)) else None
+                else "cjk"
+                if (_HAN.match(char) or _KANA.match(char))
+                else None
             )
             if language is not None and (not runs or runs[-1][0] != language):
                 runs.append((language, index))
@@ -891,10 +894,6 @@ def _clean_title(text: str) -> str:
 
 def _join_title_parts(parts: list[str]) -> str | None:
     return " ".join(parts).strip() if parts else None
-
-
-def _mostly_metadata(text: str) -> bool:
-    return bool(re.fullmatch(r"[\w\s+_.-]{1,48}", text))
 
 
 def _prefer_subtitle(current: str | None, candidate: str) -> str:

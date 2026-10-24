@@ -29,7 +29,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Callable, Optional
 
-import httpx
+import httpx2
 import semver
 from pydantic import BaseModel
 
@@ -94,9 +94,7 @@ class ApplyResult(BaseModel):
 class Progress:
     """在线更新进度，供 SSE 推送给前端。"""
 
-    phase: str = (
-        "idle"  # idle|checking|downloading|verifying|unpacking|promoting|restarting|error|done
-    )
+    phase: str = "idle"  # idle|checking|downloading|verifying|unpacking|promoting|restarting|error|done
     percent: int = 0
     message: str = ""
     version: Optional[str] = None
@@ -110,7 +108,7 @@ class Progress:
 def _parse_semver(value: str) -> Optional[semver.VersionInfo]:
     try:
         return semver.VersionInfo.parse(value.lstrip("v"))
-    except (ValueError, TypeError):
+    except ValueError, TypeError:
         return None
 
 
@@ -174,7 +172,7 @@ class Updater:
         data_db: Optional[Path] = None,
         app_root: Optional[Path] = None,
         dependency_syncer: Optional[Callable[[Path], None]] = None,
-        client: Optional[httpx.AsyncClient] = None,
+        client: Optional[httpx2.AsyncClient] = None,
         owner: str = GITHUB_OWNER,
         repo: str = GITHUB_REPO,
         pubkey_path: Optional[Path] = None,
@@ -210,15 +208,14 @@ class Updater:
 
     # -------------------------------------------------------------- HTTP
 
-    async def _get_client(self) -> httpx.AsyncClient:
+    async def _get_client(self) -> httpx2.AsyncClient:
         if self._client is not None:
             return self._client
         return await get_shared_client()
 
     async def _fetch_releases(self) -> list[dict]:
         client = await self._get_client()
-        # ponytail: 只取第一页；之后的 4.x 发布超过 100 个时，再按页往后找 3.x
-        url = f"{_API_BASE}/repos/{self.owner}/{self.repo}/releases?per_page=100"
+        url = f"{_API_BASE}/repos/{self.owner}/{self.repo}/releases?per_page=20"
         resp = await client.get(url, headers=_API_HEADERS)
         resp.raise_for_status()
         data = resp.json()
@@ -270,9 +267,6 @@ class Updater:
         return bundle_url, sha_url, sig_url
 
     def _pick_release(self, releases: list[dict], channel: str) -> Optional[dict]:
-        # 只提供与镜像同一主版本的更新：下一个主版本的更新包要求新镜像
-        # （min_image_version），只能更换镜像标签升级
-        image = _parse_semver(self.image_version)
         candidates: list[tuple[semver.VersionInfo, dict]] = []
         for rel in releases:
             if rel.get("draft"):
@@ -281,9 +275,6 @@ class Updater:
                 continue
             ver = _parse_semver(rel.get("tag_name") or "")
             if ver is None:
-                continue
-            # 镜像版本无法解析（开发/本地构建）时 _image_supports 拒绝任何更新包
-            if image is None or ver.major != image.major:
                 continue
             candidates.append((ver, rel))
         if not candidates:
@@ -296,7 +287,7 @@ class Updater:
         try:
             data = json.loads(applied.read_text(encoding="utf-8"))
             return data.get("version")
-        except (OSError, ValueError):
+        except OSError, ValueError:
             return None
 
     def _local_state(self, result: UpdateCheckResult) -> UpdateCheckResult:
@@ -618,7 +609,7 @@ class Updater:
                 applied_data: dict = {}
                 try:
                     applied_data = json.loads(applied.read_text(encoding="utf-8"))
-                except (OSError, ValueError):
+                except OSError, ValueError:
                     pass
 
                 live_schema = _read_db_schema_version(self.data_db)
@@ -670,7 +661,7 @@ class Updater:
 
                     try:
                         version = _read_manifest(current).get("version")
-                    except (OSError, ValueError):
+                    except OSError, ValueError:
                         version = None
                     # 只有当 schema 自 apply 后确实前进过（旧代码读不了新库）
                     # 才还原快照；schema 没变时保留活库，避免丢掉更新之后
@@ -692,7 +683,7 @@ class Updater:
                         restored_schema = self._restore_database_snapshot(applied_data)
                     else:
                         logger.info(
-                            "Schema unchanged since update; " "keeping live database."
+                            "Schema unchanged since update; keeping live database."
                         )
                     applied.write_text(
                         json.dumps(

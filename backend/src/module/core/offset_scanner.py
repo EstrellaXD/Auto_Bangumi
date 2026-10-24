@@ -54,11 +54,6 @@ class OffsetScanner:
             An event describing the flag if the bangumi was flagged for
             review, None otherwise.
         """
-        # Skip if already needs review
-        if bangumi.needs_review:
-            logger.debug(f"Skipping {bangumi.official_title}: already needs review")
-            return None
-
         # OVA/OAD/SP are persisted as Bangumi for library compatibility, but
         # they are not weekly episode streams and must never drive offsets.
         if bangumi.episode_type != "episode":
@@ -96,7 +91,45 @@ class OffsetScanner:
             tmdb_info=tmdb_info,
         )
 
-        if suggestion and suggestion.confidence in ("high", "medium"):
+        flagged = suggestion is not None and suggestion.confidence in (
+            "high",
+            "medium",
+        )
+        # 已标记的番剧也要重新扫描：TMDB 集数更新或解析修正后，误报不会自己消失
+        # （#1072）。needs_review 只由本扫描器设置；用户忽略或应用后标记已清除，
+        # 手动配了偏移的在上面已跳过，这里清除的只会是扫描器自己的旧标记
+        if bangumi.needs_review:
+            if not flagged:
+                # 建议的偏移全为 0 的标记只是集数超出 TMDB 该季集数：连载中 TMDB
+                # 跟上后清除、下周新集又超出，会每周重复通知，所以不自动清除，
+                # 由用户忽略或应用
+                if bangumi.suggested_season_offset or bangumi.suggested_episode_offset:
+                    async with Database() as db:
+                        await db.bangumi.clear_needs_review(bangumi.id)
+                    logger.info(
+                        "Cleared review flag for %s: no mismatch on rescan",
+                        bangumi.official_title,
+                    )
+            elif suggestion is not None and (
+                suggestion.reason,
+                suggestion.season_offset,
+                suggestion.episode_offset,
+            ) != (
+                bangumi.needs_review_reason,
+                bangumi.suggested_season_offset,
+                bangumi.suggested_episode_offset,
+            ):
+                # 仍不匹配但原因或建议变了：更新为最新结论，不再重复通知
+                async with Database() as db:
+                    await db.bangumi.set_needs_review(
+                        bangumi.id,
+                        suggestion.reason,
+                        suggested_season_offset=suggestion.season_offset,
+                        suggested_episode_offset=suggestion.episode_offset,
+                    )
+            return None
+
+        if suggestion and flagged:
             async with Database() as db:
                 await db.bangumi.set_needs_review(
                     bangumi.id,

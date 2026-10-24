@@ -1,5 +1,6 @@
 import { useIntervalFn } from '@vueuse/core';
 import type { InboxMessage } from '@/api/notification';
+import { idLabel } from '@/utils/id-label';
 
 /** 有 i18n 文案的消息类型；未知 kind 回退到后端存储的 title/body。 */
 const KNOWN_KINDS = [
@@ -13,6 +14,7 @@ const KNOWN_KINDS = [
   'llm_auth_failure',
   'llm_plugin_install_failed',
   'rename_conflict',
+  'rename_skipped',
 ] as const;
 
 export const useNotificationStore = defineStore('notification', () => {
@@ -44,6 +46,15 @@ export const useNotificationStore = defineStore('notification', () => {
     if (msg.kind === 'downloader_unavailable') {
       const reason = String(payload.reason || 'unreachable');
       return `${payload.host ?? ''}: ${t(`notifications.reason.${reason}`)}`;
+    }
+    if (msg.kind === 'rename_skipped') {
+      // 重命名方式显示名称而非内部 id；插件自定义的方式回退为 id
+      const strategy = idLabel(
+        t,
+        'config.manage_set.strategy_labels',
+        String(payload.strategy ?? '')
+      );
+      return t(`notifications.kind.${msg.kind}.body`, { ...payload, strategy });
     }
     return t(`notifications.kind.${msg.kind}.body`, payload);
   }

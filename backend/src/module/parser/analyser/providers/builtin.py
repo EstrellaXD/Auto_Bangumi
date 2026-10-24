@@ -52,7 +52,7 @@ class OpenAIAdapter(LLMProviderAdapter):
         import openai as openai_sdk
 
         try:
-            resp = await self._openai_client.beta.chat.completions.parse(
+            resp = await self._openai_client.chat.completions.parse(
                 model=self.model,
                 messages=[
                     {"role": "system", "content": DEFAULT_PROMPT},

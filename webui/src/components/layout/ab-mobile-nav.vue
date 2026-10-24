@@ -2,41 +2,30 @@
 import {
   Calendar,
   Download,
-  Home,
-  Log,
+  House,
+  LayoutGrid,
   Moon,
-  SettingTwo,
+  Puzzle,
+  Rss,
+  ScrollText,
+  Settings,
   Sun,
-} from '@icon-park/vue-next';
-import InlineSvg from 'vue-inline-svg';
+} from '@lucide/vue';
+import { slotTitle, usePluginPages } from '@/hooks/usePluginUi';
 
-const { t } = useMyI18n();
+const { t, lang } = useMyI18n();
 const route = useRoute();
 const { isDark, toggle: toggleDark } = useDarkMode();
 
-const RSS = h(
-  'span',
-  {
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      width: '20px',
-      height: '20px',
-    },
-  },
-  h(InlineSvg, { src: './images/RSS.svg', width: '14', height: '14' })
-);
-
 const navItems = [
-  { id: 1, icon: Home, label: () => t('sidebar.homepage'), path: '/bangumi' },
+  { id: 1, icon: House, label: () => t('sidebar.homepage'), path: '/bangumi' },
   {
     id: 2,
     icon: Calendar,
     label: () => t('sidebar.calendar'),
     path: '/calendar',
   },
-  { id: 3, icon: RSS, label: () => t('sidebar.rss'), path: '/rss' },
+  { id: 3, icon: Rss, label: () => t('sidebar.rss'), path: '/rss' },
   {
     id: 5,
     icon: Download,
@@ -44,16 +33,33 @@ const navItems = [
     path: '/downloader',
     hidden: localStorage.getItem('enable_downloader_iframe') !== '1',
   },
-  { id: 6, icon: Log, label: () => t('sidebar.log'), path: '/log' },
+  { id: 6, icon: ScrollText, label: () => t('sidebar.log'), path: '/log' },
+  {
+    id: 8,
+    icon: LayoutGrid,
+    label: () => t('sidebar.market_short'),
+    path: '/market',
+  },
   {
     id: 7,
-    icon: SettingTwo,
+    icon: Settings,
     label: () => t('sidebar.config'),
     path: '/config',
   },
 ];
 
-const visibleItems = computed(() => navItems.filter((i) => !i.hidden));
+// 插件经 page 挂载点提供的页面，排在设置之前；导航栏可横向滚动
+const pageSlots = usePluginPages();
+const visibleItems = computed(() => {
+  const pluginItems = pageSlots.value.map((ui, index) => ({
+    id: 100 + index,
+    icon: Puzzle,
+    label: () => slotTitle(ui, lang.value === 'zh-CN' ? 'zh-CN' : 'en-US'),
+    path: `/plugins/${encodeURIComponent(ui.plugin_id)}`,
+  }));
+  const shown = navItems.filter((i) => !i.hidden);
+  return [...shown.slice(0, -1), ...pluginItems, shown[shown.length - 1]];
+});
 </script>
 
 <template>
@@ -64,7 +70,10 @@ const visibleItems = computed(() => navItems.filter((i) => !i.hidden));
       :to="item.path"
       replace
       class="mobile-nav__item"
-      :class="{ 'mobile-nav__item--active': route.path === item.path }"
+      :class="{
+        'mobile-nav__item--active':
+          route.path === item.path || route.path.startsWith(`${item.path}/`),
+      }"
       :aria-label="item.label()"
     >
       <Component :is="item.icon" :size="18" class="mobile-nav__icon" />
@@ -108,13 +117,14 @@ const visibleItems = computed(() => navItems.filter((i) => !i.hidden));
   }
 
   &__item {
-    flex: 1;
+    // 不收缩：项多时导航栏横向滚动，保持 44px 以上的触控区域
+    flex: 1 0 auto;
+    min-width: var(--touch-target);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 2px;
-    min-width: 0;
     height: 56px;
     padding: 6px 4px;
     cursor: pointer;
@@ -159,7 +169,7 @@ const visibleItems = computed(() => navItems.filter((i) => !i.hidden));
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 100%;
+    max-width: 6em;
     line-height: 1.2;
   }
 }

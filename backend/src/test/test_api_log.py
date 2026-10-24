@@ -149,7 +149,7 @@ class TestGetLog:
         from module.api.log import _read_file_tail
 
         missing = temp_log_file.with_name("gone.txt")
-        assert _read_file_tail(missing, 100) == (b"", False)
+        assert _read_file_tail(missing, 100) == (b"", False, 0)
 
 
 # ---------------------------------------------------------------------------

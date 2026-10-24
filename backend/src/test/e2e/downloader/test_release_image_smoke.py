@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import re
 
-import httpx
+import httpx2
 import pytest
 
 pytestmark = pytest.mark.e2e
@@ -13,7 +13,7 @@ pytestmark = pytest.mark.e2e
 _SEMVER = re.compile(r"^\d+\.\d+\.\d+(?:-[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?$")
 
 
-def _ensure_setup(client: httpx.Client, downloader_stack) -> None:
+def _ensure_setup(client: httpx2.Client, downloader_stack) -> None:
     status = client.get("/api/v1/setup/status")
     assert status.status_code == 200
     if not status.json()["need_setup"]:
@@ -46,7 +46,7 @@ def test_native_image_version_and_config_survive_restart(downloader_stack):
     assert app_service["pull_policy"] == "never"
     assert not app_image.endswith(":latest")
 
-    with httpx.Client(
+    with httpx2.Client(
         base_url=downloader_stack.base_url,
         timeout=10,
         trust_env=False,
@@ -84,12 +84,12 @@ def test_native_image_version_and_config_survive_restart(downloader_stack):
         config["rss_parser"]["enable"] = False
         config["rss_parser"]["language"] = "jp"
         config["bangumi_manage"]["enable"] = False
-        config["network"][
-            "tmdb_base_url"
-        ] = f"{downloader_stack.environment['AB_E2E_MOCK_INTERNAL_URL']}/tmdb"
-        config["network"][
-            "bgm_base_url"
-        ] = f"{downloader_stack.environment['AB_E2E_MOCK_INTERNAL_URL']}/bgm"
+        config["network"]["tmdb_base_url"] = (
+            f"{downloader_stack.environment['AB_E2E_MOCK_INTERNAL_URL']}/tmdb"
+        )
+        config["network"]["bgm_base_url"] = (
+            f"{downloader_stack.environment['AB_E2E_MOCK_INTERNAL_URL']}/bgm"
+        )
         config["update"]["auto_check"] = False
         updated = client.patch("/api/v1/config/update", json=config)
         assert updated.status_code == 200
@@ -115,7 +115,7 @@ def test_native_image_version_and_config_survive_restart(downloader_stack):
         assert persisted["rss_parser"]["language"] == "jp"
         assert persisted["bangumi_manage"]["enable"] is False
         assert (
-            persisted["downloader"]["host"]
+            persisted["plugins"]["instances"][0]["options"]["host"]
             == downloader_stack.environment["AB_E2E_QB_INTERNAL_URL"]
         )
         assert persisted["network"]["tmdb_base_url"] == (

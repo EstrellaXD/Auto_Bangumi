@@ -1,6 +1,4 @@
 <script lang="ts" setup>
-import { NSelect } from 'naive-ui';
-
 const { t } = useMyI18n();
 const setupStore = useSetupStore();
 const { notificationData, validation } = storeToRefs(setupStore);
@@ -59,34 +57,31 @@ const canTest = computed(() => {
 <template>
   <ab-container :title="t('setup.notification.title')" class="wizard-step">
     <div class="step-content">
-      <p class="step-subtitle">{{ t('setup.notification.subtitle') }}</p>
+      <p class="step-subtitle">
+        {{ t('setup.notification.subtitle') }}
+      </p>
 
       <div class="form-fields">
         <ab-field :label="t('config.notification_set.type')">
-          <NSelect
-            v-model:value="notificationData.type"
+          <ab-select
+            v-model="notificationData.type"
             :options="notificationTypes"
             :aria-label="t('config.notification_set.type')"
-            size="small"
           />
         </ab-field>
 
         <ab-field :label="t('config.notification_set.token')">
-          <input
+          <ab-input
             v-model="notificationData.token"
-            type="text"
             :aria-label="t('config.notification_set.token')"
             autocomplete="off"
-            class="setup-input setup-input-wide"
           />
         </ab-field>
 
         <ab-field :label="t('config.notification_set.chat_id')">
-          <input
+          <ab-input
             v-model="notificationData.chat_id"
-            type="text"
             :aria-label="t('config.notification_set.chat_id')"
-            class="setup-input"
           />
         </ab-field>
       </div>
@@ -158,35 +153,6 @@ const canTest = computed(() => {
   gap: 12px;
 }
 
-.setup-input {
-  outline: none;
-  min-width: 0;
-  width: 200px;
-  height: 28px;
-  padding: 0 12px;
-  font-size: 12px;
-  text-align: right;
-  border-radius: 6px;
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-  color: var(--color-text);
-  transition: border-color var(--transition-fast),
-    box-shadow var(--transition-fast);
-
-  &:hover {
-    border-color: var(--color-primary);
-  }
-
-  &:focus {
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 2px rgba(108, 74, 182, 0.2);
-  }
-}
-
-.setup-input-wide {
-  width: 260px;
-}
-
 .test-section {
   display: flex;
   align-items: center;
@@ -195,11 +161,11 @@ const canTest = computed(() => {
 
 .test-message {
   font-size: 11px;
-  color: var(--color-error, #e53935);
+  color: var(--color-danger);
   margin: 0;
 
   &.success {
-    color: var(--color-success, #43a047);
+    color: var(--color-success);
   }
 }
 

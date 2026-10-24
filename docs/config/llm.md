@@ -48,6 +48,6 @@ LLM 调用会使用应用的 [代理设置](/config/proxy)。
 | `max_concurrency` | 最大并发 | 整数 | 高级设置 | `2` |
 | `failure_threshold` | 熔断失败次数 | 整数 | 高级设置 | `3` |
 | `failure_backoff` | 熔断暂停时长 | 整数（秒） | 高级设置 | `300` |
-| `providers` | 非内置 provider 的覆盖配置 | 对象 | 按 provider 保存 | `{}` |
+| `providers` | 按 provider id 保存的覆盖配置（`api_key`、`model`、`base_url`），存在时取代扁平字段 | 对象 | 按 provider 保存 | `{}` |
 
-旧版 `experimental_openai` 配置会在启动时自动迁移到 `llm` 段。
+旧版 `experimental_openai` 配置已在 4.0 移除，见[旧版实验性功能](/config/experimental)。

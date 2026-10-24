@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 
 from module.mcp import create_mcp_app
 from module.mcp.runtime import get_context, set_context
-from module.mcp.tools import _get_program_status
+from module.mcp.tools import get_program_status
 
 
 class TestRuntimeContext:
@@ -28,7 +28,7 @@ class TestProgramStatusReadsContext:
         ctx.first_run = False
         set_context(ctx)
         try:
-            result = _get_program_status()
+            result = get_program_status()
         finally:
             set_context(None)
         assert result["running"] is True
@@ -36,6 +36,6 @@ class TestProgramStatusReadsContext:
 
     def test_status_without_context_is_safe(self):
         set_context(None)
-        result = _get_program_status()
+        result = get_program_status()
         assert result["running"] is False
         assert result["first_run"] is True

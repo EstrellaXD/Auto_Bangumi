@@ -59,7 +59,7 @@ def _torrent(_id: int, bangumi_id: int | None) -> Torrent:
         id=_id,
         name=f"torrent_{_id}",
         url=f"https://example.com/{_id}",
-        bangumi_id=bangumi_id,
+        refer_id=bangumi_id,
     )
 
 

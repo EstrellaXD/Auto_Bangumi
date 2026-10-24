@@ -7,7 +7,6 @@ const props = defineProps<{
   isToday: boolean;
   isDragging: boolean;
   groups: BangumiGroup[];
-  delay: string;
 }>();
 
 const emit = defineEmits<{
@@ -19,20 +18,16 @@ const emit = defineEmits<{
 
 <template>
   <div
-    class="calendar-column anim-slide-up"
+    class="calendar-column"
     :class="{
       'calendar-column--today': isToday,
       'calendar-column--drop-active': isDragging,
     }"
-    :style="{ '--delay': delay }"
   >
     <!-- Day header -->
-    <div
-      class="calendar-day-header"
-      :class="{ 'calendar-day-header--today': isToday }"
-    >
+    <div class="calendar-day-header">
       <span class="calendar-day-label">{{ dayLabel }}</span>
-      <span v-if="isToday" class="calendar-today-badge">{{
+      <span v-if="isToday" class="calendar-today-mark">{{
         $t('calendar.today')
       }}</span>
     </div>
@@ -79,8 +74,7 @@ const emit = defineEmits<{
     border-color var(--transition-normal);
 
   &--today {
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 1px var(--color-primary-light);
+    border-color: var(--color-accent);
   }
 
   &--drop-active {
@@ -95,32 +89,44 @@ const emit = defineEmits<{
   align-items: center;
   gap: 6px;
   padding: 4px 6px;
-  border-radius: var(--radius-sm);
-  transition: background-color var(--transition-fast);
-
-  &--today {
-    background: var(--color-primary-light);
-  }
+  container-type: inline-size;
 }
 
 .calendar-day-label {
   font-size: 13px;
   font-weight: 600;
   color: var(--color-text-secondary);
+  white-space: nowrap;
   transition: color var(--transition-normal);
 
-  .calendar-day-header--today & {
-    color: var(--color-primary);
+  .calendar-column--today & {
+    color: var(--color-text);
   }
 }
 
-.calendar-today-badge {
+// 今天：accent 方块标记 + 墨色文字（DESIGN：accent 只用于日历的今天）
+.calendar-today-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   font-size: 11px;
   font-weight: 500;
-  color: var(--color-primary);
-  background: var(--color-primary-light);
-  padding: 1px 6px;
-  border-radius: var(--radius-full);
+  color: var(--color-text);
+  white-space: nowrap;
+
+  // 窄列（平板看板）只留方块；文字仍在 DOM 中供读屏
+  @container (max-width: 80px) {
+    font-size: 0;
+    gap: 0;
+  }
+
+  &::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    background: var(--color-accent);
+  }
 }
 
 .calendar-column-items {
@@ -147,27 +153,5 @@ const emit = defineEmits<{
   text-align: center;
   padding: 12px 4px;
   transition: color var(--transition-normal);
-}
-
-.anim-slide-up {
-  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
-  animation-delay: var(--delay, 0s);
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .anim-slide-up {
-    animation: none;
-  }
 }
 </style>

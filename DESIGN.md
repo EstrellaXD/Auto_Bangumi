@@ -1,6 +1,6 @@
 # Design
 
-Visual system of the AutoBangumi web UI (Vue 3 + naive-ui + UnoCSS). Source of truth for tokens: `webui/src/style/var.scss` (`:root` light, `.dark` overrides). naive-ui components are themed via `GlobalThemeOverrides` in `webui/src/App.vue`, which reference these same CSS custom properties.
+Visual system of the AutoBangumi web UI (Vue 3 + naive-ui + UnoCSS). Source of truth for tokens: `webui/src/style/var.scss` (`:root` light, `.dark` overrides). naive-ui components are themed via the `abNaiveTheme` `GlobalThemeOverrides` in `webui/src/style/naive-theme.ts` (provided by the root `NConfigProvider` in `webui/src/App.vue`), which reference these same CSS custom properties. Icons come from `@lucide/vue`.
 
 ## Color
 
@@ -52,9 +52,9 @@ Semantic scale only: `--z-dropdown` 10 · `--z-sticky` 20 · `--z-fixed` 30 · `
 
 ## Components
 
-- **Universal `ab-*` layer** (`src/components/basic/`): pages and composites use only `ab-*` components — never raw `NButton`/`NInput`/bare styled `<button>`. Where naive-ui fits, the `ab-*` component wraps it (`ab-select`, `ab-switch`, `ab-tooltip`); where it doesn't, the component is custom on tokens (`ab-button`, `ab-tag`, `ab-modal`).
+- **Universal `ab-*` layer** (`src/components/basic/`): pages and composites use only `ab-*` components — never raw `NButton`/`NInput`/bare styled `<button>`. Where naive-ui fits, the `ab-*` component wraps it (`ab-select`, `ab-switch`, `ab-tooltip`, `ab-modal`, `ab-bottom-sheet`, `ab-menu`, `ab-fold-panel`); where it doesn't, the component is custom on tokens (`ab-button`, `ab-tag`).
 - **Composites**: app-specific `ab-*` components (`ab-add-rss`, `ab-edit-rule`, calendar pieces, layout shells) compose the universal layer + tokens.
-- **Utility CSS**: UnoCSS with attributify preset; prefer token-backed values over arbitrary literals.
+- **Utility CSS**: UnoCSS (`presetWind3`), utilities go in `class` (no attributify); prefer token-backed values over arbitrary literals.
 - Every interactive component ships all states: default, hover, focus-visible, active, disabled, loading, error — and ≥44px touch targets on mobile (`--touch-target`).
 - Soft Ink component grammar: filled controls on `--color-surface-2` (border only on focus/error); tags are hairline chips with a square semantic mark and ink text; status is a square mark + ink label; tabs underline (no thumb); alerts are hairline outlines led by a bold colored word (no icons, no tinted fills); toasts are inverted ink chips; empty states are left-aligned prose with one action; loading is skeletons, not spinners-in-content.
 - Every universal component ships a Storybook story and (where it has behavior) a vitest test in `__tests__/`.
@@ -63,7 +63,7 @@ The universal set (`src/components/basic/` unless noted):
 
 | Group | Components |
 |---|---|
-| Actions | `ab-button` (primary/secondary/ghost/danger·sm/md·loading), `ab-icon-button` (required label, 44px touch, ghost/solid/round), `ab-menu` (headlessui dropdown), `ab-split-button` |
+| Actions | `ab-button` (primary/secondary/ghost/danger·sm/md·loading), `ab-icon-button` (required label, 44px touch, ghost/solid/round), `ab-menu` (naive-ui NDropdown), `ab-split-button` |
 | Forms | `ab-field` (label/description/error/required + aria wiring via injection), `ab-input` (affixes, clearable, password reveal, error), `ab-select`, `ab-switch`, `ab-segmented` (underline tabs), `ab-setting` (root — field+control settings row) |
 | Overlays | `ab-modal` (adaptive: dialog ≥ tablet, bottom sheet on mobile; footer slot; sizes sm/md/lg), `useConfirm()` + `ab-confirm-host` (promise confirm, danger variant), `ab-tooltip`, `ab-bottom-sheet` (internal to ab-modal) |
 | Display | `ab-tag` (semantic marks: success/warning/danger/info/neutral, closable), `ab-status` (running/stopped/paused/degraded + label/detail), `ab-badge` (count/dot, 99+), `ab-container` (root — title/footer/flush card), `ab-fold-panel` (root — accessible, animated), `ab-progress` |

@@ -1,17 +1,20 @@
-<script lang="tsx" setup>
+<script lang="ts" setup>
 import {
   Calendar,
+  CirclePlay,
   Download,
-  Home,
-  Log,
-  Logout,
-  MenuUnfold,
+  House,
+  LayoutGrid,
+  LogOut,
   Moon,
-  Play,
-  SettingTwo,
+  PanelLeftOpen,
+  Puzzle,
+  Rss,
+  ScrollText,
+  Settings,
   Sun,
-} from '@icon-park/vue-next';
-import InlineSvg from 'vue-inline-svg';
+} from '@lucide/vue';
+import { slotTitle, usePluginPages } from '@/hooks/usePluginUi';
 
 const props = withDefaults(
   defineProps<{
@@ -22,7 +25,7 @@ const props = withDefaults(
   }
 );
 
-const { t } = useMyI18n();
+const { t, lang } = useMyI18n();
 const { logout } = useAuth();
 const route = useRoute();
 const { isMobile, isTablet, isMobileOrTablet } = useBreakpointQuery();
@@ -31,24 +34,10 @@ const { isDark, toggle: toggleDark } = useDarkMode();
 const show = ref(props.open);
 const toggle = () => (show.value = !show.value);
 
-const RSS = h(
-  'span',
-  {
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      width: '20px',
-      height: '20px',
-    },
-  },
-  h(InlineSvg, { src: './images/RSS.svg', width: '16', height: '16' })
-);
-
 const items = [
   {
     id: 1,
-    icon: Home,
+    icon: House,
     label: () => t('sidebar.homepage'),
     path: '/bangumi',
   },
@@ -60,13 +49,13 @@ const items = [
   },
   {
     id: 3,
-    icon: RSS,
+    icon: Rss,
     label: () => t('sidebar.rss'),
     path: '/rss',
   },
   {
     id: 4,
-    icon: Play,
+    icon: CirclePlay,
     label: () => t('sidebar.player'),
     path: '/player',
   },
@@ -79,34 +68,59 @@ const items = [
   },
   {
     id: 6,
-    icon: Log,
+    icon: ScrollText,
     label: () => t('sidebar.log'),
     path: '/log',
   },
   {
+    id: 8,
+    icon: LayoutGrid,
+    label: () => t('sidebar.market'),
+    path: '/market',
+  },
+  {
     id: 7,
-    icon: SettingTwo,
+    icon: Settings,
     label: () => t('sidebar.config'),
     path: '/config',
   },
 ];
 
+// 子路由（如 /market/:id）也高亮所属入口
+function isActive(path: string) {
+  return route.path === path || route.path.startsWith(`${path}/`);
+}
+
+// 插件经 page 挂载点提供的页面，排在设置之前
+const pageSlots = usePluginPages();
+const navItems = computed(() => {
+  const pluginItems = pageSlots.value.map((ui, index) => ({
+    id: 100 + index,
+    icon: Puzzle,
+    label: () => slotTitle(ui, lang.value === 'zh-CN' ? 'zh-CN' : 'en-US'),
+    path: `/plugins/${encodeURIComponent(ui.plugin_id)}`,
+    hidden: false,
+  }));
+  return [...items.slice(0, -1), ...pluginItems, items[items.length - 1]];
+});
+
 function Exit() {
-  return (
-    <button
-      type="button"
-      aria-label={t('sidebar.logout')}
-      class={[
+  return h(
+    'button',
+    {
+      type: 'button',
+      'aria-label': t('sidebar.logout'),
+      class: [
         'sidebar-item sidebar-item--action',
         isMobileOrTablet.value ? 'h-40' : '',
-      ]}
-      onClick={logout}
-    >
-      <Logout size={20} />
-      {!isMobileOrTablet.value && show.value && (
-        <div class="sidebar-item-label">{t('sidebar.logout')}</div>
-      )}
-    </button>
+      ],
+      onClick: logout,
+    },
+    [
+      h(LogOut, { size: 20 }),
+      !isMobileOrTablet.value &&
+      h('div', { class: 'sidebar-item-label' }, t('sidebar.logout')),
+    ]
   );
 }
 </script>
@@ -125,12 +139,11 @@ function Exit() {
           :aria-expanded="show"
           @click="toggle"
         >
-          <div v-show="show" class="sidebar-title">
+          <div class="sidebar-title">
             {{ $t('sidebar.title') }}
           </div>
-          <MenuUnfold
-            theme="outline"
-            size="20"
+          <PanelLeftOpen
+            :size="20"
             class="sidebar-toggle-icon"
             :class="[show && 'sidebar-toggle-icon--open']"
           />
@@ -139,19 +152,21 @@ function Exit() {
         <!-- Navigation -->
         <nav class="sidebar-nav">
           <RouterLink
-            v-for="i in items"
+            v-for="i in navItems"
             :key="i.id"
             :to="i.path"
             replace
             :title="i.label()"
             class="sidebar-item"
             :class="[
-              route.path === i.path && 'sidebar-item--active',
+              isActive(i.path) && 'sidebar-item--active',
               i.hidden && 'hidden',
             ]"
           >
             <Component :is="i.icon" :size="20" />
-            <div v-show="show" class="sidebar-item-label">{{ i.label() }}</div>
+            <div class="sidebar-item-label">
+              {{ i.label() }}
+            </div>
           </RouterLink>
         </nav>
 
@@ -159,16 +174,13 @@ function Exit() {
         <div class="sidebar-footer">
           <button
             class="sidebar-item sidebar-item--action sidebar-item--theme"
-            :title="isDark ? 'Light mode' : 'Dark mode'"
-            :aria-label="
-              isDark ? 'Switch to light mode' : 'Switch to dark mode'
-            "
+            :title="isDark ? $t('theme.light') : $t('theme.dark')"
             @click="toggleDark"
           >
             <Moon v-if="!isDark" :size="20" />
             <Sun v-else :size="20" />
-            <div v-show="show" class="sidebar-item-label">
-              {{ isDark ? 'Light' : 'Dark' }}
+            <div class="sidebar-item-label">
+              {{ isDark ? $t('theme.light') : $t('theme.dark') }}
             </div>
           </button>
           <Exit />
@@ -182,14 +194,14 @@ function Exit() {
         <div class="sidebar-inner">
           <nav class="sidebar-nav">
             <RouterLink
-              v-for="i in items"
+              v-for="i in navItems"
               :key="i.id"
               :to="i.path"
               replace
               :title="i.label()"
               class="sidebar-item"
               :class="[
-                route.path === i.path && 'sidebar-item--active',
+                isActive(i.path) && 'sidebar-item--active',
                 i.hidden && 'hidden',
               ]"
             >
@@ -200,7 +212,8 @@ function Exit() {
           <div class="sidebar-footer">
             <button
               class="sidebar-item sidebar-item--action sidebar-item--theme"
-              :title="isDark ? 'Light mode' : 'Dark mode'"
+              :title="isDark ? $t('theme.light') : $t('theme.dark')"
+              :aria-label="isDark ? $t('theme.light') : $t('theme.dark')"
               @click="toggleDark"
             >
               <Moon v-if="!isDark" :size="20" />
@@ -272,7 +285,24 @@ function Exit() {
   font-weight: 600;
   color: var(--color-text);
   white-space: nowrap;
-  transition: opacity var(--transition-fast);
+}
+
+// 标签始终渲染：收起时先快速淡出，展开时等宽度过半再淡入，避免过渡中露出半截文字。
+// 用 :deep 是因为 Exit 是渲染函数，其子元素不带本组件的 scope 属性。
+.sidebar {
+  :deep(.sidebar-title),
+  :deep(.sidebar-item-label) {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: clip;
+    transition: opacity var(--transition-fast) 100ms;
+  }
+
+  &--collapsed :deep(.sidebar-title),
+  &--collapsed :deep(.sidebar-item-label) {
+    opacity: 0;
+    transition: opacity 100ms ease-in;
+  }
 }
 
 .sidebar-toggle-icon {
@@ -313,9 +343,10 @@ function Exit() {
     background-color var(--transition-fast);
   white-space: nowrap;
 
+  // 悬停用中性色，紫色只留给当前页
   &:hover {
-    color: var(--color-primary);
-    background: var(--color-primary-light);
+    color: var(--color-text);
+    background: var(--color-surface-2);
   }
 
   &:focus-visible {
@@ -323,7 +354,8 @@ function Exit() {
     outline-offset: -2px;
   }
 
-  &--active {
+  &--active,
+  &--active:hover {
     color: var(--color-primary);
     background: var(--color-primary-light);
     font-weight: 500;
@@ -347,13 +379,20 @@ function Exit() {
   }
 
   &--theme:hover {
-    color: var(--color-primary);
-    background: var(--color-primary-light);
+    color: var(--color-text);
+    background: var(--color-surface-2);
   }
 }
 
-.sidebar-item-label {
-  font-size: 14px;
+.sidebar-item {
+  // 标签收窄时图标不被压缩
+  :deep(svg) {
+    flex-shrink: 0;
+  }
+
+  :deep(.sidebar-item-label) {
+    font-size: 14px;
+  }
 }
 
 .sidebar-footer {

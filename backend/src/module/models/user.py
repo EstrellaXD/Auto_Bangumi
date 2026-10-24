@@ -8,14 +8,14 @@ from sqlmodel import Field, SQLModel
 class User(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     username: str = Field(
-        "admin",
+        default="admin",
         min_length=4,
         max_length=20,
         regex=r"^[a-zA-Z0-9_]+$",
         unique=True,
         index=True,
     )
-    password: str = Field("", min_length=8)
+    password: str = Field(default="", min_length=8)
     enabled: bool = Field(default=True, index=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -23,9 +23,9 @@ class User(SQLModel, table=True):
 
 class UserUpdate(SQLModel):
     username: Optional[str] = Field(
-        None, min_length=4, max_length=20, regex=r"^[a-zA-Z0-9_]+$"
+        default=None, min_length=4, max_length=20, regex=r"^[a-zA-Z0-9_]+$"
     )
-    password: Optional[str] = Field(None, min_length=8)
+    password: Optional[str] = Field(default=None, min_length=8)
     enabled: Optional[bool] = None
 
 
@@ -35,9 +35,9 @@ class UserCredentialsUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     username: Optional[str] = Field(
-        None, min_length=4, max_length=20, regex=r"^[a-zA-Z0-9_]+$"
+        default=None, min_length=4, max_length=20, regex=r"^[a-zA-Z0-9_]+$"
     )
-    password: Optional[str] = Field(None, min_length=8)
+    password: Optional[str] = Field(default=None, min_length=8)
 
 
 class UserCreate(SQLModel):
@@ -57,17 +57,3 @@ class AuthenticationSuccess(SQLModel):
     """Non-secret response shared by every browser-session issuing endpoint."""
 
     authenticated: Literal[True] = True
-
-
-class UserLogin(SQLModel):
-    username: str
-    password: str = Field(..., min_length=8)
-
-
-class Token(BaseModel):
-    token: str
-    token_type: str
-
-
-class TokenData(BaseModel):
-    username: str | None = None

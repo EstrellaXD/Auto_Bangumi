@@ -1,11 +1,16 @@
-import { describe, expect, it } from 'vitest';
-import { mount } from '@vue/test-utils';
+import { afterEach, describe, expect, it } from 'vitest';
+import { flushPromises, mount } from '@vue/test-utils';
 import AbSplitButton from '../ab-split-button.vue';
 
 const options = [
   { label: 'Enable rule', value: 'enable' },
   { label: 'Enable + collect season', value: 'collect' },
 ];
+
+// 选项菜单由 NDropdown 传送到 document.body
+afterEach(() => {
+  document.body.innerHTML = '';
+});
 
 describe('ab-split-button', () => {
   it('should show the label of the selected value on the main button', () => {
@@ -31,7 +36,8 @@ describe('ab-split-button', () => {
       attachTo: document.body,
     });
     await wrapper.find('.ab-split-arrow').trigger('click');
-    await wrapper.findAll('[role="menuitem"]')[1].trigger('click');
+    document.querySelectorAll<HTMLElement>('[role="menuitem"]')[1].click();
+    await flushPromises();
     expect(wrapper.emitted('update:value')?.[0]).toEqual(['collect']);
   });
 

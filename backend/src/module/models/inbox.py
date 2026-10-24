@@ -17,13 +17,13 @@ def utcnow_iso() -> str:
 
 class InboxMessage(SQLModel, table=True):
     id: int = Field(default=None, primary_key=True)
-    kind: str = Field("", index=True)
-    severity: str = Field("info")  # info | warning | error
-    title: str = Field("")
-    body: str = Field("")
-    payload: Optional[str] = Field(None)  # JSON 字符串
-    dedup_key: Optional[str] = Field(None, index=True)
-    read: bool = Field(False, index=True)
-    count: int = Field(1)  # 合并计数（同 dedup_key 未读重复出现的次数）
+    kind: str = Field(default="", index=True)
+    severity: str = Field(default="info")  # info | warning | error
+    title: str = Field(default="")
+    body: str = Field(default="")
+    payload: Optional[str] = Field(default=None)  # JSON 字符串
+    dedup_key: Optional[str] = Field(default=None, index=True)
+    read: bool = Field(default=False, index=True)
+    count: int = Field(default=1)  # 合并计数（同 dedup_key 未读重复出现的次数）
     created_at: str = Field(default_factory=utcnow_iso)
     updated_at: str = Field(default_factory=utcnow_iso)

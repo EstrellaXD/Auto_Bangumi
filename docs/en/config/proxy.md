@@ -2,7 +2,7 @@
 
 ## Proxy
 
-![proxy](/image/config/proxy.png){width=700}{class=ab-shadow-card}
+![proxy](/image/en/config/proxy.png){width=700}{class=ab-shadow-card}
 
 AutoBangumi supports HTTP, HTTPS and SOCKS5 proxies for RSS, search providers, TMDB, Bangumi, LLM providers and other outbound requests.
 

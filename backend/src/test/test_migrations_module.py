@@ -6,7 +6,7 @@ import pytest
 from sqlalchemy import inspect, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError, OperationalError
-from sqlmodel import SQLModel, create_engine
+from sqlmodel import SQLModel, create_engine, select
 
 import module.database.migrations as migration_module
 from module.database.migrations import (
@@ -44,11 +44,7 @@ def _make_v0_engine():
         )
         conn.execute(
             text(
-                "CREATE TABLE rssitem ("
-                "  id INTEGER PRIMARY KEY,"
-                "  name TEXT,"
-                "  url TEXT"
-                ")"
+                "CREATE TABLE rssitem (  id INTEGER PRIMARY KEY,  name TEXT,  url TEXT)"
             )
         )
         conn.execute(
@@ -140,6 +136,8 @@ def _make_v19_auth_engine() -> Engine:
     engine = create_engine("sqlite://")
     with engine.begin() as conn:
         conn.execute(text("PRAGMA foreign_keys=ON"))
+        # 真实数据库总有 bangumi 表；v27 重建 aria2_gid 时外键检查要求它存在
+        conn.execute(text("CREATE TABLE bangumi (id INTEGER PRIMARY KEY)"))
         conn.execute(
             text(
                 "CREATE TABLE user ("
@@ -191,20 +189,13 @@ def _make_v19_auth_engine() -> Engine:
             )
         )
         conn.execute(
-            text(
-                "CREATE INDEX ix_auth_session_expires_at " "ON auth_session(expires_at)"
-            )
+            text("CREATE INDEX ix_auth_session_expires_at ON auth_session(expires_at)")
         )
         conn.execute(
-            text(
-                "CREATE INDEX ix_auth_session_revoked_at " "ON auth_session(revoked_at)"
-            )
+            text("CREATE INDEX ix_auth_session_revoked_at ON auth_session(revoked_at)")
         )
         conn.execute(
-            text(
-                "CREATE UNIQUE INDEX ix_api_token_token_hash "
-                "ON api_token(token_hash)"
-            )
+            text("CREATE UNIQUE INDEX ix_api_token_token_hash ON api_token(token_hash)")
         )
         conn.execute(text("CREATE INDEX ix_api_token_user_id ON api_token(user_id)"))
         conn.execute(text("CREATE INDEX ix_api_token_scope ON api_token(scope)"))
@@ -262,7 +253,8 @@ def _make_v18_movie_engine(monkeypatch: pytest.MonkeyPatch) -> Engine:
     engine = _make_v0_engine()
     _run_through_version(engine, 17, monkeypatch)
     with engine.begin() as conn:
-        conn.execute(text("""CREATE TABLE movie (
+        conn.execute(
+            text("""CREATE TABLE movie (
                     id INTEGER PRIMARY KEY,
                     official_title VARCHAR NOT NULL,
                     title_raw VARCHAR,
@@ -278,7 +270,8 @@ def _make_v18_movie_engine(monkeypatch: pytest.MonkeyPatch) -> Engine:
                     save_path VARCHAR,
                     rule_name VARCHAR,
                     filter VARCHAR NOT NULL DEFAULT ''
-                )"""))
+                )""")
+        )
         conn.execute(text("CREATE INDEX ix_movie_title_raw ON movie(title_raw)"))
         conn.execute(text("CREATE INDEX ix_movie_deleted ON movie(deleted)"))
         conn.execute(
@@ -302,9 +295,9 @@ class TestMigrationTable:
     def test_every_migration_has_an_already_applied_guard(self):
         """No migration may rely on the old hardcoded if-ladder."""
         for migration in MIGRATIONS:
-            assert callable(
-                migration.already_applied
-            ), f"migration v{migration.version} has no already_applied guard"
+            assert callable(migration.already_applied), (
+                f"migration v{migration.version} has no already_applied guard"
+            )
 
     def test_versions_are_consecutive_from_one(self):
         versions = [m.version for m in MIGRATIONS]
@@ -704,6 +697,74 @@ class TestRunMigrations:
             assert get_schema_version(conn) == CURRENT_SCHEMA_VERSION
         assert prefix == "legacy_cccccccc"
 
+    @pytest.mark.parametrize("preexisting", [None, "torrent"])
+    def test_v26_downloader_id_existing_rows_follow_default(
+        self, preexisting, monkeypatch
+    ):
+        """v26：存量种子归属实例 default；番剧 / 电影 / 订阅为空（跟随默认实例）。
+        已有该列的表（如被 create_all 提前建出）跳过，其它表照常补列。"""
+        engine = _make_v0_engine()
+        with engine.begin() as conn:
+            if preexisting:
+                conn.execute(
+                    text(
+                        f"ALTER TABLE {preexisting} ADD COLUMN downloader_id VARCHAR "
+                        "DEFAULT 'default'"
+                    )
+                )
+            conn.execute(
+                text("INSERT INTO bangumi (id, official_title) VALUES (1, 'a')")
+            )
+            conn.execute(text("INSERT INTO rssitem (id, name) VALUES (1, 'r')"))
+            conn.execute(text("INSERT INTO torrent (id, name) VALUES (1, 't')"))
+        _run_through_version(engine, 25, monkeypatch)
+        with engine.begin() as conn:
+            conn.execute(text("INSERT INTO movie (official_title) VALUES ('m')"))
+
+        run_migrations(engine)
+
+        expected = {"bangumi": None, "movie": None, "rssitem": None}
+        with engine.connect() as conn:
+            for table in ("bangumi", "movie", "rssitem", "torrent"):
+                values = conn.execute(
+                    text(f"SELECT downloader_id FROM {table}")
+                ).scalars()
+                assert list(values) == [expected.get(table, "default")], table
+
+    def test_v27_aria2_gid_existing_rows_scoped_to_default_instance(self, monkeypatch):
+        """v27：aria2_gid 主键加上实例 id，存量行归属 default，各列原样保留；
+        另一个实例可以有同一个 gid。"""
+        engine = _make_v0_engine()
+        _run_through_version(engine, 26, monkeypatch)
+        with engine.begin() as conn:
+            conn.execute(
+                text(
+                    "INSERT INTO aria2_gid (gid, category, dedup_key, renamed_paths, "
+                    "rename_intent, created_at) "
+                    "VALUES ('g1', 'Bangumi', 'url:x', '{}', 'i', '2026-01-01')"
+                )
+            )
+
+        run_migrations(engine)
+
+        with engine.begin() as conn:
+            row = conn.execute(
+                text(
+                    "SELECT downloader_id, category, dedup_key, renamed_paths, "
+                    "rename_intent FROM aria2_gid"
+                )
+            ).one()
+            conn.execute(
+                text(
+                    "INSERT INTO aria2_gid (downloader_id, gid, created_at) "
+                    "VALUES ('b', 'g1', '2026-01-01')"
+                )
+            )
+        assert tuple(row) == ("default", "Bangumi", "url:x", "{}", "i")
+        assert "ix_aria2_gid_dedup_key" in {
+            ix["name"] for ix in inspect(engine).get_indexes("aria2_gid")
+        }
+
     def test_is_idempotent(self):
         engine = _make_v0_engine()
         run_migrations(engine)
@@ -833,3 +894,82 @@ class TestRunMigrations:
         inspector = inspect(engine)
         rssitem_cols = {c["name"] for c in inspector.get_columns("rssitem")}
         assert "connection_status" not in rssitem_cols
+
+
+class TestSearchKeywordEpisodeMigration:
+    NYAA = "https://nyaa.si/?page=rss&q=%s&c=0_0&f=0"
+    PROVIDERS = {
+        "nyaa": {"url": NYAA, "parser": "tmdb"},
+        "dmhy": {
+            "url": "http://dmhy.org/topics/rss/rss.xml?keyword=%s",
+            "parser": "tmdb",
+        },
+        "mikan": {
+            "url": "https://mikanani.me/RSS/Search?searchstr=%s",
+            "parser": "mikan",
+        },
+    }
+
+    @pytest.mark.parametrize(
+        ("season_raw", "url", "expected"),
+        [
+            (
+                "S03E02",
+                NYAA.replace(
+                    "%s",
+                    "ToonsHub+The+Apothecary+Diaries+S03E02+Multi+Subs+NF+WEB+DL+1080p",
+                ),
+                NYAA.replace(
+                    "%s",
+                    "ToonsHub+The+Apothecary+Diaries+S03+Multi+Subs+NF+WEB+DL+1080p",
+                ),
+            ),
+            (
+                "Season 2 EPs 01-12",
+                "http://dmhy.org/topics/rss/rss.xml?keyword=ANi+葬送的芙莉莲+Season+2+EPs+01+12+1080P",
+                "http://dmhy.org/topics/rss/rss.xml?keyword=ANi+葬送的芙莉莲+Season+2+1080P",
+            ),
+            ("S03", NYAA.replace("%s", "Show+S03+1080p"), None),
+            (
+                "S03E02",
+                "https://mikanani.me/RSS/Bangumi?bangumiId=3519&subgroupid=583",
+                None,
+            ),
+        ],
+        ids=["nyaa-episode", "dmhy-multi-token", "no-episode", "mikan-bangumi-feed"],
+    )
+    def test_strips_episode_from_search_subscription_once(
+        self, monkeypatch, season_raw, url, expected
+    ):
+        """旧版本搜索订阅关键词里的集号在启动时去掉一次，非搜索 URL 不变（#1138）。"""
+        from sqlmodel import Session
+
+        from module.models import Bangumi, RSSItem
+        from test.factories import make_bangumi
+
+        monkeypatch.setattr(
+            "module.searcher.provider.get_provider", lambda: self.PROVIDERS
+        )
+        engine = create_engine("sqlite://")
+        SQLModel.metadata.create_all(engine)
+        with engine.begin() as conn:
+            ensure_schema_version_table(conn)
+            set_schema_version(conn, CURRENT_SCHEMA_VERSION - 1)
+        other = "https://mikanani.me/RSS/Bangumi?bangumiId=1"
+        with Session(engine) as session:
+            session.add(RSSItem(id=1, url=url))
+            session.add(make_bangumi(season_raw=season_raw, rss_link=f"{other},{url}"))
+            session.commit()
+
+        run_migrations(engine)
+        with engine.begin() as conn:
+            assert get_schema_version(conn) == CURRENT_SCHEMA_VERSION
+            # 再跑一次不再改动
+            migration_module._strip_search_keyword_episodes(conn)
+
+        with Session(engine) as session:
+            rss = session.get(RSSItem, 1)
+            bangumi = session.exec(select(Bangumi)).one()
+        assert rss is not None
+        assert rss.url == (expected or url)
+        assert bangumi.rss_link == f"{other},{expected or url}"

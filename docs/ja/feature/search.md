@@ -10,9 +10,11 @@ v3.1以降、ABにはアニメを素早く見つけるための検索機能が�
 
 検索バーはABのトップバーにあります。クリックして検索パネルを開きます。
 
-![Search Panel](/image/feature/search-panel.png)
+![Search Panel](/image/en/feature/search-panel.png)
 
 ソースサイトを選択し、キーワードを入力すると、ABが自動的に解析して検索結果を表示します。アニメを追加するには、カードの右側にある追加ボタンをクリックします。
+
+検索から追加した番組は既定のダウンローダーを使います。ダウンローダーが複数あるときは、後で番組の詳細設定で変更できます。[複数のダウンローダー](./downloaders.md)を参照してください。
 
 ::: tip
 ソースが**Mikan**の場合、ABはデフォルトで`mikan`パーサーを使用します。他のソースの場合、TMDBパーサーが使用されます。
@@ -26,13 +28,13 @@ v3.2以降、JSONファイルを編集せずに、設定ページで直接検索
 
 **設定** → **検索プロバイダー**に移動して、設定パネルにアクセスします。
 
-![Search Provider Settings](/image/feature/search-provider.png)
+![Search Provider Settings](/image/en/feature/search-provider.png)
 
 ここから以下が可能です：
 - すべての設定済み検索ソースを**表示**
 - 「プロバイダーを追加」ボタンで新しい検索ソースを**追加**
 - 既存のソースURLを**編集**
-- カスタムソースを**削除**（デフォルトソースmikan、nyaa、dmhyは削除できません）
+- カスタムソースを**削除**（デフォルトソースmikan、anibt、nyaa、dmhyは削除できません）
 
 ### URLテンプレート形式
 
@@ -52,6 +54,7 @@ https://example.com/rss/search?q=%s
 | ソース | URLテンプレート |
 |--------|---------------|
 | mikan | `https://mikanani.me/RSS/Search?searchstr=%s` |
+| anibt | `https://anibt.net/rss/magnets.xml?q=%s` |
 | nyaa | `https://nyaa.si/?page=rss&q=%s&c=0_0&f=0` |
 | dmhy | `http://dmhy.org/topics/rss/rss.xml?keyword=%s` |
 

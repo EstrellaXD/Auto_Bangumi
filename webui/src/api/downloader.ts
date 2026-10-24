@@ -1,4 +1,4 @@
-import type { QbTorrentInfo } from '#/downloader';
+import type { DownloaderInstances, QbTorrentInfo } from '#/downloader';
 import type { ApiSuccess } from '#/api';
 
 export const apiDownloader = {
@@ -10,26 +10,37 @@ export const apiDownloader = {
     return data!;
   },
 
-  async pause(hashes: string[]) {
+  async instances() {
+    const { data } = await axios.get<DownloaderInstances>(
+      'api/v1/downloader/instances'
+    );
+    return data!;
+  },
+
+  async pause(hashes: string[], downloaderId: string) {
     const { data } = await axios.post<ApiSuccess>(
       'api/v1/downloader/torrents/pause',
-      { hashes }
+      { hashes, downloader_id: downloaderId }
     );
     return data!;
   },
 
-  async resume(hashes: string[]) {
+  async resume(hashes: string[], downloaderId: string) {
     const { data } = await axios.post<ApiSuccess>(
       'api/v1/downloader/torrents/resume',
-      { hashes }
+      { hashes, downloader_id: downloaderId }
     );
     return data!;
   },
 
-  async deleteTorrents(hashes: string[], deleteFiles = false) {
+  async deleteTorrents(
+    hashes: string[],
+    downloaderId: string,
+    deleteFiles = false
+  ) {
     const { data } = await axios.post<ApiSuccess>(
       'api/v1/downloader/torrents/delete',
-      { hashes, delete_files: deleteFiles }
+      { hashes, downloader_id: downloaderId, delete_files: deleteFiles }
     );
     return data!;
   },

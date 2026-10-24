@@ -1,5 +1,6 @@
 """通知中心 REST API（/notification/messages*）。"""
 
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -46,7 +47,7 @@ def unauthed_client(app):
 
 
 def _message(**overrides) -> InboxMessage:
-    fields = dict(
+    fields: dict[str, Any] = dict(
         id=1,
         kind="rss_failure",
         severity="error",

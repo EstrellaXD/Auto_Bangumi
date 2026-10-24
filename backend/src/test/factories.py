@@ -1,7 +1,9 @@
 """Test data factories for creating model instances with sensible defaults."""
 
 from datetime import datetime, timezone
+from typing import Any
 
+from module.downloader import DownloaderPool
 from module.models import Bangumi, RSSItem, Torrent
 from module.models.config import Config
 from module.models.passkey import Passkey
@@ -9,7 +11,7 @@ from module.models.passkey import Passkey
 
 def make_bangumi(**overrides) -> Bangumi:
     """Create a Bangumi instance with sensible test defaults."""
-    defaults = dict(
+    defaults: dict[str, Any] = dict(
         official_title="Test Anime",
         year="2024",
         title_raw="Test Anime Raw",
@@ -35,7 +37,7 @@ def make_bangumi(**overrides) -> Bangumi:
 
 def make_torrent(**overrides) -> Torrent:
     """Create a Torrent instance with sensible test defaults."""
-    defaults = dict(
+    defaults: dict[str, Any] = dict(
         name="[TestGroup] Test Anime Raw - 01 [1080p].mkv",
         url="https://example.com/test.torrent",
         homepage="https://mikanani.me/Home/Episode/test",
@@ -47,7 +49,7 @@ def make_torrent(**overrides) -> Torrent:
 
 def make_rss_item(**overrides) -> RSSItem:
     """Create an RSSItem instance with sensible test defaults."""
-    defaults = dict(
+    defaults: dict[str, Any] = dict(
         name="Test RSS Feed",
         url="https://mikanani.me/RSS/MyBangumi?token=test",
         aggregate=True,
@@ -69,7 +71,7 @@ def make_config(**overrides) -> Config:
 
 def make_passkey(**overrides) -> Passkey:
     """Create a Passkey instance with sensible test defaults."""
-    defaults = dict(
+    defaults: dict[str, Any] = dict(
         id=1,
         user_id=1,
         name="Test Passkey",
@@ -85,3 +87,14 @@ def make_passkey(**overrides) -> Passkey:
     )
     defaults.update(overrides)
     return Passkey(**defaults)
+
+
+class SingleClientPool(DownloaderPool):
+    """所有实例都返回同一个（模拟）客户端的下载器池。"""
+
+    def __init__(self, client) -> None:
+        super().__init__()
+        self.client = client
+
+    async def get(self, instance_id: str):
+        return self.client

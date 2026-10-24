@@ -64,13 +64,13 @@ const items: SettingItem<Proxy>[] = [
 
 <template>
   <ab-fold-panel :title="$t('config.proxy_set.title')">
-    <div space-y-8>
+    <div class="space-y-8">
       <ab-setting
         v-for="i in items"
         :key="i.configKey"
         v-bind="i"
         v-model:data="proxy[i.configKey]"
-      ></ab-setting>
+      />
     </div>
   </ab-fold-panel>
 </template>

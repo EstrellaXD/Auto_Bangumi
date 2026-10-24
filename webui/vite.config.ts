@@ -4,30 +4,26 @@ import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import AutoImport from 'unplugin-auto-import/vite';
 import Components from 'unplugin-vue-components/vite';
-import VueRouter from 'unplugin-vue-router/vite';
-import { VueRouterAutoImports } from 'unplugin-vue-router';
+import VueRouter from 'vue-router/vite';
+import { VueRouterAutoImports } from 'vue-router/unplugin';
 import VueI18nPlugin from '@intlify/unplugin-vue-i18n/vite';
-import { VitePWA } from 'vite-plugin-pwa';
-import VueJsx from '@vitejs/plugin-vue-jsx';
+
+// 与后端给 SPA 文档加的响应头一致（backend/src/main.py）。只加在 preview：
+// dev 服务器会注入内联脚本，会被这个策略拦下
+const headers = { 'Content-Security-Policy': 'script-src \'self\'' };
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
+export default defineConfig({
   base: './',
   plugins: [
-    VueJsx(),
     VueRouter({
       dts: 'types/dts/router-type.d.ts',
     }),
-    vue({
-      script: {
-        defineModel: true,
-      },
-    }),
+    vue(),
     UnoCSS(),
     AutoImport({
       imports: [
         'vue',
-        'vitest',
         'pinia',
         {
           '@vueuse/core': [
@@ -47,74 +43,33 @@ export default defineConfig(({ mode }) => ({
     }),
     Components({
       dts: 'types/dts/components.d.ts',
-      dirs: [
-        'src/components',
-        'src/components/basic',
-        'src/components/layout',
-        'src/components/setting',
-        'src/components/setup',
-      ],
     }),
     VueI18nPlugin({
-      include: resolve(__dirname, './src/i18n/**'),
-    }),
-    VitePWA({
-      injectRegister: false,
-      registerType: 'autoUpdate',
-      devOptions: {
-        enabled: true,
-      },
-      workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
-      },
-      manifest: {
-        name: 'AutoBangumi',
-        display: 'standalone',
-        short_name: 'AutoBangumi',
-        description: 'Automated Bangumi Download Tool',
-        theme_color: '#ffffff',
-        icons: [
-          {
-            src: '/images/logo.svg',
-            sizes: 'any',
-            type: 'image/svg+xml',
-            purpose: 'any',
-          },
-          {
-            src: '/images/pwa-192.png',
-            sizes: '192x192',
-            type: 'image/png',
-          },
-          {
-            src: '/images/pwa-512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'any',
-          },
-        ],
-      },
+      include: resolve(import.meta.dirname, './src/i18n/**'),
+      dropMessageCompiler: true,
     }),
   ],
   css: {
     preprocessorOptions: {
       scss: {
-        additionalData: '@import "./src/style/mixin.scss";',
+        additionalData: '@use "@/style/mixin.scss" as *;',
       },
     },
   },
-  esbuild: {
-    drop: mode === 'production' ? ['console', 'debugger'] : [],
-  },
   build: {
     cssCodeSplit: false,
-  },
-  resolve: {
-    alias: {
-      '~': resolve(__dirname, './'),
-      '@': resolve(__dirname, 'src'),
-      '#': resolve(__dirname, 'types'),
+    rolldownOptions: {
+      output: { minify: { compress: { dropConsole: true } } },
     },
   },
+  resolve: {
+    tsconfigPaths: true,
+    // 只用运行时：模板都在构建期编译，不需要打包 @vue/compiler-*
+    alias: [
+      { find: /^vue$/, replacement: 'vue/dist/vue.runtime.esm-bundler.js' },
+    ],
+  },
+  preview: { headers },
   server: {
     proxy: {
       '^/api/.*': {
@@ -124,4 +79,4 @@ export default defineConfig(({ mode }) => ({
       '^/posters/.*': 'http://localhost:7892',
     },
   },
-}));
+});

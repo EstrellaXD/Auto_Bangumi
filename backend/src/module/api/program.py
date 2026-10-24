@@ -14,16 +14,14 @@ from .deps import get_context
 from .response import u_response
 
 logger = logging.getLogger(__name__)
-router = APIRouter(tags=["program"])
+router = APIRouter(tags=["program"], dependencies=[Depends(get_current_user)])
 
 
 # Note: Lifespan events (startup/shutdown) are handled in main.py via the
 # lifespan context manager; the AppContext is injected here per-request.
 
 
-@router.post(
-    "/restart", response_model=APIResponse, dependencies=[Depends(get_current_user)]
-)
+@router.post("/restart", response_model=APIResponse)
 async def restart(ctx: AppContext = Depends(get_context)):
     try:
         resp = await ctx.restart()
@@ -40,9 +38,7 @@ async def restart(ctx: AppContext = Depends(get_context)):
         )
 
 
-@router.post(
-    "/start", response_model=APIResponse, dependencies=[Depends(get_current_user)]
-)
+@router.post("/start", response_model=APIResponse)
 async def start(ctx: AppContext = Depends(get_context)):
     try:
         resp = await ctx.start_tasks()
@@ -59,15 +55,13 @@ async def start(ctx: AppContext = Depends(get_context)):
         )
 
 
-@router.post(
-    "/stop", response_model=APIResponse, dependencies=[Depends(get_current_user)]
-)
+@router.post("/stop", response_model=APIResponse)
 async def stop(ctx: AppContext = Depends(get_context)):
     resp = await ctx.stop()
     return u_response(resp)
 
 
-@router.get("/status", response_model=dict, dependencies=[Depends(get_current_user)])
+@router.get("/status", response_model=dict)
 async def program_status(ctx: AppContext = Depends(get_context)):
     if not ctx.is_running:
         return {
@@ -83,9 +77,7 @@ async def program_status(ctx: AppContext = Depends(get_context)):
         }
 
 
-@router.post(
-    "/shutdown", response_model=APIResponse, dependencies=[Depends(get_current_user)]
-)
+@router.post("/shutdown", response_model=APIResponse)
 async def shutdown_program(ctx: AppContext = Depends(get_context)):
     await ctx.stop()
     logger.info("Shutting down program...")
@@ -104,26 +96,6 @@ async def shutdown_program(ctx: AppContext = Depends(get_context)):
     "/check/downloader",
     tags=["check"],
     response_model=bool,
-    dependencies=[Depends(get_current_user)],
 )
 async def check_downloader_status(ctx: AppContext = Depends(get_context)):
     return await ctx.check_downloader()
-
-
-# 3.2 兼容：这些控制端点在 3.2 及更早版本是 GET，外部自动化（cron/Home
-# Assistant 等）沿用旧方法，升级后不得 405 静默失效。GET 别名标记为
-# deprecated，计划下个大版本移除。
-for _path, _endpoint in (
-    ("/restart", restart),
-    ("/start", start),
-    ("/stop", stop),
-    ("/shutdown", shutdown_program),
-):
-    router.add_api_route(
-        _path,
-        _endpoint,
-        methods=["GET"],
-        response_model=APIResponse,
-        dependencies=[Depends(get_current_user)],
-        deprecated=True,
-    )

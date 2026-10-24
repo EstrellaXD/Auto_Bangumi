@@ -1,6 +1,6 @@
 # Passkey設定
 
-![passkey](/image/config/passkey.png){width=700}{class=ab-shadow-card}
+![passkey](/image/en/config/passkey.png){width=700}{class=ab-shadow-card}
 
 Passkey設定では、現在のアカウントで使うWebAuthn / Passkey資格情報を管理します。
 

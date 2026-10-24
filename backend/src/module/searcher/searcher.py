@@ -1,7 +1,7 @@
 import json
 import logging
+import re
 from collections import OrderedDict
-from typing import TypeAlias
 
 from module.conf import settings
 from module.models import Bangumi, Movie, RSSItem, Torrent
@@ -22,7 +22,18 @@ SEARCH_KEY = [
     "dpi",
 ]
 
-BangumiJSON: TypeAlias = str
+# 解析器现在只把季的写法存进 season_raw；旧版本存下的「S03E02」「Season 2 EPs
+# 01-12」这类季集合写仍留在数据库里（补全整季时会读到），只保留季的部分，
+# 否则订阅关键词锁死在单集（#1138）
+_SEASON_WITH_EPISODE = re.compile(
+    r"^(S\d{1,2}|Season\s+\d{1,2})\s*E(?:Ps?|pisodes?)?\.?\s*\d.*$", re.I
+)
+
+
+def strip_season_episode(season_raw: str) -> str:
+    """季集合写的 season_raw 只保留季的部分（S03E02 -> S03）。"""
+    return _SEASON_WITH_EPISODE.sub(r"\1", season_raw)
+
 
 # Cache for TMDB preview lookups by official_title. Bounded (LRU-ish,
 # oldest-evicted) like _tmdb_cache/_mikan_cache — was previously a plain dict
@@ -70,11 +81,6 @@ class SearchTorrent:
         _poster_cache.setdefault(title, {})[language] = (localized_title, poster_link)
         return localized_title, poster_link
 
-    async def _fetch_tmdb_poster(self, title: str) -> str | None:
-        """Fetch poster from TMDB if not in cache."""
-        _, poster_link = await self._fetch_tmdb_preview(title)
-        return poster_link
-
     async def analyse_keyword(
         self, keywords: list[str], site: str = "mikan", limit: int = 100
     ):
@@ -106,11 +112,15 @@ class SearchTorrent:
                             bangumi.official_title = tmdb_title
                         if not bangumi.poster_link and tmdb_poster:
                             bangumi.poster_link = tmdb_poster
-                    yield json.dumps(bangumi.dict(), separators=(",", ":"))
+                    yield json.dumps(bangumi.model_dump(), separators=(",", ":"))
 
     @staticmethod
     def special_url(data: Bangumi | Movie, site: str) -> RSSItem:
-        keywords = [value for key in SEARCH_KEY if (value := getattr(data, key, None))]
+        keywords = [
+            strip_season_episode(value) if key == "season_raw" else value
+            for key in SEARCH_KEY
+            if (value := getattr(data, key, None))
+        ]
         url = search_url(site, keywords)
         return url
 

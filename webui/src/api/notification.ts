@@ -17,6 +17,10 @@ export interface TestProviderConfigRequest {
   api_token?: string;
   template?: string;
   url?: string;
+  sound?: string;
+  group?: string;
+  level?: string;
+  icon?: string;
 }
 
 export interface TestResponse {

@@ -10,6 +10,7 @@
     <meta name="theme-color" content="#FAFAFA" />
     <link rel="icon" href="/images/logo.svg" />
     <link rel="apple-touch-icon" href="/images/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="description" content="Automated Bangumi Download Tool" />
     <!-- Self-hosted Inter (variable, 300–700): no render-blocking Google
          Fonts round-trip, and it works where fonts.googleapis.com is slow
@@ -45,18 +46,7 @@
       }
     </style>
     <title>AutoBangumi</title>
-    <script>
-      // Apply dark mode before render to prevent flash
-      (function () {
-        const saved = localStorage.getItem('theme');
-        const prefersDark = window.matchMedia(
-          '(prefers-color-scheme: dark)'
-        ).matches;
-        if (saved === 'dark' || (!saved && prefersDark)) {
-          document.documentElement.classList.add('dark');
-        }
-      })();
-    </script>
+    <script src="/theme-init.js"></script>
   </head>
   <body>
     <div id="app"></div>

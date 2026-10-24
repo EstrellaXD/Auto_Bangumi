@@ -1,5 +1,7 @@
 <script lang="ts" setup>
 import type { Component } from 'vue';
+import PluginSlot from '@/components/plugin-slot.vue';
+import { slotTitle, useUiSlots } from '@/hooks/usePluginUi';
 import { useConfirm } from '@/hooks/useConfirm';
 import type { Config } from '#/config';
 import ConfigNormal from '@/components/setting/config-normal.vue';
@@ -16,13 +18,15 @@ import ConfigPasskey from '@/components/setting/config-passkey.vue';
 import ConfigSecurity from '@/components/setting/config-security.vue';
 import ConfigAccess from '@/components/setting/config-access.vue';
 import UpdateCard from '@/components/setting/update-card.vue';
+import ConfigPlugins from '@/components/setting/config-plugins.vue';
 import { configSectionMatches } from '@/utils/config-search';
+import { isAtBottom, pickActiveSection } from '@/utils/scroll-spy';
 
 definePage({
   name: 'Config',
 });
 
-const { t } = useMyI18n();
+const { t, lang } = useMyI18n();
 const { confirm } = useConfirm();
 const configStore = useConfigStore();
 const { getConfig, setConfig } = configStore;
@@ -57,9 +61,11 @@ interface ConfigSection {
   keywords: string[];
   /** 当前 locale 下也应参与搜索的可见字段/选项文案。 */
   keywordKeys?: string[];
+  /** 传给 component 的 props（插件分区用） */
+  props?: Record<string, unknown>;
 }
 
-const sections: ConfigSection[] = [
+const baseSections: ConfigSection[] = [
   {
     id: 'normal',
     titleKey: 'config.normal_set.title',
@@ -92,14 +98,14 @@ const sections: ConfigSection[] = [
     id: 'downloader',
     titleKey: 'config.downloader_set.title',
     component: ConfigDownload,
-    groups: ['downloader'],
+    groups: ['plugins'],
     keywords: ['qbittorrent', 'host', 'username', 'password', 'ssl', 'path'],
   },
   {
     id: 'manage',
     titleKey: 'config.manage_set.title',
     component: ConfigManage,
-    groups: ['bangumi_manage'],
+    groups: ['bangumi_manage', 'plugins'],
     keywords: [
       'rename',
       'method',
@@ -192,6 +198,14 @@ const sections: ConfigSection[] = [
     keywords: ['security', 'whitelist', 'ip', 'token', 'mcp'],
   },
   {
+    id: 'plugins',
+    titleKey: 'config.plugins_set.title',
+    // 插件卡片经 /plugins 接口自行保存，不参与全局保存
+    component: ConfigPlugins,
+    groups: [],
+    keywords: ['plugin', 'extension', 'sdk', 'unsigned', '插件'],
+  },
+  {
     id: 'update',
     titleKey: 'update.title',
     // 更新卡片自持久化（渠道/自动检查直接写回配置，apply/rollback 独立），
@@ -202,14 +216,42 @@ const sections: ConfigSection[] = [
   },
 ];
 
+// 插件经 settings.section 挂载点追加的分区；自行保存，不参与全局保存
+const settingSlots = useUiSlots('settings.section');
+const pluginTitles = computed(
+  () =>
+    new Map(
+      settingSlots.value.map((ui) => [
+        `${ui.plugin_id}:${ui.element}`,
+        slotTitle(ui, lang.value === 'zh-CN' ? 'zh-CN' : 'en-US'),
+      ])
+    )
+);
+const sections = computed<ConfigSection[]>(() => [
+  ...baseSections,
+  ...settingSlots.value.map((ui) => ({
+    id: `plugin-${ui.plugin_id}-${ui.element}`,
+    titleKey: `${ui.plugin_id}:${ui.element}`,
+    component: PluginSlot,
+    groups: [],
+    keywords: ['plugin', ui.plugin_id, '插件'],
+    props: { ui },
+  })),
+]);
+
+function sectionTitle(section: ConfigSection): string {
+  return pluginTitles.value.get(section.titleKey) ?? t(section.titleKey);
+}
+
 // --- 搜索 ---
 const searchQuery = ref('');
 
 function sectionMatches(section: ConfigSection): boolean {
-  return configSectionMatches(section, searchQuery.value, t);
+  return configSectionMatches(section, searchQuery.value, (key) =>
+    key === section.titleKey ? sectionTitle(section) : t(key));
 }
 
-const visibleSections = computed(() => sections.filter(sectionMatches));
+const visibleSections = computed(() => sections.value.filter(sectionMatches));
 
 // --- 脏值 ---
 function sectionDirty(section: ConfigSection): boolean {
@@ -217,12 +259,12 @@ function sectionDirty(section: ConfigSection): boolean {
 }
 
 const dirtySectionTitles = computed(() =>
-  sections.filter(sectionDirty).map((s) => t(s.titleKey))
+  sections.value.filter(sectionDirty).map(sectionTitle)
 );
 
 // --- 分区定位 ---
-const scrollEl = ref<HTMLElement | null>(null);
-const activeSection = ref(sections[0].id);
+const scrollEl = useTemplateRef<HTMLElement>('scrollEl');
+const activeSection = ref(baseSections[0].id);
 const sectionEls = new Map<string, HTMLElement>();
 
 function setSectionEl(id: string, el: unknown) {
@@ -230,21 +272,50 @@ function setSectionEl(id: string, el: unknown) {
   else sectionEls.delete(id);
 }
 
+// 程序化平滑滚动期间暂停 scroll-spy，避免高亮在途经的分区间跳动
+let isProgrammaticScroll = false;
+let scrollTimer: ReturnType<typeof setTimeout> | null = null;
+
+function endProgrammaticScroll() {
+  isProgrammaticScroll = false;
+  if (scrollTimer) clearTimeout(scrollTimer);
+  scrollTimer = null;
+}
+
+// 程序化滚动静止 150ms 后才恢复 scroll-spy（平滑滚动时长不固定，长距离可超过 600ms）
+function armScrollTimer() {
+  if (scrollTimer) clearTimeout(scrollTimer);
+  scrollTimer = setTimeout(endProgrammaticScroll, 150);
+}
+
 function onScroll() {
   const container = scrollEl.value;
   if (!container) return;
-  const anchor = container.scrollTop + 80;
-  let current = visibleSections.value[0]?.id ?? sections[0].id;
-  for (const section of visibleSections.value) {
-    const el = sectionEls.get(section.id);
-    if (el && el.offsetTop <= anchor) current = section.id;
+  if (isProgrammaticScroll) {
+    armScrollTimer();
+    return;
   }
-  activeSection.value = current;
+  const containerTop = container.getBoundingClientRect().top;
+  const tops = visibleSections.value.flatMap(({ id }) => {
+    const el = sectionEls.get(id);
+    return el ? [{ id, top: el.getBoundingClientRect().top - containerTop }] : [];
+  });
+  activeSection.value =
+    pickActiveSection(tops, isAtBottom(container)) ??
+    visibleSections.value[0]?.id ??
+    baseSections[0].id;
 }
 
 function jumpTo(id: string) {
   const el = sectionEls.get(id);
   if (!el) return;
+  activeSection.value = id;
+  isProgrammaticScroll = true;
+  // scrollend 不可用（Safari）或根本没有滚动时，由静止定时器兜底解除
+  armScrollTimer();
+  scrollEl.value?.addEventListener('scrollend', endProgrammaticScroll, {
+    once: true,
+  });
   const reduceMotion = window.matchMedia(
     '(prefers-reduced-motion: reduce)'
   ).matches;
@@ -252,7 +323,6 @@ function jumpTo(id: string) {
     behavior: reduceMotion ? 'auto' : 'smooth',
     block: 'start',
   });
-  activeSection.value = id;
 }
 
 // --- 保存 / 放弃 ---
@@ -320,16 +390,23 @@ onBeforeRouteLeave(() => {
           :aria-current="activeSection === s.id ? 'true' : undefined"
           @click="jumpTo(s.id)"
         >
-          <span class="rail-link-title">{{ $t(s.titleKey) }}</span>
+          <span class="rail-link-title">{{ sectionTitle(s) }}</span>
           <span
             v-if="sectionDirty(s)"
             class="dirty-dot"
             :title="$t('config.unsaved_count', 1)"
-          ></span>
+          />
         </button>
       </nav>
 
-      <div ref="scrollEl" class="config-scroll" @scroll.passive="onScroll">
+      <div
+        ref="scrollEl"
+        class="config-scroll"
+        @scroll.passive="onScroll"
+        @wheel.passive="endProgrammaticScroll"
+        @touchmove.passive="endProgrammaticScroll"
+        @pointerdown.passive="endProgrammaticScroll"
+      >
         <div v-if="visibleSections.length === 0" class="config-no-match">
           <p>{{ $t('config.no_match') }}</p>
           <ab-button size="sm" @click="searchQuery = ''">
@@ -344,7 +421,7 @@ onBeforeRouteLeave(() => {
           class="config-section"
           :class="{ 'section-dirty': sectionDirty(s) }"
         >
-          <component :is="s.component" />
+          <component :is="s.component" v-bind="s.props" />
         </div>
       </div>
     </div>
@@ -352,7 +429,7 @@ onBeforeRouteLeave(() => {
     <div class="config-actions">
       <span class="unsaved-hint" role="status">
         <template v-if="isDirty">
-          <span class="dirty-dot" aria-hidden="true"></span>
+          <span class="dirty-dot" aria-hidden="true" />
           <b>{{ $t('config.unsaved_count', dirtyGroups.length) }}</b>
           <span v-if="!isMobileOrTablet" class="unsaved-sections">
             · {{ dirtySectionTitles.join(', ') }}
@@ -388,6 +465,11 @@ onBeforeRouteLeave(() => {
   display: flex;
   flex-direction: column;
   gap: 10px;
+
+  // 保存栏与内容列同宽：rail 190 + gap 16 + 内容 860
+  @include forDesktop {
+    max-width: calc(190px + 16px + 860px);
+  }
 }
 
 .config-layout {
@@ -449,12 +531,13 @@ onBeforeRouteLeave(() => {
 .dirty-dot {
   width: 7px;
   height: 7px;
-  border-radius: var(--radius-full);
+  border-radius: 2px;
   background: var(--color-accent);
   flex-shrink: 0;
 }
 
 .config-scroll {
+  position: relative;
   flex: 1;
   min-width: 0;
   overflow-y: auto;
@@ -477,9 +560,9 @@ onBeforeRouteLeave(() => {
 .config-no-match {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
-  padding: 32px 16px;
+  padding: 16px 0;
   color: var(--color-text-secondary);
   font-size: 14px;
 }

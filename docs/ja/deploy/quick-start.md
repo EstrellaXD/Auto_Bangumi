@@ -3,6 +3,10 @@
 AutoBangumiはDockerでのデプロイを推奨しています。
 デプロイ前に、[Docker Engine][docker-engine]または[Docker Desktop][docker-desktop]がインストールされていることを確認してください。
 
+::: tip 3.3 からのアップグレード
+このページのコマンドは `latest` タグを使い、4.0 の正式版をインストールします。現在 3.3 を使っている場合は、新しいイメージを取得する前に [3.3 から 4.0 へのアップグレード](./upgrade-4.0) を読んでください。3.3 のままにする場合は、タグを `3.3.7` に固定してください。4.0 のハードリンクプラグインを使う場合は、メディアライブラリのフォルダーもコンテナにマウントする必要があります。[アニメ管理設定](../config/manager) を参照してください。
+:::
+
 ## データと設定ディレクトリの作成
 
 ABのデータと設定を更新時に永続化するために、バインドマウントまたはDockerボリュームの使用を推奨します。
@@ -112,13 +116,13 @@ ABをインストール後、WebUIは自動的に起動しますが、メイン�
 1. Webページを開きます。デフォルトのユーザー名は`admin`、デフォルトのパスワードは`adminadmin`です。初回ログイン後すぐに変更してください。
 2. ダウンローダーのアドレス、ポート、ユーザー名、パスワードを入力します。
 
-![ab-webui](/image/config/downloader.png){width=500}{class=ab-shadow-card}
+![ab-webui](/image/en/config/downloader.png){width=500}{class=ab-shadow-card}
 
 3. **適用**をクリックして設定を保存します。ABが再起動し、右上のドットが緑色になると、ABが正常に動作していることを示します。
 
 4. 右上の**+**ボタンをクリックし、**集約RSS**にチェックを入れ、パーサータイプを選択し、Mikan RSS URLを入力します。
 
-![ab-rss](/image/config/add-rss.png){width=500}{class=ab-shadow-card}
+![ab-rss](/image/en/config/add-rss.png){width=500}{class=ab-shadow-card}
 
 ABが集約RSSを解析するのを待ちます。解析が完了すると、自動的にアニメを追加し、ダウンロードを管理します。
 

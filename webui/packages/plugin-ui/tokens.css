@@ -1,0 +1,67 @@
+/*
+ * 插件组件的主题变量：在 Shadow DOM 内引入（见 template/src/index.ts）。
+ * --ab-* 是对插件稳定的名字，取宿主当前的设计令牌（webui/src/style/var.scss），
+ * CSS 变量会穿过 Shadow DOM 继承，深浅色切换自动生效。括号中的浅色值只在
+ * 宿主之外单独预览组件时使用。
+ */
+:host {
+  --ab-color-primary: var(--color-primary, #6c4ab6);
+  --ab-color-primary-hover: var(--color-primary-hover, #563a92);
+  --ab-color-primary-light: var(--color-primary-light, #e8def8);
+  --ab-color-primary-alpha: var(--color-primary-alpha, rgba(108, 74, 182, 0.2));
+  --ab-color-accent: var(--color-accent, #f97316);
+  --ab-color-success: var(--color-success, #22c55e);
+  --ab-color-danger: var(--color-danger, #ef4444);
+  --ab-color-warning: var(--color-warning, #f59e0b);
+
+  --ab-color-bg: var(--color-bg, #fafafa);
+  --ab-color-surface: var(--color-surface, #ffffff);
+  --ab-color-surface-hover: var(--color-surface-hover, #f5f5f5);
+  --ab-color-surface-2: var(--color-surface-2, #f1f4f8);
+
+  --ab-color-text: var(--color-text, #1e293b);
+  --ab-color-text-secondary: var(--color-text-secondary, #64748b);
+  --ab-color-text-muted: var(--color-text-muted, #94a3b8);
+
+  --ab-color-border: var(--color-border, #e2e8f0);
+  --ab-color-border-hover: var(--color-border-hover, #cbd5e1);
+
+  --ab-radius-sm: var(--radius-sm, 4px);
+  --ab-radius-md: var(--radius-md, 8px);
+  --ab-radius-lg: var(--radius-lg, 12px);
+  --ab-radius-full: var(--radius-full, 9999px);
+
+  --ab-shadow-sm: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
+  --ab-shadow-md: var(
+    --shadow-md,
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -2px rgba(0, 0, 0, 0.1)
+  );
+
+  --ab-transition-fast: var(--transition-fast, 150ms ease-out);
+  --ab-transition-normal: var(--transition-normal, 200ms ease-out);
+
+  --ab-font-family: var(
+    --font-family,
+    'Inter',
+    -apple-system,
+    'Noto Sans SC',
+    'Microsoft YaHei',
+    system-ui,
+    sans-serif
+  );
+  --ab-font-mono: var(
+    --font-mono,
+    ui-monospace,
+    'SF Mono',
+    SFMono-Regular,
+    Menlo,
+    Consolas,
+    monospace
+  );
+
+  /* 基础样式：字体与颜色本会从宿主继承，这里写明是为了单独预览时一致 */
+  display: block;
+  font-family: var(--ab-font-family);
+  color: var(--ab-color-text);
+}

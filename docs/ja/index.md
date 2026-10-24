@@ -18,7 +18,7 @@ hero:
       link: /ja/home/
     - theme: alt
       text: 更新履歴
-      link: /ja/changelog/3.3
+      link: /ja/changelog/4.0
 
 features:
   - icon:
@@ -28,7 +28,7 @@ features:
   - icon:
       src: /image/icons/qbittorrent-logo.svg
     title: qBittorrent / aria2 ダウンローダー
-    details: qBittorrentまたはaria2を使用してアニメをダウンロード。AutoBangumiで既存のアニメ管理、過去のエピソードのダウンロード、エントリの削除が可能です。
+    details: qBittorrentまたはaria2を使用してアニメをダウンロード。AutoBangumiで既存のアニメ管理、過去のエピソードのダウンロード、エントリの削除が可能です。4.0 からは複数のダウンローダーに同時に接続し、ルールや購読ごとに指定できます。
   - icon:
       src: /image/icons/tmdb-icon.png
     title: TMDBメタデータマッチング
@@ -36,7 +36,14 @@ features:
   - icon:
       src: /image/icons/plex-icon.png
     title: Plex / Jellyfin / Infuse ...
-    details: マッチング結果に基づいてファイル名とディレクトリ構造を自動整理。メディアライブラリソフトウェアが高い成功率でメタデータをスクレイピングできるようにします。
+    details: マッチング結果に基づいてファイル名とディレクトリ構造を自動整理。メディアライブラリソフトウェアが高い成功率でメタデータをスクレイピングできるようにします。メディアライブラリへのハードリンクや、整理完了後の Jellyfin / Emby / Plex の更新にも対応します。
+  - icon:
+      light: /image/icons/light-icon.svg
+      dark: /image/icons/dark-icon.svg
+    title: プラグイン
+    details: 4.0 から、ダウンローダー、通知チャンネル、メタデータソース、検索サイト、リネーム方式をプラグインで提供できます。SDK と ab-plugin コマンドラインで独自のプラグインを作れます。
+    link: /ja/dev/plugins
+    linkText: プラグイン開発
 ---
 
 

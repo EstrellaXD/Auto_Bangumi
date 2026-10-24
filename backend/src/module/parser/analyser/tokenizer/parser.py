@@ -770,7 +770,8 @@ def _collect_structural_candidates(collector: _CandidateCollector) -> None:
                     match=match,
                     claims=Claims(
                         season=int(match.group(1)),
-                        season_raw=match.group(0),
+                        # 只记季的写法（S03 / Season 2），不带集数（#1138）
+                        season_raw=match.string[match.start() : match.end(1)],
                         episode=start,
                         episode_end=end,
                         release_kind=ReleaseKind.RANGE,
@@ -879,7 +880,8 @@ def _collect_structural_candidates(collector: _CandidateCollector) -> None:
                     match=match,
                     claims=Claims(
                         season=int(match.group(1)),
-                        season_raw=match.group(0),
+                        # 只记季的写法（S03 / Season 2），不带集数（#1138）
+                        season_raw=match.string[match.start() : match.end(1)],
                         episode=_number(match.group(2)),
                         episode_title=episode_title,
                         version=_int(match.group(3)),
@@ -1544,7 +1546,9 @@ def _split_mixed_title(text: str) -> list[str]:
             language = (
                 "en"
                 if _LATIN.match(char)
-                else "cjk" if (_HAN.match(char) or _KANA.match(char)) else None
+                else "cjk"
+                if (_HAN.match(char) or _KANA.match(char))
+                else None
             )
             if language is not None and (not runs or runs[-1][0] != language):
                 runs.append((language, index))

@@ -1,9 +1,11 @@
 # syntax=docker/dockerfile:1
 
-FROM ghcr.io/astral-sh/uv:0.5-python3.13-alpine AS builder
+FROM ghcr.io/astral-sh/uv:0.13-python3.14-alpine AS builder
 
 WORKDIR /app
-ENV UV_LINK_MODE=copy
+# 依赖与应用源码都预编译为 .pyc，容器冷启动不再逐个编译
+ENV UV_LINK_MODE=copy \
+    UV_COMPILE_BYTECODE=1
 
 # Install dependencies (cached layer)
 COPY backend/pyproject.toml backend/uv.lock ./
@@ -11,9 +13,10 @@ RUN uv sync --frozen --no-dev
 
 # Copy application source
 COPY backend/src ./src
+RUN .venv/bin/python -m compileall -q src
 
 
-FROM python:3.13-alpine AS runtime
+FROM python:3.14-alpine AS runtime
 
 RUN apk add --no-cache \
     bash \

@@ -1,0 +1,10 @@
+[plugin]
+id = "slack-notifier"
+name = "Slack 通知"
+version = "0.1.0"
+sdk = ">=0.5,<1"
+entry = "slack_notifier:SlackNotifier"
+description = "示例插件：把通知发到 Slack 的 Incoming Webhook，带海报时附图片。在「设置 → 通知 → 添加渠道」选择类型 slack"
+authors = ["AutoBangumi"]
+permissions = ["network"]
+extension_points = ["notifier"]

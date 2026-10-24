@@ -3,6 +3,10 @@
 We recommend deploying AutoBangumi in Docker.
 Before deployment, make sure you have [Docker Engine][docker-engine] or [Docker Desktop][docker-desktop] installed.
 
+::: tip Upgrade from 3.3
+The commands on this page use the `latest` tag, which installs the 4.0 stable release. If you use 3.3 now, read [Upgrade from 3.3 to 4.0](./upgrade-4.0) before you pull the new image. To stay on 3.3, set the tag to `3.3.7`. The 4.0 hard link plugin also needs the media library directory mounted into the container. Refer to [Bangumi Manager](../config/manager).
+:::
+
 ## Create Data and Configuration Directories
 
 To ensure AB's data and configuration persist across updates, we recommend using bind mounts or Docker volumes.
@@ -112,13 +116,13 @@ After installing AB, the WebUI will start automatically, but the main program wi
 1. Open the webpage. The default username is `admin` and the default password is `adminadmin`. Change these immediately after first login.
 2. Enter your downloader's address, port, username, and password.
 
-![ab-webui](/image/config/downloader.png){width=500}{class=ab-shadow-card}
+![ab-webui](/image/en/config/downloader.png){width=500}{class=ab-shadow-card}
 
 3. Click **Apply** to save the configuration. AB will restart, and when the dot in the upper right corner turns green, it indicates AB is running normally.
 
 4. Click the **+** button in the upper right corner, check **Aggregated RSS**, select the parser type, and enter your Mikan RSS URL.
 
-![ab-rss](/image/config/add-rss.png){width=500}{class=ab-shadow-card}
+![ab-rss](/image/en/config/add-rss.png){width=500}{class=ab-shadow-card}
 
 Wait for AB to parse the aggregated RSS. Once parsing is complete, it will automatically add anime and manage downloads.
 

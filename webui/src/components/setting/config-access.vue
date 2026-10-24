@@ -17,6 +17,7 @@ import { useAccessStore } from '@/store/access';
 import { useMessage } from '@/hooks/useMessage';
 import { useMyI18n } from '@/hooks/useMyI18n';
 import { useConfirm } from '@/hooks/useConfirm';
+import { copyText } from '@/utils/clipboard';
 
 const store = useAccessStore();
 const { users, tokens, loading } = storeToRefs(store);
@@ -137,9 +138,13 @@ async function handleCreateToken(): Promise<void> {
   }
 }
 
+// 令牌只显示一次：复制失败时如实提示，令牌保持显示供手动复制
 async function copyIssuedToken(): Promise<void> {
-  await navigator.clipboard.writeText(issuedToken.value);
-  message.success(t('access.token_copied'));
+  if (await copyText(issuedToken.value)) {
+    message.success(t('access.token_copied'));
+  } else {
+    message.error(t('access.token_copy_failed'));
+  }
 }
 
 async function revokeToken(tokenId: number): Promise<void> {
@@ -164,6 +169,12 @@ function tokenOwner(userId: number): string {
   return ownerByUserId.value.get(userId) ?? t('access.unknown_user');
 }
 
+const TOKEN_STATUS_TAG = {
+  active: 'success',
+  expired: 'warning',
+  revoked: 'neutral',
+} as const;
+
 function tokenStatus(token: ApiTokenPublic): ApiTokenStatus {
   if (token.revoked_at !== null) return 'revoked';
   if (token.expires_at !== null) {
@@ -187,7 +198,9 @@ function tokenStatus(token: ApiTokenPublic): ApiTokenStatus {
         </ab-button>
       </div>
 
-      <div v-if="loading" class="empty-state">{{ $t('access.loading') }}</div>
+      <div v-if="loading" class="empty-state">
+        {{ $t('access.loading') }}
+      </div>
       <div v-else class="access-list">
         <div
           v-for="user in users"
@@ -198,9 +211,10 @@ function tokenStatus(token: ApiTokenPublic): ApiTokenStatus {
         >
           <div class="row-main">
             <strong>{{ user.username }}</strong>
-            <span class="status-dot" :class="[{ disabled: !user.enabled }]">
-              {{ user.enabled ? $t('access.enabled') : $t('access.disabled') }}
-            </span>
+            <ab-tag
+              :type="user.enabled ? 'success' : 'neutral'"
+              :title="user.enabled ? $t('access.enabled') : $t('access.disabled')"
+            />
           </div>
           <div class="row-actions">
             <ab-switch
@@ -231,7 +245,9 @@ function tokenStatus(token: ApiTokenPublic): ApiTokenStatus {
         </ab-button>
       </div>
 
-      <div v-if="loading" class="empty-state">{{ $t('access.loading') }}</div>
+      <div v-if="loading" class="empty-state">
+        {{ $t('access.loading') }}
+      </div>
       <div v-else-if="tokens.length === 0" class="empty-state">
         {{ $t('access.no_tokens') }}
       </div>
@@ -246,13 +262,13 @@ function tokenStatus(token: ApiTokenPublic): ApiTokenStatus {
           <div class="token-info">
             <div class="row-main">
               <strong>{{ token.name }}</strong>
-              <span class="scope-badge">{{ token.scope.toUpperCase() }}</span>
-              <span
-                class="token-status"
+              <ab-tag type="neutral" :title="token.scope.toUpperCase()" />
+              <ab-tag
                 :class="`token-status--${tokenStatus(token)}`"
+                :type="TOKEN_STATUS_TAG[tokenStatus(token)]"
               >
                 {{ $t(`access.token_status_${tokenStatus(token)}`) }}
-              </span>
+              </ab-tag>
             </div>
             <code>{{ token.prefix }}…</code>
             <small>
@@ -418,29 +434,13 @@ function tokenStatus(token: ApiTokenPublic): ApiTokenStatus {
   gap: 8px;
 }
 
-.status-dot,
-.scope-badge,
-.token-status {
-  padding: 2px 7px;
-  border-radius: var(--radius-full);
-  color: var(--color-primary);
-  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
-  font-size: 11px;
+.row-main .ab-tag {
+  flex-shrink: 0;
 }
 
-.status-dot.disabled {
-  color: var(--color-text-secondary);
-  background: var(--color-surface-hover);
-}
-
-.token-status--expired {
-  color: var(--color-warning);
-  background: color-mix(in srgb, var(--color-warning) 12%, transparent);
-}
-
-.token-status--revoked {
-  color: var(--color-text-secondary);
-  background: var(--color-surface-hover);
+.row-main strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .token-info {

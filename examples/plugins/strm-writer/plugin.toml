@@ -1,0 +1,9 @@
+[plugin]
+id = "strm-writer"
+name = "STRM 写入"
+version = "0.1.0"
+sdk = ">=0.5,<1"
+entry = "strm_writer:StrmWriter"
+description = "示例插件：种子整理完成后，按媒体目录结构在 STRM 目录写 .strm，内容为地址前缀加相对路径。演示 torrent.organized 事件与幂等写入"
+authors = ["AutoBangumi"]
+permissions = ["fs.write"]

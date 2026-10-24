@@ -1,29 +1,26 @@
 <script lang="ts" setup>
 // Soft Ink 通用按钮：页面中唯一的按钮词汇（禁止裸 <button> / NButton）。
 // danger 变体默认为柔和填充，hover 时升级为实色（Primer 式渐进破坏确认）。
-const props = withDefaults(
-  defineProps<{
-    variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
-    size?: 'sm' | 'md';
-    type?: 'button' | 'submit';
-    loading?: boolean;
-    disabled?: boolean;
-    block?: boolean;
-  }>(),
-  {
-    variant: 'secondary',
-    size: 'md',
-    type: 'button',
-    loading: false,
-    disabled: false,
-    block: false,
-  }
-);
+const {
+  variant = 'secondary',
+  size = 'md',
+  type = 'button',
+  loading = false,
+  disabled = false,
+  block = false,
+} = defineProps<{
+  variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
+  size?: 'sm' | 'md';
+  type?: 'button' | 'submit';
+  loading?: boolean;
+  disabled?: boolean;
+  block?: boolean;
+}>();
 
 const emit = defineEmits<{ click: [event: MouseEvent] }>();
 
 function onClick(event: MouseEvent) {
-  if (props.disabled || props.loading) return;
+  if (disabled || loading) return;
   emit('click', event);
 }
 </script>
@@ -31,20 +28,29 @@ function onClick(event: MouseEvent) {
 <template>
   <button
     class="ab-btn"
-    :class="[`ab-btn--${variant}`, `ab-btn--${size}`, block && 'ab-btn--block']"
+    :class="[
+      `ab-btn--${variant}`,
+      `ab-btn--${size}`,
+      block && 'ab-btn--block',
+      loading && 'ab-btn--loading',
+    ]"
     :type="type"
     :disabled="disabled || loading"
     :aria-busy="loading || undefined"
     @click="onClick"
   >
-    <span v-if="loading" class="ab-btn-spin" aria-hidden="true"></span>
-    <slot v-else name="icon"></slot>
-    <slot></slot>
+    <!-- loading 时文字只隐藏不移除，转圈叠在原位，按钮尺寸不变 -->
+    <span class="ab-btn-label">
+      <slot name="icon" />
+      <slot />
+    </span>
+    <span v-if="loading" class="ab-btn-spin" aria-hidden="true" />
   </button>
 </template>
 
 <style lang="scss" scoped>
 .ab-btn {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -135,7 +141,25 @@ function onClick(event: MouseEvent) {
   }
 }
 
+// 调用方写在按钮上的 gap / justify-content 透传给插槽内容；min-width:0 让内容可收缩、省略
+.ab-btn-label {
+  display: inline-flex;
+  align-items: center;
+  gap: inherit;
+  justify-content: inherit;
+  min-width: 0;
+  max-width: 100%;
+
+  // 用 opacity 而非 visibility：保留按钮的可访问名称
+  .ab-btn--loading & {
+    opacity: 0;
+  }
+}
+
 .ab-btn-spin {
+  position: absolute;
+  inset: 0;
+  margin: auto;
   width: 13px;
   height: 13px;
   flex-shrink: 0;

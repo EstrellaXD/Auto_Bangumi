@@ -197,7 +197,7 @@ class TestIssue1072VersionedEpisode:
     def test_title_without_episode_signal_remains_unparseable(self):
         assert (
             raw_parser(
-                "[SubsPlease] Haibara-kun no Tsuyokute Seishun New Game " "[1080p].mkv"
+                "[SubsPlease] Haibara-kun no Tsuyokute Seishun New Game [1080p].mkv"
             )
             is None
         )

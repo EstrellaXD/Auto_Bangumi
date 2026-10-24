@@ -1,8 +1,10 @@
 """RenameOperationDatabase — #1078 durable rename/replacement state."""
 
 from datetime import datetime, timedelta, timezone
+from typing import Any
 
 import pytest
+from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
 from module.database import Database
@@ -11,7 +13,7 @@ from module.models import RenameOperation
 
 
 def _operation(**overrides) -> RenameOperation:
-    values = {
+    values: dict[str, Any] = {
         "downloader_type": "qbittorrent",
         "kind": "replacement",
         "state": "planned",
@@ -230,10 +232,10 @@ async def test_expired_replacement_phase_lease_can_be_reclaimed(db_session):
     assert reclaimed.attempt_count == 2
 
 
-async def test_retry_query_and_done_pruning(db_session):
+async def test_conflict_query_and_done_pruning(db_session):
     repo = RenameOperationDatabase(db_session)
     now = datetime.now(timezone.utc)
-    due, _ = await repo.get_or_create(
+    await repo.get_or_create(
         _operation(state="retry", retry_at=now - timedelta(seconds=1))
     )
     await repo.get_or_create(
@@ -253,14 +255,65 @@ async def test_retry_query_and_done_pruning(db_session):
         )
     )
 
-    assert [row.id for row in await repo.list_retryable(now)] == [due.id]
     assert [row.id for row in await repo.list_conflicts()] == [conflict.id]
 
     await repo.set_state(conflict.id, "done")
     conflict.updated_at = now - timedelta(days=31)
     db_session.add(conflict)
     await db_session.commit()
-    assert await repo.prune_done(before=now - timedelta(days=30)) == 1
+    assert (
+        await repo.prune_done(
+            before=now - timedelta(days=30),
+            live_task_ids={"conflict-v4"},
+            downloader_type=None,
+        )
+        == 1
+    )
+
+
+@pytest.mark.parametrize(
+    ("live_task_ids", "downloader_type", "pruned"),
+    [
+        ({"new-v2"}, None, False),
+        ({"other-task"}, None, True),
+        (set(), None, False),
+        ({"other-task"}, "qbittorrent", True),
+        ({"other-task"}, "aria2", False),
+    ],
+    ids=[
+        "task-present",
+        "task-gone",
+        "empty-snapshot",
+        "same-instance",
+        "other-instance",
+    ],
+)
+async def test_prune_done_unchanged_path_rows_only_when_task_gone(
+    db_session, live_task_ids, downloader_type, pruned
+):
+    """路径未变（重命名方式 none）的 done 记录是只通知一次的依据：任务仍在、
+    快照为空或属于别的实例时保留，任务已从该实例删除时清理（#1082）。"""
+    repo = RenameOperationDatabase(db_session)
+    now = datetime.now(timezone.utc)
+    row, _ = await repo.get_or_create(
+        _operation(
+            kind="conflict",
+            state="done",
+            source_path="Anime - 01.mkv",
+            target_path="Anime - 01.mkv",
+        )
+    )
+    row.updated_at = now - timedelta(days=31)
+    db_session.add(row)
+    await db_session.commit()
+
+    assert await repo.prune_done(
+        before=now - timedelta(days=30),
+        live_task_ids=live_task_ids,
+        downloader_type=downloader_type,
+    ) == int(pruned)
+    db_session.expunge_all()
+    assert (await repo.get(row.id) is None) is pruned
 
 
 async def test_database_facade_exposes_rename_operation_repository(db_engine):
@@ -268,3 +321,28 @@ async def test_database_facade_exposes_rename_operation_repository(db_engine):
         row, created = await db.rename_operation.get_or_create(_operation())
         assert created is True
         assert await db.rename_operation.get(row.id) is not None
+
+
+async def test_get_by_target_active_filter_uses_partial_unique_index(db_session):
+    """state 过滤必须写成 NOT IN ('done')，才能命中同样条件的部分唯一索引。"""
+    repo = RenameOperationDatabase(db_session)
+    captured: list[Any] = []
+    original = db_session.execute
+
+    async def spy(statement, *args, **kwargs):
+        captured.append(statement)
+        return await original(statement, *args, **kwargs)
+
+    db_session.execute = spy  # type: ignore[method-assign]
+    await repo.get_by_target(
+        downloader_type="qbittorrent", save_path="/d", target_path="t.mp4"
+    )
+    db_session.execute = original  # type: ignore[method-assign]
+
+    plan = await db_session.execute(
+        text(
+            "EXPLAIN QUERY PLAN "
+            + str(captured[0].compile(compile_kwargs={"literal_binds": True}))
+        )
+    )
+    assert "ux_rename_operation_active_target" in " ".join(r[3] for r in plan)

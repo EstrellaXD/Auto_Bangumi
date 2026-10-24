@@ -1,18 +1,15 @@
 <script lang="ts" setup>
-withDefaults(
-  defineProps<{
-    title: string;
-  }>(),
-  {
-    title: 'title',
-  }
-);
+const { title = 'title' } = defineProps<{
+  title: string;
+}>();
 </script>
 
 <template>
   <div class="page-title">
-    <h1 class="page-title-text">{{ title }}</h1>
-    <div class="page-title-accent"></div>
+    <h1 class="page-title-text">
+      {{ title }}
+    </h1>
+    <div class="page-title-accent" />
   </div>
 </template>
 

@@ -6,9 +6,6 @@ python3 -m venv venv
 
 ./venv/bin/python3 -m pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements-dev.txt
 
-# install git-hooks for pre-commit before committing.
-./venv/bin/pre-commit install
-
 cd src || exit
 
 CONFIG_DIR="config"

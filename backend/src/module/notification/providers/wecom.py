@@ -17,8 +17,7 @@ class WecomProvider(NotificationProvider):
 
     def __init__(self, config: "ProviderConfig"):
         super().__init__(config)
-        # Support both webhook_url and legacy chat_id field
-        self.notification_url = config.webhook_url or config.chat_id
+        self.notification_url = config.webhook_url
         self.token = config.token
 
     async def send(self, notification: Notification) -> bool:

@@ -1,4 +1,3 @@
-import { omit } from 'radash';
 import type {
   BangumiAPI,
   BangumiRule,
@@ -37,7 +36,7 @@ export const apiBangumi = {
       filter: bangumiRule.filter.join(','),
       rss_link: bangumiRule.rss_link.join(','),
     };
-    const post = omit(rule, ['id']);
+    const { id: _id, ...post } = rule;
     const { data } = await axios.patch<ApiSuccess>(
       `api/v1/bangumi/update/${bangumiId}`,
       post

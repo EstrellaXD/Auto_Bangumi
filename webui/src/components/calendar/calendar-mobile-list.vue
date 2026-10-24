@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ErrorPicture } from '@icon-park/vue-next';
+import { ImageOff } from '@lucide/vue';
 import type { BangumiGroup } from './types';
 
 const props = defineProps<{
@@ -7,7 +7,6 @@ const props = defineProps<{
   groupedByDay: Record<string, BangumiGroup[]>;
   todayIndex: number;
   getDayLabel: (key: string) => string;
-  hasBangumi: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -28,8 +27,8 @@ function posterSrc(link: string | null | undefined): string {
     <template v-for="(key, index) in dayKeys" :key="key">
       <div
         v-if="groupedByDay[key].length > 0"
-        class="calendar-section anim-slide-up"
-        :style="{ '--delay': `${index * 0.05}s` }"
+        class="calendar-section calendar-enter"
+        :style="{ '--delay': `${index * 0.03}s` }"
       >
         <!-- Day divider -->
         <div
@@ -42,7 +41,7 @@ function posterSrc(link: string | null | undefined): string {
           <span class="calendar-section-label">{{ getDayLabel(key) }}</span>
           <span
             v-if="key !== 'unknown' && isToday(index)"
-            class="calendar-today-badge calendar-today-badge--small"
+            class="calendar-today-mark"
           >
             {{ $t('calendar.today') }}
           </span>
@@ -68,17 +67,19 @@ function posterSrc(link: string | null | undefined): string {
                 :alt="group.primary.official_title"
                 class="calendar-row-img"
                 loading="lazy"
-              />
+              >
               <div v-else class="calendar-row-placeholder">
-                <ErrorPicture theme="outline" size="16" />
+                <ImageOff :size="16" />
               </div>
             </div>
             <div class="calendar-row-info">
               <div class="calendar-row-title">
-                {{ group.primary.official_title }}
-                <span v-if="group.rules.length > 1" class="calendar-row-badge">
-                  {{ group.rules.length }}
-                </span>
+                <span class="calendar-row-title-text">{{ group.primary.official_title }}</span>
+                <ab-badge
+                  v-if="group.rules.length > 1"
+                  class="calendar-row-badge"
+                  :count="group.rules.length"
+                />
               </div>
               <div class="calendar-row-meta">
                 <ab-tag :title="`S${group.primary.season}`" type="info" />
@@ -93,14 +94,6 @@ function posterSrc(link: string | null | undefined): string {
         </div>
       </div>
     </template>
-
-    <!-- All days empty on mobile -->
-    <div
-      v-if="!hasBangumi"
-      class="calendar-empty-day calendar-empty-day--mobile"
-    >
-      {{ $t('calendar.no_data') }}
-    </div>
   </div>
 </template>
 
@@ -126,33 +119,37 @@ function posterSrc(link: string | null | undefined): string {
   transition: border-color var(--transition-normal);
 
   &--today {
-    border-bottom-color: var(--color-primary);
+    border-bottom-color: var(--color-accent);
   }
 }
 
 .calendar-section-label {
   font-size: 13px;
   font-weight: 600;
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
   letter-spacing: 0.3px;
   transition: color var(--transition-normal);
 
   .calendar-section-header--today & {
-    color: var(--color-primary);
+    color: var(--color-text);
   }
 }
 
-.calendar-today-badge {
+// 今天：accent 方块标记 + 墨色文字（DESIGN：accent 只用于日历的今天）
+.calendar-today-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   font-size: 11px;
   font-weight: 500;
-  color: var(--color-primary);
-  background: var(--color-primary-light);
-  padding: 1px 6px;
-  border-radius: var(--radius-full);
+  color: var(--color-text);
 
-  &--small {
-    font-size: 10px;
-    padding: 0 5px;
+  &::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    background: var(--color-accent);
   }
 }
 
@@ -171,13 +168,19 @@ function posterSrc(link: string | null | undefined): string {
   user-select: none;
   transition: background-color var(--transition-fast);
 
-  &:hover {
-    background: var(--color-surface-hover);
+  @media (hover: hover) {
+    &:hover {
+      background: var(--color-surface-2);
+    }
+  }
+
+  &:active {
+    background: var(--color-surface-2);
   }
 
   &:focus-visible {
     outline: 2px solid var(--color-primary);
-    outline-offset: 2px;
+    outline-offset: -2px;
   }
 }
 
@@ -216,11 +219,17 @@ function posterSrc(link: string | null | undefined): string {
   font-size: 14px;
   font-weight: 500;
   color: var(--color-text);
+  display: flex;
+  align-items: center;
+  margin-bottom: 4px;
+  transition: color var(--transition-normal);
+}
+
+.calendar-row-title-text {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  margin-bottom: 4px;
-  transition: color var(--transition-normal);
 }
 
 .calendar-row-meta {
@@ -230,53 +239,7 @@ function posterSrc(link: string | null | undefined): string {
 }
 
 .calendar-row-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
+  flex-shrink: 0;
   margin-left: 6px;
-  border-radius: 9px;
-  background: var(--color-badge-bg);
-  color: var(--color-white);
-  font-size: 11px;
-  font-weight: 600;
-  vertical-align: middle;
-}
-
-.calendar-empty-day {
-  font-size: 12px;
-  color: var(--color-text-muted);
-  text-align: center;
-  padding: 12px 4px;
-  transition: color var(--transition-normal);
-
-  &--mobile {
-    padding: 32px 16px;
-    font-size: 14px;
-  }
-}
-
-.anim-slide-up {
-  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
-  animation-delay: var(--delay, 0s);
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .anim-slide-up {
-    animation: none;
-  }
 }
 </style>

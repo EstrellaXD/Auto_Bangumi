@@ -8,7 +8,7 @@ from unittest.mock import patch
 import pytest
 
 from module.conf import settings
-from module.models import Movie, Torrent
+from module.models import Movie, RSSItem, Torrent
 from module.models.config import LLM
 from module.parser.analyser import selector
 from module.parser.analyser.selector import parse_configured_release_title
@@ -97,8 +97,8 @@ async def test_rss_to_data_keeps_one_parser_engine_across_awaits(
     torrent = Torrent(name="resource", url="https://example.com/resource")
     analyser = RSSAnalyser()
 
-    async def get_rss_torrents(rss_link: str, full_parse: bool = True):
-        return [torrent]
+    async def check_new(torrents, rss: RSSItem | None = None):
+        return torrents
 
     async def match_movies(torrents, rss_link: str):
         assert parse_configured_release_title(torrent.name) is classic_release
@@ -107,7 +107,7 @@ async def test_rss_to_data_keeps_one_parser_engine_across_awaits(
         assert parse_configured_release_title(torrent.name) is classic_release
         return torrents
 
-    async def match_bangumi(torrents, rss_link: str):
+    async def match_bangumi(torrents, rss_link: str, match_datas):
         assert parse_configured_release_title(torrent.name) is classic_release
         return torrents
 
@@ -115,19 +115,19 @@ async def test_rss_to_data_keeps_one_parser_engine_across_awaits(
         assert parse_configured_release_title(torrent.name) is classic_release
         return [], []
 
-    monkeypatch.setattr(analyser, "get_rss_torrents", get_rss_torrents)
     monkeypatch.setattr(analyser, "torrents_to_data", torrents_to_data)
     engine = cast(
         RSSEngine,
         SimpleNamespace(
             db=SimpleNamespace(
+                torrent=SimpleNamespace(check_new=check_new),
                 movie=SimpleNamespace(match_list=match_movies),
                 bangumi=SimpleNamespace(match_list=match_bangumi),
             )
         ),
     )
 
-    await analyser.rss_to_data(make_rss_item(parser="none"), engine)
+    await analyser.rss_to_data(make_rss_item(parser="none"), [torrent], engine, [])
 
     # The task-local scope is gone, so a later workflow sees the new setting.
     assert parse_configured_release_title(torrent.name) is preview_release

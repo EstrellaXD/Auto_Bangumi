@@ -12,5 +12,5 @@ from .rename_operation import (
 )
 from .response import APIResponse, ResponseModel
 from .rss import RSSItem, RSSUpdate
-from .torrent import EpisodeFile, SubtitleFile, Torrent, TorrentUpdate
-from .user import User, UserLogin, UserUpdate
+from .torrent import EpisodeFile, SubtitleFile, Torrent
+from .user import User, UserUpdate

@@ -1,9 +1,9 @@
 import logging
 import re
 from collections import OrderedDict
+from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup
-from urllib3.util import parse_url
 
 from module.network import RequestContent
 from module.utils import save_image
@@ -32,7 +32,7 @@ def _cache_result(homepage: str, result: tuple[str, str]) -> tuple[str, str]:
 async def mikan_parser(homepage: str):
     if homepage in _mikan_cache:
         return _mikan_cache[homepage]
-    root_path = parse_url(homepage).host
+    root_path = urlparse(homepage).hostname
     async with RequestContent() as req:
         content = await req.get_html(homepage)
         # get_html returns None on a failed fetch; feed BeautifulSoup an empty

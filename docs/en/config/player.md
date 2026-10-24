@@ -2,7 +2,7 @@
 
 Player settings control the **Player** page in the sidebar.
 
-![player](/image/config/player.png){width=700}{class=ab-shadow-card}
+![player](/image/en/config/player.png){width=700}{class=ab-shadow-card}
 
 - **Type**:
   - `jump`: opening the Player page jumps to the external media server.

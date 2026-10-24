@@ -1,0 +1,9 @@
+[plugin]
+id = "media-server-refresh"
+name = "媒体库刷新"
+version = "1.0.0"
+sdk = ">=0.4,<1"
+entry = "media_server_refresh:MediaServerRefresh"
+description = "种子整理完成后通知 Jellyfin / Emby / Plex 刷新媒体库；填写服务器地址与 API Key 后生效"
+authors = ["AutoBangumi"]
+permissions = ["network"]

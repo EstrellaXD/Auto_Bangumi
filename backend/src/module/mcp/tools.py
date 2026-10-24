@@ -1,178 +1,26 @@
-import json
-import logging
+"""内置 MCP 工具：参数 schema 由类型注解生成。
 
-from mcp import types
+``structured_output=False``：结果由 ``AutoBangumiMCP.call_tool`` 序列化为一段
+JSON 文本，不声明 outputSchema。
+"""
+
+import json
+from typing import Annotated, Literal
+
+from pydantic import Field
 
 from module.conf import VERSION
 from module.database import Database
-from module.downloader import DownloadClient
+from module.downloader import DownloaderPool, list_torrents
 from module.manager import SeasonCollector, TorrentManager
 from module.models import Bangumi, BangumiUpdate, RSSItem
 from module.rss import RSSAnalyser, RSSEngine
 from module.searcher import SearchTorrent
 
 from .runtime import get_context
+from .server import mcp
 
-logger = logging.getLogger(__name__)
-
-TOOLS = [
-    types.Tool(
-        name="list_anime",
-        description="List all tracked anime subscriptions. Returns title, season, status, and episode offset for each.",
-        inputSchema={
-            "type": "object",
-            "properties": {
-                "active_only": {
-                    "type": "boolean",
-                    "description": "If true, only return active (non-disabled) anime",
-                    "default": False,
-                },
-            },
-        },
-    ),
-    types.Tool(
-        name="get_anime",
-        description="Get detailed information about a specific anime subscription by its ID.",
-        inputSchema={
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "integer",
-                    "description": "The anime/bangumi ID",
-                },
-            },
-            "required": ["id"],
-        },
-    ),
-    types.Tool(
-        name="search_anime",
-        description="Search for anime torrents across torrent sites (Mikan, DMHY, Nyaa). Returns available anime matching the keywords.",
-        inputSchema={
-            "type": "object",
-            "properties": {
-                "keywords": {
-                    "type": "string",
-                    "description": "Search keywords (e.g. anime title)",
-                },
-                "site": {
-                    "type": "string",
-                    "description": "Torrent site to search",
-                    "enum": ["mikan", "dmhy", "nyaa"],
-                    "default": "mikan",
-                },
-            },
-            "required": ["keywords"],
-        },
-    ),
-    types.Tool(
-        name="subscribe_anime",
-        description="Subscribe to an anime series by providing its RSS link. Analyzes the RSS feed and sets up automatic downloading.",
-        inputSchema={
-            "type": "object",
-            "properties": {
-                "rss_link": {
-                    "type": "string",
-                    "description": "RSS feed URL for the anime (obtained from search_anime results)",
-                },
-                "parser": {
-                    "type": "string",
-                    "description": "RSS parser type",
-                    "enum": ["mikan", "dmhy", "nyaa"],
-                    "default": "mikan",
-                },
-            },
-            "required": ["rss_link"],
-        },
-    ),
-    types.Tool(
-        name="unsubscribe_anime",
-        description="Unsubscribe from an anime. Can either disable (keeps data) or fully delete the subscription.",
-        inputSchema={
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "integer",
-                    "description": "The anime/bangumi ID to unsubscribe",
-                },
-                "delete": {
-                    "type": "boolean",
-                    "description": "If true, permanently delete the subscription. If false, just disable it.",
-                    "default": False,
-                },
-            },
-            "required": ["id"],
-        },
-    ),
-    types.Tool(
-        name="list_downloads",
-        description="Show current torrent download status from the download client (qBittorrent/Aria2).",
-        inputSchema={
-            "type": "object",
-            "properties": {
-                "status": {
-                    "type": "string",
-                    "description": "Filter by download status",
-                    "enum": ["all", "downloading", "completed", "paused"],
-                    "default": "all",
-                },
-            },
-        },
-    ),
-    types.Tool(
-        name="list_rss_feeds",
-        description="List all configured RSS feeds with their connection status and health information.",
-        inputSchema={
-            "type": "object",
-            "properties": {},
-        },
-    ),
-    types.Tool(
-        name="get_program_status",
-        description="Get the current program status including version, running state, and first-run flag.",
-        inputSchema={
-            "type": "object",
-            "properties": {},
-        },
-    ),
-    types.Tool(
-        name="refresh_feeds",
-        description="Trigger an immediate refresh of all RSS feeds to check for new episodes.",
-        inputSchema={
-            "type": "object",
-            "properties": {},
-        },
-    ),
-    types.Tool(
-        name="update_anime",
-        description="Update settings for a tracked anime (episode offset, season offset, filters, etc.).",
-        inputSchema={
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "integer",
-                    "description": "The anime/bangumi ID to update",
-                },
-                "episode_offset": {
-                    "type": "integer",
-                    "description": "Episode number offset for renaming",
-                },
-                "season_offset": {
-                    "type": "integer",
-                    "description": "Season number offset for renaming",
-                },
-                "season": {
-                    "type": "integer",
-                    "description": "Season number",
-                },
-                "filter": {
-                    "type": "string",
-                    "description": "Comma-separated filter patterns to exclude",
-                },
-            },
-            "required": ["id"],
-        },
-    ),
-]
+Site = Literal["mikan", "dmhy", "nyaa"]
 
 
 def _bangumi_to_dict(b: Bangumi) -> dict:
@@ -198,47 +46,16 @@ def _bangumi_to_dict(b: Bangumi) -> dict:
     }
 
 
-async def handle_tool(name: str, arguments: dict) -> list[types.TextContent]:
-    try:
-        result = await _dispatch(name, arguments)
-        return [
-            types.TextContent(type="text", text=json.dumps(result, ensure_ascii=False))
-        ]
-    except Exception as e:
-        logger.exception("Tool %s failed", name)
-        return [
-            types.TextContent(
-                type="text", text=json.dumps({"error": str(e)}, ensure_ascii=False)
-            )
-        ]
-
-
-async def _dispatch(name: str, args: dict) -> dict | list:
-    if name == "list_anime":
-        return await _list_anime(args.get("active_only", False))
-    elif name == "get_anime":
-        return await _get_anime(args["id"])
-    elif name == "search_anime":
-        return await _search_anime(args["keywords"], args.get("site", "mikan"))
-    elif name == "subscribe_anime":
-        return await _subscribe_anime(args["rss_link"], args.get("parser", "mikan"))
-    elif name == "unsubscribe_anime":
-        return await _unsubscribe_anime(args["id"], args.get("delete", False))
-    elif name == "list_downloads":
-        return await _list_downloads(args.get("status", "all"))
-    elif name == "list_rss_feeds":
-        return await _list_rss_feeds()
-    elif name == "get_program_status":
-        return _get_program_status()
-    elif name == "refresh_feeds":
-        return await _refresh_feeds()
-    elif name == "update_anime":
-        return await _update_anime(args)
-    else:
-        return {"error": f"Unknown tool: {name}"}
-
-
-async def _list_anime(active_only: bool) -> list[dict]:
+@mcp.tool(
+    description="List all tracked anime subscriptions. Returns title, season, status, and episode offset for each.",
+    structured_output=False,
+)
+async def list_anime(
+    active_only: Annotated[
+        bool,
+        Field(description="If true, only return active (non-disabled) anime"),
+    ] = False,
+) -> list[dict]:
     async with Database() as db:
         manager = TorrentManager(db)
         if active_only:
@@ -248,16 +65,29 @@ async def _list_anime(active_only: bool) -> list[dict]:
     return [_bangumi_to_dict(b) for b in items]
 
 
-async def _get_anime(bangumi_id: int) -> dict:
+@mcp.tool(
+    description="Get detailed information about a specific anime subscription by its ID.",
+    structured_output=False,
+)
+async def get_anime(
+    id: Annotated[int, Field(description="The anime/bangumi ID")],
+) -> dict:
     async with Database() as db:
         manager = TorrentManager(db)
-        result = await manager.search_one(bangumi_id)
+        result = await manager.search_one(id)
     if isinstance(result, Bangumi):
         return _bangumi_to_dict(result)
     return {"error": result.msg_en}
 
 
-async def _search_anime(keywords: str, site: str) -> list[dict]:
+@mcp.tool(
+    description="Search for anime torrents across torrent sites (Mikan, DMHY, Nyaa). Returns available anime matching the keywords.",
+    structured_output=False,
+)
+async def search_anime(
+    keywords: Annotated[str, Field(description="Search keywords (e.g. anime title)")],
+    site: Annotated[Site, Field(description="Torrent site to search")] = "mikan",
+) -> list[dict]:
     keyword_list = keywords.split()
     results = []
     st = SearchTorrent()
@@ -268,7 +98,19 @@ async def _search_anime(keywords: str, site: str) -> list[dict]:
     return results
 
 
-async def _subscribe_anime(rss_link: str, parser: str) -> dict:
+@mcp.tool(
+    description="Subscribe to an anime series by providing its RSS link. Analyzes the RSS feed and sets up automatic downloading.",
+    structured_output=False,
+)
+async def subscribe_anime(
+    rss_link: Annotated[
+        str,
+        Field(
+            description="RSS feed URL for the anime (obtained from search_anime results)"
+        ),
+    ],
+    parser: Annotated[Site, Field(description="RSS parser type")] = "mikan",
+) -> dict:
     analyser = RSSAnalyser()
     rss = RSSItem(url=rss_link, parser=parser)
     data = await analyser.link_to_data(rss)
@@ -278,22 +120,40 @@ async def _subscribe_anime(rss_link: str, parser: str) -> dict:
     return {"status": resp.status, "message": resp.msg_en}
 
 
-async def _unsubscribe_anime(bangumi_id: int, delete: bool) -> dict:
+@mcp.tool(
+    description="Unsubscribe from an anime. Can either disable (keeps data) or fully delete the subscription.",
+    structured_output=False,
+)
+async def unsubscribe_anime(
+    id: Annotated[int, Field(description="The anime/bangumi ID to unsubscribe")],
+    delete: Annotated[
+        bool,
+        Field(
+            description="If true, permanently delete the subscription. If false, just disable it."
+        ),
+    ] = False,
+) -> dict:
     async with Database() as db:
         manager = TorrentManager(db)
         if delete:
-            resp = await manager.delete_rule(bangumi_id)
+            resp = await manager.delete_rule(id)
         else:
-            resp = await manager.disable_rule(bangumi_id)
+            resp = await manager.disable_rule(id)
     return {"status": resp.status, "message": resp.msg_en}
 
 
-async def _list_downloads(status: str) -> list[dict]:
+@mcp.tool(
+    description="Show current torrent download status from the download client (qBittorrent/Aria2).",
+    structured_output=False,
+)
+async def list_downloads(
+    status: Annotated[
+        Literal["all", "downloading", "completed", "paused"],
+        Field(description="Filter by download status"),
+    ] = "all",
+) -> list[dict]:
     status_filter = None if status == "all" else status
-    async with DownloadClient() as client:
-        torrents = await client.get_torrent_info(
-            status_filter=status_filter, category="Bangumi"
-        )
+    torrents = await list_torrents(status_filter) or []
     return [
         {
             "name": t.get("name", ""),
@@ -303,12 +163,17 @@ async def _list_downloads(status: str) -> list[dict]:
             "dlspeed": t.get("dlspeed", 0),
             "upspeed": t.get("upspeed", 0),
             "eta": t.get("eta", 0),
+            "downloader": t["downloader_id"],
         }
         for t in torrents
     ]
 
 
-async def _list_rss_feeds() -> list[dict]:
+@mcp.tool(
+    description="List all configured RSS feeds with their connection status and health information.",
+    structured_output=False,
+)
+async def list_rss_feeds() -> list[dict]:
     async with Database() as db:
         feeds = await db.rss.search_all()
     return [
@@ -327,7 +192,11 @@ async def _list_rss_feeds() -> list[dict]:
     ]
 
 
-def _get_program_status() -> dict:
+@mcp.tool(
+    description="Get the current program status including version, running state, and first-run flag.",
+    structured_output=False,
+)
+def get_program_status() -> dict:
     ctx = get_context()
     return {
         "version": VERSION,
@@ -336,31 +205,50 @@ def _get_program_status() -> dict:
     }
 
 
-async def _refresh_feeds() -> dict:
-    async with DownloadClient() as client:
+@mcp.tool(
+    description="Trigger an immediate refresh of all RSS feeds to check for new episodes.",
+    structured_output=False,
+)
+async def refresh_feeds() -> dict:
+    async with DownloaderPool() as downloaders:
         async with Database() as db:
             engine = RSSEngine(db)
-            await engine.refresh_rss(client)
+            await engine.refresh_rss(downloaders)
     return {"status": True, "message": "RSS feeds refreshed successfully"}
 
 
-async def _update_anime(args: dict) -> dict:
-    bangumi_id = args["id"]
+@mcp.tool(
+    description="Update settings for a tracked anime (episode offset, season offset, filters, etc.).",
+    structured_output=False,
+)
+async def update_anime(
+    id: Annotated[int, Field(description="The anime/bangumi ID to update")],
+    episode_offset: Annotated[
+        int | None, Field(description="Episode number offset for renaming")
+    ] = None,
+    season_offset: Annotated[
+        int | None, Field(description="Season number offset for renaming")
+    ] = None,
+    season: Annotated[int | None, Field(description="Season number")] = None,
+    filter: Annotated[
+        str | None, Field(description="Comma-separated filter patterns to exclude")
+    ] = None,
+) -> dict:
     async with Database() as db:
         manager = TorrentManager(db)
-        existing = await db.bangumi.search_id(bangumi_id)
+        existing = await db.bangumi.search_id(id)
         if not existing:
-            return {"error": f"Anime with id {bangumi_id} not found"}
+            return {"error": f"Anime with id {id} not found"}
 
         update_data = BangumiUpdate(**existing.model_dump())
-        if "episode_offset" in args:
-            update_data.episode_offset = args["episode_offset"]
-        if "season_offset" in args:
-            update_data.season_offset = args["season_offset"]
-        if "season" in args:
-            update_data.season = args["season"]
-        if "filter" in args:
-            update_data.filter = args["filter"]
+        if episode_offset is not None:
+            update_data.episode_offset = episode_offset
+        if season_offset is not None:
+            update_data.season_offset = season_offset
+        if season is not None:
+            update_data.season = season
+        if filter is not None:
+            update_data.filter = filter
 
-        resp = await manager.update_rule(bangumi_id, update_data)
+        resp = await manager.update_rule(id, update_data)
     return {"status": resp.status, "message": resp.msg_en}

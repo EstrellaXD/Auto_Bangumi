@@ -106,7 +106,7 @@ test('API and MCP tokens are isolated and Bearer cannot control accounts', async
     await bearerApi.bearerGet('/api/v1/users', apiToken.token, 403);
     await bearerApi.bearerGet('/api/v1/tokens', apiToken.token, 403);
     await bearerApi.bearerGet('/api/v1/bangumi/get/all', mcpToken.token, 401);
-    await bearerApi.bearerGet('/mcp/sse', apiToken.token, 403);
+    await bearerApi.bearerGet('/mcp', apiToken.token, 403);
 
     // An explicit invalid Authorization header must beat the valid admin cookie.
     await api.bearerGet('/api/v1/bangumi/get/all', mcpToken.token, 401);
@@ -114,8 +114,23 @@ test('API and MCP tokens are isolated and Bearer cannot control accounts', async
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
     try {
-      const response = await fetch(`${environment.baseURL}/mcp/sse`, {
-        headers: { Authorization: `Bearer ${mcpToken.token}` },
+      const response = await fetch(`${environment.baseURL}/mcp`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${mcpToken.token}`,
+          Accept: 'application/json, text/event-stream',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'initialize',
+          params: {
+            protocolVersion: '2025-06-18',
+            capabilities: {},
+            clientInfo: { name: 'e2e', version: '0' },
+          },
+        }),
         signal: controller.signal,
       });
       expect(response.status).toBe(200);

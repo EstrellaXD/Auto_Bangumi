@@ -15,16 +15,28 @@ from module.searcher.provider import search_url
 # ---------------------------------------------------------------------------
 
 
+MIKAN_SITE = {"url": "https://mikanani.me/RSS/Search?searchstr=%s", "parser": "mikan"}
+
+
 class TestSearchUrl:
     @pytest.fixture(autouse=True)
     def mock_search_config(self):
         """Ensure SEARCH_CONFIG has default providers."""
         config = {
-            "mikan": "https://mikanani.me/RSS/Search?searchstr=%s",
-            "nyaa": "https://nyaa.si/?page=rss&q=%s&c=0_0&f=0",
-            "dmhy": "http://dmhy.org/topics/rss/rss.xml?keyword=%s",
+            "mikan": {
+                "url": "https://mikanani.me/RSS/Search?searchstr=%s",
+                "parser": "mikan",
+            },
+            "nyaa": {
+                "url": "https://nyaa.si/?page=rss&q=%s&c=0_0&f=0",
+                "parser": "tmdb",
+            },
+            "dmhy": {
+                "url": "http://dmhy.org/topics/rss/rss.xml?keyword=%s",
+                "parser": "tmdb",
+            },
         }
-        with patch("module.searcher.provider.SEARCH_CONFIG", config):
+        with patch("module.searcher.provider.get_provider", return_value=config):
             yield
 
     def test_mikan_url(self):
@@ -128,10 +140,8 @@ class TestSpecialUrl:
         )
 
         with patch(
-            "module.searcher.provider.SEARCH_CONFIG",
-            {
-                "mikan": "https://mikanani.me/RSS/Search?searchstr=%s",
-            },
+            "module.searcher.provider.get_provider",
+            return_value={"mikan": MIKAN_SITE},
         ):
             result = SearchTorrent.special_url(bangumi, "mikan")
 
@@ -155,15 +165,87 @@ class TestSpecialUrl:
         )
 
         with patch(
-            "module.searcher.provider.SEARCH_CONFIG",
-            {
-                "mikan": "https://mikanani.me/RSS/Search?searchstr=%s",
-            },
+            "module.searcher.provider.get_provider",
+            return_value={"mikan": MIKAN_SITE},
         ):
             result = SearchTorrent.special_url(bangumi, "mikan")
 
         # Only title_raw should be in the URL
         assert "Test" in result.url
+
+    @pytest.mark.parametrize(
+        ("title", "keyword"),
+        [
+            (
+                "[ToonsHub] The Apothecary Diaries S03E02 Multi Subs NF WEB-DL 1080p",
+                "ToonsHub+The+Apothecary+Diaries+S03+Multi+Subs+NF+1080p",
+            ),
+            (
+                "[ToonsHub] The Apothecary Diaries S03 E02 1080p NF WEB-DL",
+                "ToonsHub+The+Apothecary+Diaries+S03+NF+1080p",
+            ),
+            (
+                "[ANi] 葬送的芙莉莲 第二季 - 05 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]",
+                "ANi+葬送的芙莉莲+第二季+CHT+Baha+1080P",
+            ),
+            (
+                "[Lilith-Raws] Kusuriya no Hitorigoto S2 - 05 [Baha][WebDL 1080p AVC AAC][CHT]",
+                "Lilith+Raws+Kusuriya+no+Hitorigoto+S2+CHT+Baha+1080p",
+            ),
+            (
+                "[SubsPlease] Spy x Family Season 2 - 05 (1080p) [ABCDEF12].mkv",
+                "SubsPlease+Spy+x+Family+Season+2+1080p",
+            ),
+            (
+                "[Erai-raws] Mushoku Tensei 2nd Season - 05 [1080p][Multiple Subtitle]",
+                "Erai+raws+Mushoku+Tensei+2nd+Season+Multiple+Subtitle+1080p",
+            ),
+        ],
+    )
+    async def test_keyword_keeps_season_but_drops_episode(self, title, keyword):
+        """搜索结果生成订阅时关键词保留季、去掉集数，订阅才能收到后续集（#1138）。"""
+        from module.parser.title_parser import TitleParser
+        from module.searcher.searcher import SearchTorrent
+
+        bangumi = await TitleParser.raw_parser(title)
+        assert isinstance(bangumi, Bangumi)
+        with patch(
+            "module.searcher.provider.get_provider",
+            return_value={"nyaa": {"url": "https://nyaa.si/?q=%s", "parser": "tmdb"}},
+        ):
+            result = SearchTorrent.special_url(bangumi, "nyaa")
+
+        assert result.url == f"https://nyaa.si/?q={keyword}"
+
+    @pytest.mark.parametrize(
+        ("season_raw", "keyword"),
+        [
+            ("S03E02", "S03"),
+            ("Season 3 Episode 2", "Season+3"),
+            ("S03E01-E03", "S03"),
+            ("Season 2 EPs 01-12", "Season+2"),
+        ],
+    )
+    def test_legacy_season_raw_drops_episode(self, season_raw, keyword):
+        """旧版本存进数据库的季集合写 season_raw，生成关键词时只保留季（#1138）。"""
+        from module.searcher.searcher import SearchTorrent
+        from test.factories import make_bangumi
+
+        bangumi = make_bangumi(
+            group_name=None,
+            title_raw="Test",
+            season_raw=season_raw,
+            dpi=None,
+            source=None,
+            subtitle=None,
+        )
+        with patch(
+            "module.searcher.provider.get_provider",
+            return_value={"nyaa": {"url": "https://nyaa.si/?q=%s", "parser": "tmdb"}},
+        ):
+            result = SearchTorrent.special_url(bangumi, "nyaa")
+
+        assert result.url == f"https://nyaa.si/?q=Test+{keyword}"
 
     def test_supports_movie_without_season_fields(self):
         """Movie search results do not expose Bangumi-only season fields."""
@@ -176,8 +258,8 @@ class TestSpecialUrl:
             dpi="1080p",
         )
         with patch(
-            "module.searcher.provider.SEARCH_CONFIG",
-            {"mikan": "https://mikanani.me/RSS/Search?searchstr=%s"},
+            "module.searcher.provider.get_provider",
+            return_value={"mikan": MIKAN_SITE},
         ):
             result = SearchTorrent.special_url(movie, "mikan")
 
@@ -224,7 +306,7 @@ class TestPosterCache:
             "module.searcher.searcher.tmdb_parser", new=AsyncMock(return_value=None)
         ):
             for i in range(4):
-                await torrent._fetch_tmdb_poster(f"Title {i}")
+                await torrent._fetch_tmdb_preview(f"Title {i}")
 
         assert len(searcher_module._poster_cache) == 3
         # The oldest entry ("Title 0") was evicted; the rest remain.

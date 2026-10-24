@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { Refresh } from '@icon-park/vue-next';
+import { RefreshCw } from '@lucide/vue';
 import type { BangumiRule } from '#/bangumi';
 import type { BangumiGroup } from '@/components/calendar/types';
 
@@ -126,33 +126,36 @@ function onRuleSelect(rule: BangumiRule) {
 <template>
   <div class="page-calendar">
     <!-- Header -->
-    <div class="calendar-header anim-fade-in">
+    <div class="calendar-header calendar-enter">
       <!-- 页面本身已有 h1 “Calendar”，这里不再重复标题，只留说明文字 -->
       <div class="calendar-header-text">
-        <p class="calendar-subtitle">{{ $t('calendar.subtitle') }}</p>
+        <p class="calendar-subtitle">
+          {{ $t('calendar.subtitle') }}
+        </p>
       </div>
       <ab-icon-button
-        class="calendar-refresh-btn"
         :class="{ 'calendar-refresh-btn--spinning': refreshing }"
         :disabled="refreshing"
         :label="$t('calendar.refresh')"
         @click="refreshCalendar"
       >
-        <Refresh :size="18" />
+        <RefreshCw :size="18" />
       </ab-icon-button>
     </div>
 
     <!-- Empty state -->
-    <div v-if="!hasBangumi" class="empty-guide">
-      <div class="empty-guide-header anim-fade-in">
-        <div class="empty-guide-title">
-          {{ $t('calendar.empty_state.title') }}
-        </div>
-        <div class="empty-guide-subtitle">
-          {{ $t('calendar.empty_state.subtitle') }}
-        </div>
-      </div>
-    </div>
+    <ab-empty
+      v-if="!hasBangumi"
+      class="empty-guide calendar-enter"
+      :title="$t('calendar.empty_state.title')"
+      :description="$t('calendar.empty_state.subtitle')"
+    >
+      <template #action>
+        <ab-button size="sm" :loading="refreshing" @click="refreshCalendar">
+          {{ $t('calendar.refresh') }}
+        </ab-button>
+      </template>
+    </ab-empty>
 
     <!-- Desktop: board of day columns -->
     <calendar-board
@@ -171,7 +174,6 @@ function onRuleSelect(rule: BangumiRule) {
       :grouped-by-day="groupedBangumiByDay"
       :today-index="todayIndex"
       :get-day-label="getDayLabel"
-      :has-bangumi="hasBangumi"
       @card-click="onCardClick"
     />
 
@@ -207,41 +209,8 @@ function onRuleSelect(rule: BangumiRule) {
   transition: color var(--transition-normal);
 }
 
-.calendar-refresh-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: var(--radius-md);
-
-  @include forTouch {
-    width: var(--touch-target);
-    height: var(--touch-target);
-  }
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  transition: color var(--transition-fast), border-color var(--transition-fast),
-    background-color var(--transition-fast);
-
-  &:hover:not(:disabled) {
-    color: var(--color-primary);
-    border-color: var(--color-primary);
-    background: var(--color-primary-light);
-  }
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-  &--spinning {
-    :deep(svg) {
-      animation: spin 1s linear infinite;
-    }
-  }
+.calendar-refresh-btn--spinning :deep(svg) {
+  animation: spin 1s linear infinite;
 }
 
 @keyframes spin {
@@ -252,53 +221,24 @@ function onRuleSelect(rule: BangumiRule) {
     transform: rotate(360deg);
   }
 }
+</style>
 
-// Empty state (reuse pattern from bangumi page)
-.empty-guide {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 40vh;
-  padding: 24px;
+<style lang="scss">
+// 日历页统一进场：标题、星期列、移动端分区共用（子组件根元素加 calendar-enter + --delay）
+.calendar-enter {
+  animation: calendar-enter var(--transition-slow) both;
+  animation-delay: var(--delay, 0s);
 }
 
-.empty-guide-header {
-  text-align: center;
-}
-
-.empty-guide-title {
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--color-text);
-  margin-bottom: 6px;
-  transition: color var(--transition-normal);
-}
-
-.empty-guide-subtitle {
-  font-size: 14px;
-  color: var(--color-text-secondary);
-  transition: color var(--transition-normal);
-}
-
-// Animations
-.anim-fade-in {
-  animation: fadeIn 0.5s ease both;
-}
-
-@keyframes fadeIn {
+@keyframes calendar-enter {
   from {
     opacity: 0;
-    transform: translateY(-6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+    transform: translateY(8px);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .anim-fade-in {
+  .calendar-enter {
     animation: none;
   }
 }

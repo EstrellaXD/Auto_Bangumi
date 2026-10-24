@@ -2,6 +2,10 @@
 
 使用 `docker-compose.yml` 文件一键部署 **AutoBangumi**。
 
+::: tip 从 3.3 升级
+本页命令使用 `latest` 标签，安装的是 4.0 正式版。正在使用 3.3 时，拉取新镜像前请先阅读 [从 3.3 升级到 4.0](./upgrade-4.0)；暂时不升级，就把标签固定为 `3.3.7`。4.0 的硬链接插件需要把媒体库目录也挂载进容器，见 [番剧管理设置](../config/manager)。
+:::
+
 ## 安装 Docker Compose
 
 Docker Compose 通常与 Docker 捆绑安装。使用以下命令检查：

@@ -2,6 +2,7 @@ import asyncio
 import logging
 import time
 
+from ab_sdk import points
 from module.conf import settings
 from module.models import Bangumi, Movie
 from module.models.bangumi import Episode
@@ -29,6 +30,7 @@ from module.parser.release_policy import (
     normalized_season,
     persistence_target,
 )
+from module.plugin import host as plugin_host
 
 logger = logging.getLogger(__name__)
 
@@ -106,21 +108,7 @@ def reset_cache() -> None:
 
 
 def _llm_config() -> LLM:
-    """读取 LLM 配置段；llm 段缺失时回退读取旧的 experimental_openai
-    （与 conf/config.py 的自动迁移互为保险）。"""
-    llm = getattr(settings, "llm", None)
-    if llm is not None:
-        return llm
-    legacy = settings.experimental_openai
-    return LLM(
-        enable=legacy.enable,
-        provider="openai",
-        api_key=legacy.api_key,
-        model=legacy.model,
-        base_url=legacy.api_base,
-        # 旧配置的语义是 LLM 优先
-        mode="primary",
-    )
+    return settings.llm
 
 
 async def _llm_parse(raw: str) -> Episode | None:
@@ -341,6 +329,14 @@ def _merge_llm_release(
     )
 
 
+async def _apply_title_hooks(release: ParsedRelease) -> ParsedRelease:
+    """``title.parsed``：插件在准入判定前修正解析结果（字幕组别名、季数等）。"""
+    runner = plugin_host.hook_runner(points.TITLE_PARSED)
+    if runner is None:
+        return release
+    return await runner.transform(points.TITLE_PARSED, release, expect=ParsedRelease)
+
+
 class TitleParser:
     def __init__(self):
         pass
@@ -502,6 +498,7 @@ class TitleParser:
 
             if release is None:
                 return None
+            release = await _apply_title_hooks(release)
             target = persistence_target(release)
             if target is None:
                 logger.debug("Parsed but did not admit resource: %s", raw)

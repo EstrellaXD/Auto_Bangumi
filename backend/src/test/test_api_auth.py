@@ -1,6 +1,6 @@
 """Tests for database-backed Auth API endpoints."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -13,7 +13,6 @@ from module.conf import settings
 from module.models.auth import ApiToken
 from module.models.user import User
 from module.security.api import get_auth_service
-from module.security.jwt import create_access_token
 
 
 @pytest.fixture
@@ -78,20 +77,15 @@ class TestRefresh:
         assert response.json() == {"authenticated": True}
         assert "persisted-session" not in response.text
 
-    def test_get_refresh_is_deprecated_compatibility_alias(self, client, service):
-        service.refresh_session.return_value = persisted_user()
+    def test_get_refresh_is_rejected(self, client, service):
         client.cookies.set("token", "persisted-session")
-        response = client.get("/api/v1/auth/refresh_token")
-        assert response.status_code == 200
-        assert response.json() == {"authenticated": True}
-        assert "persisted-session" not in response.text
-        assert response.headers["deprecation"] == "true"
+        assert client.get("/api/v1/auth/refresh_token").status_code == 405
+        service.refresh_session.assert_not_called()
 
     def test_refresh_rejects_legacy_jwt(self, client, service):
         service.refresh_session.return_value = None
-        legacy_jwt = create_access_token(
-            {"sub": "testuser"}, expires_delta=timedelta(hours=1)
-        )
+        # 3.2 时代的 JWT 形态 cookie：不再有任何解码路径，只会查无此会话
+        legacy_jwt = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZXN0dXNlciJ9.c2lnbmF0dXJl"
         client.cookies.set("token", legacy_jwt)
         response = client.post("/api/v1/auth/refresh_token")
         assert response.status_code == 401
@@ -207,9 +201,7 @@ def test_authorization_does_not_accept_plaintext_config_token(client, service):
 
 @patch("module.security.api.DEV_AUTH_BYPASS", False)
 def test_legacy_jwt_cookie_is_not_normal_authentication(client, service):
-    legacy_jwt = create_access_token(
-        {"sub": "testuser"}, expires_delta=timedelta(hours=1)
-    )
+    legacy_jwt = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZXN0dXNlciJ9.c2lnbmF0dXJl"
     service.authenticate_session.return_value = None
     client.cookies.set("token", legacy_jwt)
     response = client.get("/api/v1/auth/me")

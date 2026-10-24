@@ -99,10 +99,14 @@ class PeriodicTask:
 
 
 class Scheduler:
-    """Owns a fixed set of :class:`PeriodicTask` and starts/stops them together."""
+    """Owns a set of :class:`PeriodicTask` and starts/stops them together.
+
+    The built-in tasks are fixed at construction; plugin tasks are added and
+    removed at runtime via :meth:`add` / :meth:`remove`.
+    """
 
     def __init__(self, tasks: list[PeriodicTask]) -> None:
-        self._tasks = tasks
+        self._tasks = list(tasks)
         self._running = False
 
     @property
@@ -123,3 +127,14 @@ class Scheduler:
     async def stop_all(self) -> None:
         await asyncio.gather(*(task.stop() for task in self._tasks))
         self._running = False
+
+    def add(self, task: PeriodicTask) -> None:
+        """Register a task; it starts immediately if the scheduler is running."""
+        self._tasks.append(task)
+        if self._running and task.enabled:
+            task.start()
+
+    async def remove(self, task: PeriodicTask) -> None:
+        if task in self._tasks:
+            self._tasks.remove(task)
+        await task.stop()

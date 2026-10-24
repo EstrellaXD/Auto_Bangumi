@@ -19,29 +19,39 @@ from module.notification.inbox import bump_inbox_revision
 from module.security.api import get_current_user
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/notification", tags=["notification"])
+router = APIRouter(
+    prefix="/notification",
+    tags=["notification"],
+    dependencies=[Depends(get_current_user)],
+)
 
 
 class TestProviderRequest(BaseModel):
     """Request body for testing a saved provider by index."""
 
-    provider_index: int = Field(..., description="Index of the provider to test")
+    provider_index: int = Field(
+        default=..., description="Index of the provider to test"
+    )
 
 
 class TestProviderConfigRequest(BaseModel):
     """Request body for testing an unsaved provider configuration."""
 
-    type: str = Field(..., description="Provider type")
-    enabled: bool = Field(True, description="Whether provider is enabled")
-    token: Optional[str] = Field(None, description="Auth token")
-    chat_id: Optional[str] = Field(None, description="Chat/channel ID")
-    webhook_url: Optional[str] = Field(None, description="Webhook URL")
-    server_url: Optional[str] = Field(None, description="Server URL")
-    device_key: Optional[str] = Field(None, description="Device key")
-    user_key: Optional[str] = Field(None, description="User key")
-    api_token: Optional[str] = Field(None, description="API token")
-    template: Optional[str] = Field(None, description="Custom template")
-    url: Optional[str] = Field(None, description="URL for generic webhook")
+    type: str = Field(default=..., description="Provider type")
+    enabled: bool = Field(default=True, description="Whether provider is enabled")
+    token: Optional[str] = Field(default=None, description="Auth token")
+    chat_id: Optional[str] = Field(default=None, description="Chat/channel ID")
+    webhook_url: Optional[str] = Field(default=None, description="Webhook URL")
+    server_url: Optional[str] = Field(default=None, description="Server URL")
+    device_key: Optional[str] = Field(default=None, description="Device key")
+    user_key: Optional[str] = Field(default=None, description="User key")
+    api_token: Optional[str] = Field(default=None, description="API token")
+    template: Optional[str] = Field(default=None, description="Custom template")
+    url: Optional[str] = Field(default=None, description="URL for generic webhook")
+    sound: Optional[str] = Field(default=None, description="Bark sound")
+    group: Optional[str] = Field(default=None, description="Bark group")
+    level: Optional[str] = Field(default=None, description="Bark level")
+    icon: Optional[str] = Field(default=None, description="Bark icon URL")
 
 
 class TestResponse(BaseModel):
@@ -53,9 +63,7 @@ class TestResponse(BaseModel):
     message_en: str = ""
 
 
-@router.post(
-    "/test", response_model=TestResponse, dependencies=[Depends(get_current_user)]
-)
+@router.post("/test", response_model=TestResponse)
 async def test_provider(request: TestProviderRequest):
     """Test a configured notification provider by its index.
 
@@ -63,15 +71,7 @@ async def test_provider(request: TestProviderRequest):
     in the current configuration.
     """
     try:
-        manager = NotificationManager()
-        if request.provider_index >= len(manager):
-            return TestResponse(
-                success=False,
-                message=f"Invalid provider index: {request.provider_index}",
-                message_zh=f"无效的提供者索引: {request.provider_index}",
-                message_en=f"Invalid provider index: {request.provider_index}",
-            )
-
+        manager = NotificationManager(load_providers=False)
         success, message = await manager.test_provider(request.provider_index)
         return TestResponse(
             success=success,
@@ -92,7 +92,6 @@ async def test_provider(request: TestProviderRequest):
 @router.post(
     "/test-config",
     response_model=TestResponse,
-    dependencies=[Depends(get_current_user)],
 )
 async def test_provider_config(request: TestProviderConfigRequest):
     """Test an unsaved notification provider configuration.
@@ -113,6 +112,10 @@ async def test_provider_config(request: TestProviderConfigRequest):
             api_token=request.api_token or "",
             template=request.template,
             url=request.url or "",
+            sound=request.sound,
+            group=request.group,
+            level=request.level,
+            icon=request.icon,
         )
 
         success, message = await NotificationManager.test_provider_config(config)
@@ -163,7 +166,7 @@ def _to_out(message) -> InboxMessageOut:
     if message.payload:
         try:
             payload = json.loads(message.payload)
-        except (json.JSONDecodeError, TypeError):
+        except json.JSONDecodeError, TypeError:
             payload = None
     return InboxMessageOut(
         id=message.id,
@@ -182,7 +185,6 @@ def _to_out(message) -> InboxMessageOut:
 @router.get(
     "/messages",
     response_model=InboxListResponse,
-    dependencies=[Depends(get_current_user)],
 )
 async def list_messages(
     unread_only: bool = False,
@@ -202,7 +204,6 @@ async def list_messages(
 
 @router.get(
     "/messages/unread-count",
-    dependencies=[Depends(get_current_user)],
 )
 async def unread_count(db: Database = Depends(get_db)):
     return {"unread_count": await db.inbox.unread_count()}
@@ -211,7 +212,6 @@ async def unread_count(db: Database = Depends(get_db)):
 @router.post(
     "/messages/read-all",
     response_model=ResponseModel,
-    dependencies=[Depends(get_current_user)],
 )
 async def mark_all_read(db: Database = Depends(get_db)):
     changed = await db.inbox.mark_all_read()
@@ -227,7 +227,6 @@ async def mark_all_read(db: Database = Depends(get_db)):
 @router.post(
     "/messages/{message_id}/read",
     response_model=ResponseModel,
-    dependencies=[Depends(get_current_user)],
 )
 async def mark_read(message_id: int, db: Database = Depends(get_db)):
     if not await db.inbox.mark_read(message_id):
@@ -244,7 +243,6 @@ async def mark_read(message_id: int, db: Database = Depends(get_db)):
 @router.delete(
     "/messages/{message_id}",
     response_model=ResponseModel,
-    dependencies=[Depends(get_current_user)],
 )
 async def delete_message(message_id: int, db: Database = Depends(get_db)):
     if not await db.inbox.delete(message_id):
@@ -261,7 +259,6 @@ async def delete_message(message_id: int, db: Database = Depends(get_db)):
 @router.delete(
     "/messages",
     response_model=ResponseModel,
-    dependencies=[Depends(get_current_user)],
 )
 async def clear_messages(db: Database = Depends(get_db)):
     removed = await db.inbox.clear()

@@ -6,9 +6,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import col, func, select
 
-from module.models import ResponseModel
 from module.models.user import User, UserUpdate
-from module.security.jwt import get_password_hash, verify_password
+from module.security.password import get_password_hash, verify_password
 
 logger = logging.getLogger(__name__)
 
@@ -101,13 +100,6 @@ class UserDatabase:
             await self.session.refresh(user)
         return user
 
-    async def set_enabled(
-        self, user_id: int, enabled: bool, *, commit: bool = True
-    ) -> User:
-        return await self.update_user_by_id(
-            user_id, UserUpdate(enabled=enabled), commit=commit
-        )
-
     async def delete_user(self, user_id: int, *, commit: bool = True) -> bool:
         user = await self.session.get(User, user_id)
         if user is None:
@@ -120,38 +112,6 @@ class UserDatabase:
         else:
             await self.session.flush()
         return True
-
-    async def auth_user(self, user: User) -> ResponseModel:
-        statement = select(User).where(User.username == user.username)
-        result = await self.session.execute(statement)
-        db_user = result.scalars().first()
-        if not user.password:
-            return ResponseModel(
-                status_code=401,
-                status=False,
-                msg_en="Incorrect password format",
-                msg_zh="密码格式不正确",
-            )
-        if not db_user or not db_user.enabled:
-            return ResponseModel(
-                status_code=401,
-                status=False,
-                msg_en="User not found",
-                msg_zh="用户不存在",
-            )
-        if not verify_password(user.password, db_user.password):
-            return ResponseModel(
-                status_code=401,
-                status=False,
-                msg_en="Incorrect password",
-                msg_zh="密码错误",
-            )
-        return ResponseModel(
-            status_code=200,
-            status=True,
-            msg_en="Login successfully",
-            msg_zh="登录成功",
-        )
 
     async def update_user(self, username: str, update_user: UserUpdate) -> User:
         statement = select(User).where(User.username == username)

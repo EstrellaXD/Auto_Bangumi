@@ -6,11 +6,12 @@ from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import anthropic
-import httpx
+import httpx2
 import openai as openai_sdk
 import pytest
 from google.genai import errors as genai_errors
 
+from module.conf import settings
 from module.models.config import Proxy
 from module.parser.analyser import llm as llm_module
 from module.parser.analyser.llm import (
@@ -56,28 +57,21 @@ class TestLLMParserInit:
             username="user",
             password="pass",
         )
-        with patch.object(llm_module.settings, "proxy", proxy):
-            with patch("module.parser.analyser.llm.httpx.AsyncClient") as mock_client:
+        with patch.object(settings, "proxy", proxy):
+            with patch("module.parser.analyser.llm.httpx2.AsyncClient") as mock_client:
                 llm_module._build_http_client(5.0)
 
         assert mock_client.call_args.kwargs["proxy"] == (
             "http://user:pass@proxy.local:7890"
         )
 
-    def test_socks_proxy_uses_proxy_transport(self):
+    def test_socks_proxy_is_passed_to_injected_http_client(self):
         proxy = Proxy(enable=True, type="socks5", host="proxy.local", port=7891)
-        with patch.object(llm_module.settings, "proxy", proxy):
-            with (
-                patch("module.parser.analyser.llm.httpx.AsyncClient") as mock_client,
-                patch(
-                    "module.parser.analyser.llm.AsyncProxyTransport.from_url",
-                    return_value="transport",
-                ) as mock_transport,
-            ):
+        with patch.object(settings, "proxy", proxy):
+            with patch("module.parser.analyser.llm.httpx2.AsyncClient") as mock_client:
                 llm_module._build_http_client(5.0)
 
-        mock_transport.assert_called_once_with("socks5://proxy.local:7891", rdns=True)
-        assert mock_client.call_args.kwargs["transport"] == "transport"
+        assert mock_client.call_args.kwargs["proxy"] == "socks5://proxy.local:7891"
 
 
 class TestOpenAIProvider:
@@ -102,7 +96,7 @@ class TestOpenAIProvider:
             ]
         )
         mock_create = AsyncMock(return_value=stub_resp)
-        parser._openai_client.beta.chat.completions.parse = mock_create  # type: ignore[method-assign]
+        parser._openai_client.chat.completions.parse = mock_create  # type: ignore[method-assign]
 
         result = await parser.parse(RAW_TITLE)
 
@@ -115,9 +109,9 @@ class TestOpenAIProvider:
 
     async def test_parse_api_error_returns_none(self):
         parser = self._make_parser()
-        parser._openai_client.beta.chat.completions.parse = AsyncMock(  # type: ignore[method-assign]
+        parser._openai_client.chat.completions.parse = AsyncMock(  # type: ignore[method-assign]
             side_effect=openai_sdk.APIConnectionError(
-                request=httpx.Request("POST", "https://api.openai.com/v1")
+                request=httpx2.Request("POST", "https://api.openai.com/v1")
             )
         )
         assert await parser.parse(RAW_TITLE) is None
@@ -127,7 +121,7 @@ class TestOpenAIProvider:
         stub_resp = SimpleNamespace(
             choices=[SimpleNamespace(message=SimpleNamespace(parsed=None))]
         )
-        parser._openai_client.beta.chat.completions.parse = AsyncMock(  # type: ignore[method-assign]
+        parser._openai_client.chat.completions.parse = AsyncMock(  # type: ignore[method-assign]
             return_value=stub_resp
         )
         assert await parser.parse(RAW_TITLE) is None
@@ -176,16 +170,16 @@ class TestAnthropicProvider:
         parser = self._make_parser()
         parser._anthropic_client.messages.create = AsyncMock(  # type: ignore[method-assign]
             side_effect=anthropic.APIConnectionError(
-                request=httpx.Request("POST", "https://api.anthropic.com")
+                request=httpx2.Request("POST", "https://api.anthropic.com")
             )
         )
         assert await parser.parse(RAW_TITLE) is None
 
     async def test_parse_rate_limit_returns_none(self):
         parser = self._make_parser()
-        response = httpx.Response(
+        response = httpx2.Response(
             status_code=429,
-            request=httpx.Request("POST", "https://api.anthropic.com"),
+            request=httpx2.Request("POST", "https://api.anthropic.com"),
         )
         parser._anthropic_client.messages.create = AsyncMock(  # type: ignore[method-assign]
             side_effect=anthropic.RateLimitError(

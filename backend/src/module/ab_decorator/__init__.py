@@ -2,7 +2,7 @@ import asyncio
 import functools
 import logging
 
-import httpx
+import httpx2
 
 logger = logging.getLogger(__name__)
 _lock = asyncio.Lock()
@@ -22,9 +22,9 @@ def qb_connect_failed_wait(func):
                 ConnectionError,
                 TimeoutError,
                 OSError,
-                httpx.ConnectError,
-                httpx.TimeoutException,
-                httpx.RequestError,
+                httpx2.ConnectError,
+                httpx2.TimeoutException,
+                httpx2.RequestError,
             ) as e:
                 last_error = e
                 delay = _RETRY_DELAYS[times]
@@ -40,19 +40,6 @@ def qb_connect_failed_wait(func):
         logger.error("Cannot connect to qBittorrent after %d retries.", times)
         assert last_error is not None, "loop always sets last_error before exiting"
         raise last_error
-
-    return wrapper
-
-
-def api_failed(func):
-    @functools.wraps(func)
-    async def wrapper(*args, **kwargs):
-        try:
-            return await func(*args, **kwargs)
-        except Exception as e:
-            logger.debug("URL: %s", args[0])
-            logger.warning("Wrong API response.")
-            logger.debug(e)
 
     return wrapper
 

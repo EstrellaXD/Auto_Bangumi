@@ -1,0 +1,14 @@
+{
+  "name": "ab-plugin-manual-pick-web",
+  "type": "module",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "vite build"
+  },
+  "devDependencies": {
+    "@autobangumi/plugin-ui": "link:../../../../webui/packages/plugin-ui",
+    "typescript": "^4.9.5",
+    "vite": "^4.5.5"
+  }
+}

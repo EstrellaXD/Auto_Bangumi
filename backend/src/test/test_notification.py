@@ -165,23 +165,24 @@ class TestNotificationManager:
         for provider in manager.providers:
             provider.send.assert_called_once_with(notify)  # type: ignore[attr-defined]
 
-    async def test_test_provider(self, mock_settings):
-        """Manager can test a specific provider."""
-        config = ProviderConfig(
+    async def test_test_provider_index_counts_disabled_rows(self, mock_settings):
+        """下标对应已保存的完整渠道列表（含停用项），用保存的配置测试。"""
+        disabled = ProviderConfig(type="bark", enabled=False, device_key="k")
+        target = ProviderConfig(
             type="telegram", enabled=True, token="test", chat_id="123"
         )
-        mock_settings.notification.providers = [config]
+        mock_settings.notification.providers = [disabled, target]
 
         manager = NotificationManager()
-
-        # Mock the provider's test method
-        manager.providers[0].test = AsyncMock(return_value=(True, "Test successful"))
-        manager.providers[0].__aenter__ = AsyncMock(return_value=manager.providers[0])
-        manager.providers[0].__aexit__ = AsyncMock(return_value=None)
-
-        success, message = await manager.test_provider(0)
+        with patch.object(
+            NotificationManager,
+            "test_provider_config",
+            AsyncMock(return_value=(True, "Test successful")),
+        ) as tested:
+            success, message = await manager.test_provider(1)
         assert success is True
         assert message == "Test successful"
+        tested.assert_awaited_once_with(target)
 
     async def test_test_provider_invalid_index(self, mock_settings):
         """Manager handles invalid provider index."""
@@ -352,6 +353,67 @@ class TestBarkProvider:
         assert result is True
         call_args = mock_post.call_args[0]
         assert "device_key" in call_args[1]
+
+    @pytest.mark.parametrize(
+        ("options", "expected"),
+        [
+            ({}, {}),
+            ({"sound": "", "level": ""}, {}),
+            (
+                {
+                    "sound": "minuet",
+                    "group": "AB",
+                    "level": "timeSensitive",
+                    "url": "https://ab.local",
+                },
+                {
+                    "sound": "minuet",
+                    "group": "AB",
+                    "level": "timeSensitive",
+                    "url": "https://ab.local",
+                },
+            ),
+        ],
+    )
+    async def test_deliver_text_sends_only_set_options(self, options, expected):
+        """#792：sound/group/level/url 只在设置时发送，旧配置的请求体不变。"""
+        config = ProviderConfig(type="bark", device_key="k", **options)
+        provider = BarkProvider(config)
+
+        with patch.object(provider, "_post_json", new_callable=AsyncMock) as mock_post:
+            mock_post.return_value = MagicMock(status_code=200)
+            assert await provider._deliver_text("T", "B") is True
+
+        assert mock_post.call_args[0][1] == {
+            "title": "T",
+            "body": "B",
+            "device_key": "k",
+            **expected,
+        }
+
+    @pytest.mark.parametrize(
+        ("icon", "poster", "expected"),
+        [
+            (None, "https://ab/p.jpg", "https://ab/p.jpg"),
+            ("https://ab/i.png", "https://ab/p.jpg", "https://ab/i.png"),
+            (None, None, None),
+        ],
+    )
+    async def test_send_icon_prefers_configured_icon_over_poster(
+        self, icon, poster, expected
+    ):
+        """配置的 icon 优先；未配置时沿用海报地址；都没有则不发 icon。"""
+        provider = BarkProvider(ProviderConfig(type="bark", device_key="k", icon=icon))
+        notify = Notification(official_title="Test Anime", season=1, episode=5)
+
+        with (
+            patch.object(provider, "_poster_url", return_value=poster),
+            patch.object(provider, "_post_json", new_callable=AsyncMock) as mock_post,
+        ):
+            mock_post.return_value = MagicMock(status_code=200)
+            await provider.send(notify)
+
+        assert mock_post.call_args[0][1].get("icon") == expected
 
 
 class TestWebhookProvider:
@@ -561,9 +623,13 @@ class TestEventInboxContract:
         assert event.kind == "downloader_unavailable"
         assert event.severity == "error"
         assert event.once is False
-        # reason 不进 dedup_key：unreachable→credentials 的翻转合并为一条
-        assert event.dedup_key() == "downloader:http://qb:8080"
-        assert event.payload() == {"host": "http://qb:8080", "reason": "credentials"}
+        # 按实例去重，reason 不进 dedup_key：unreachable→credentials 的翻转合并为一条
+        assert event.dedup_key() == "downloader:default"
+        assert event.payload() == {
+            "host": "http://qb:8080",
+            "reason": "credentials",
+            "instance": "default",
+        }
         title, body = event.describe()
         assert "下载器" in title
         assert "密码" in body
@@ -744,23 +810,6 @@ class TestDeliverText:
 
 
 class TestConfigMigration:
-    def test_legacy_config_migration(self):
-        """Old single-provider config migrates to new format."""
-        from module.models.config import Notification as NotificationConfig
-
-        # Old format
-        old_config = NotificationConfig(
-            enable=True,
-            type="telegram",
-            token="old_token",
-            chat_id="old_chat_id",
-        )
-
-        # Should have migrated to new format
-        assert len(old_config.providers) == 1
-        assert old_config.providers[0].type == "telegram"
-        assert old_config.providers[0].enabled is True
-
     def test_new_config_no_migration(self):
         """New format with providers doesn't trigger migration."""
         from module.models.config import Notification as NotificationConfig

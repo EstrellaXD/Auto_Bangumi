@@ -1,6 +1,6 @@
 # ネットワーク設定
 
-![network](/image/config/network.png){width=700}{class=ab-shadow-card}
+![network](/image/en/config/network.png){width=700}{class=ab-shadow-card}
 
 ネットワーク設定では外部メタデータサービスのURLと認証情報を上書きできます。変更後は **保存して再起動** をクリックしてください。
 

@@ -30,7 +30,7 @@ Ensure you have Python 3.10+ and pip installed locally.
 ```bash
 cd src
 python3 -m venv env
-python3 pip install -r requirements.txt
+env/bin/pip install -r requirements.txt
 ```
 
 ## Create Configuration and Data Directories

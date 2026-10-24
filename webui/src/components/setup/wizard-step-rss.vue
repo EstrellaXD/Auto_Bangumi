@@ -52,25 +52,23 @@ function handleNext() {
 <template>
   <ab-container :title="t('setup.rss.title')" class="wizard-step">
     <div class="step-content">
-      <p class="step-subtitle">{{ t('setup.rss.subtitle') }}</p>
+      <p class="step-subtitle">
+        {{ t('setup.rss.subtitle') }}
+      </p>
 
       <div class="form-fields">
         <ab-field :label="t('setup.rss.url')">
-          <input
+          <ab-input
             v-model="rssData.url"
-            type="text"
             :aria-label="t('setup.rss.url')"
             placeholder="https://mikanani.me/RSS/..."
-            class="setup-input setup-input-wide"
           />
         </ab-field>
 
         <ab-field v-if="rssData.name" :label="t('setup.rss.feed_name')">
-          <input
+          <ab-input
             v-model="rssData.name"
-            type="text"
             :aria-label="t('setup.rss.feed_name')"
-            class="setup-input"
           />
         </ab-field>
       </div>
@@ -147,35 +145,6 @@ function handleNext() {
   gap: 12px;
 }
 
-.setup-input {
-  outline: none;
-  min-width: 0;
-  width: 200px;
-  height: 28px;
-  padding: 0 12px;
-  font-size: 12px;
-  text-align: right;
-  border-radius: 6px;
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-  color: var(--color-text);
-  transition: border-color var(--transition-fast),
-    box-shadow var(--transition-fast);
-
-  &:hover {
-    border-color: var(--color-primary);
-  }
-
-  &:focus {
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 2px rgba(108, 74, 182, 0.2);
-  }
-}
-
-.setup-input-wide {
-  width: 260px;
-}
-
 .test-section {
   display: flex;
   align-items: center;
@@ -184,11 +153,11 @@ function handleNext() {
 
 .test-message {
   font-size: 11px;
-  color: var(--color-error, #e53935);
+  color: var(--color-danger);
   margin: 0;
 
   &.success {
-    color: var(--color-success, #43a047);
+    color: var(--color-success);
   }
 }
 

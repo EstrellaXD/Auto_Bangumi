@@ -40,13 +40,13 @@ const items: SettingItem<Network>[] = [
 
 <template>
   <ab-fold-panel :title="$t('config.network_set.title')">
-    <div space-y-8>
+    <div class="space-y-8">
       <ab-setting
         v-for="i in items"
         :key="i.configKey"
         v-bind="i"
         v-model:data="network[i.configKey]"
-      ></ab-setting>
+      />
     </div>
   </ab-fold-panel>
 </template>

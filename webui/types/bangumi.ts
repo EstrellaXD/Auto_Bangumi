@@ -30,6 +30,8 @@ export interface BangumiRule {
   preferred_group: string | null;
   preferred_resolution: string | null;
   episode_type: 'episode' | 'movie' | 'special';
+  /** 下载器实例 id；null 为默认实例 */
+  downloader_id: string | null;
 }
 
 export interface BangumiAPI extends Omit<BangumiRule, 'filter' | 'rss_link'> {
@@ -73,6 +75,7 @@ export const ruleTemplate: BangumiRule = {
   preferred_group: null,
   preferred_resolution: null,
   episode_type: 'episode',
+  downloader_id: null,
 };
 
 /** Legacy offset suggestion (for backward compatibility) */

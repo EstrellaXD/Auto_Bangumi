@@ -92,12 +92,12 @@ const { t } = useMyI18n();
   // below the 44px touch-target minimum; widen and heighten the shared
   // wizard controls here instead of per step component.
   @include forTouch {
-    :deep(.setup-input),
-    :deep(.setup-input-wide) {
-      width: 100%;
+    :deep(.ab-input) {
       height: var(--touch-target);
+    }
+
+    :deep(.ab-input input) {
       font-size: 16px; // ≥16px stops iOS Safari from zooming the input
-      text-align: left;
     }
 
     :deep(.wizard-actions .ab-btn),

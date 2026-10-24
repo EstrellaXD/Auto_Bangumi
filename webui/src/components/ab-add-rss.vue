@@ -1,10 +1,14 @@
 <script lang="ts" setup>
-import { Link } from '@icon-park/vue-next';
-import { NSelect, NSpin, NSwitch } from 'naive-ui';
+import { Link } from '@lucide/vue';
+import AbField from './basic/ab-field.vue';
+import AbSelect from './basic/ab-select.vue';
+import AbSwitch from './basic/ab-switch.vue';
 import type { BangumiRule } from '#/bangumi';
 import type { RSS } from '#/rss';
 import { rssTemplate } from '#/rss';
 import { ruleTemplate } from '#/bangumi';
+import { usePluginProviders } from '@/hooks/usePluginProviders';
+import { useDownloaderInstances } from '@/hooks/useDownloaderInstances';
 
 /** v-model show */
 const show = defineModel('show', { default: false });
@@ -17,7 +21,16 @@ const rss = ref<RSS>({ ...rssTemplate });
 const rule = defineModel<BangumiRule>('rule', {
   default: () => ({ ...ruleTemplate }),
 });
-const parserTypes = ['tmdb', 'mikan', 'parser'] as const;
+const pluginProviders = usePluginProviders();
+// 订阅的下载器实例：由它新建的规则继承；留空跟随默认实例
+const downloaders = useDownloaderInstances(show);
+// 内置元数据源 + 插件登记的元数据源（metadata_provider 扩展点）
+const parserTypes = computed(() => [
+  'tmdb',
+  'mikan',
+  'parser',
+  ...pluginProviders.value.metadata_provider,
+]);
 
 // UI state
 const step = ref<'input' | 'confirm'>('input');
@@ -159,45 +172,55 @@ function subscribe() {
       <!-- RSS Link -->
       <div class="form-group">
         <label class="form-label">{{ $t('topbar.add.rss_link') }}</label>
-        <div class="input-wrapper">
-          <Link theme="outline" size="16" class="input-icon" />
-          <input
-            v-model="rss.url"
-            type="text"
-            class="form-input form-input--with-icon"
-            :placeholder="$t('topbar.add.placeholder_link')"
-          />
-        </div>
+        <ab-input
+          v-model="rss.url"
+          class="form-input"
+          :aria-label="$t('topbar.add.rss_link')"
+          :placeholder="$t('topbar.add.placeholder_link')"
+        >
+          <template #prefix>
+            <Link :size="14" />
+          </template>
+        </ab-input>
       </div>
 
       <!-- Name -->
       <div class="form-group">
         <label class="form-label">{{ $t('topbar.add.name') }}</label>
-        <input
+        <ab-input
           v-model="rss.name"
-          type="text"
           class="form-input"
+          :aria-label="$t('topbar.add.name')"
           :placeholder="$t('topbar.add.placeholder_name')"
         />
       </div>
 
       <!-- Options row -->
       <div class="options-row">
-        <!-- Aggregate Switch -->
-        <div class="option-item">
-          <label class="option-label">{{ $t('topbar.add.aggregate') }}</label>
-          <NSwitch v-model:value="rss.aggregate" />
-        </div>
+        <AbField :label="$t('topbar.add.aggregate')">
+          <AbSwitch v-model="rss.aggregate" />
+        </AbField>
 
-        <!-- Parser Select -->
-        <div class="option-item">
-          <label class="option-label">{{ $t('topbar.add.parser') }}</label>
-          <NSelect
-            v-model:value="rss.parser"
-            :options="parserTypes.map((p) => ({ label: p, value: p }))"
-            class="parser-select"
+        <AbField :label="$t('topbar.add.parser')">
+          <AbSelect v-model="rss.parser" :items="parserTypes" />
+        </AbField>
+
+        <AbField
+          v-if="downloaders.multiple.value"
+          :label="$t('topbar.add.downloader')"
+        >
+          <AbSelect
+            v-model="rss.downloader_id"
+            :options="downloaders.options.value"
+            clearable
+            :placeholder="
+              $t('homepage.rule.downloader_default', {
+                id: downloaders.data.value.default,
+              })
+            "
+            :aria-label="$t('topbar.add.downloader')"
           />
-        </div>
+        </AbField>
       </div>
     </div>
 
@@ -221,15 +244,17 @@ function subscribe() {
           v-model="rule.episode_offset"
           :label="$t('homepage.rule.episode_offset')"
         >
-          <template #action>
-            <button
+          <!-- 检测依赖已存在的规则 id：新规则没有 id，不显示按钮 -->
+          <template v-if="rule.id" #action>
+            <!-- md：与 ab-input 同高（34px / 触屏 44px） -->
+            <ab-button
+              variant="secondary"
               class="detect-btn"
-              :disabled="offsetLoading || !rule.id"
+              :loading="offsetLoading"
               @click="autoDetectOffset"
             >
-              <NSpin v-if="offsetLoading" :size="14" />
-              <span v-else>{{ $t('homepage.rule.auto_detect') }}</span>
-            </button>
+              {{ $t('homepage.rule.auto_detect') }}
+            </ab-button>
           </template>
         </bangumi-offset-field>
         <div v-if="offsetReason" class="offset-reason">
@@ -259,7 +284,7 @@ function subscribe() {
           {{ $t('setup.nav.previous') }}
         </ab-button>
         <ab-button
-          variant="primary"
+          variant="secondary"
           size="sm"
           :loading="loading.collect"
           @click="collect"
@@ -311,73 +336,18 @@ function subscribe() {
   color: var(--color-text-secondary);
 }
 
-.input-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.input-icon {
-  position: absolute;
-  left: 12px;
-  color: var(--color-text-muted);
-  pointer-events: none;
-}
-
-.form-input {
+// ab-input 在平板以上默认 200px；这里上下堆叠，占满整行
+.form-group .form-input {
   width: 100%;
-  height: 40px;
-  padding: 0 12px;
-  font-size: 14px;
-  font-family: inherit;
-  color: var(--color-text);
-  background: var(--color-surface-hover);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  outline: none;
-  transition: border-color var(--transition-fast),
-    box-shadow var(--transition-fast);
-
-  &:focus {
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px
-      color-mix(in srgb, var(--color-primary) 15%, transparent);
-  }
-
-  &::placeholder {
-    color: var(--color-text-muted);
-  }
-
-  &--with-icon {
-    padding-left: 40px;
-  }
-}
-
-.parser-select {
-  width: 140px;
 }
 
 .options-row {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  padding: 16px;
-  background: var(--color-surface-hover);
+  flex-direction: column;
+  gap: var(--layout-gap);
+  padding: var(--layout-padding);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-}
-
-.option-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.option-label {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--color-text-secondary);
 }
 
 // Footer
@@ -397,31 +367,7 @@ function subscribe() {
 // shared preview/tags/rss-link/filter/offset-row styles live in the
 // bangumi-* / advanced-section sub-components)
 .detect-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 80px;
-  height: 32px;
-  padding: 0 14px;
-  font-size: 13px;
-  font-family: inherit;
-  font-weight: 500;
-  color: #fff;
-  background: var(--color-primary);
-  border: none;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background-color var(--transition-fast);
-
-  &:hover:not(:disabled) {
-    background: var(--color-primary-hover);
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
+  flex-shrink: 0;
 }
 
 .offset-reason {
@@ -431,16 +377,4 @@ function subscribe() {
 }
 
 // Modal transition
-// Responsive
-@media (max-width: 480px) {
-  .options-row {
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .option-item {
-    justify-content: space-between;
-    width: 100%;
-  }
-}
 </style>

@@ -1,0 +1,10 @@
+[plugin]
+id = "ntfy-notifier"
+name = "ntfy 通知"
+version = "0.1.0"
+sdk = ">=0.5,<1"
+entry = "ntfy_notifier:NtfyNotifier"
+description = "示例插件：把通知发到 ntfy 主题。在「设置 → 通知 → 添加渠道」选择类型 ntfy。演示 notifier 与 NotifierContract"
+authors = ["AutoBangumi"]
+permissions = ["network"]
+extension_points = ["notifier"]

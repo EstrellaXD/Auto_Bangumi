@@ -1,10 +1,14 @@
 <script setup lang="ts">
+import { useData } from 'vitepress'
+
+// WebUI 只有中英文：中文站用中文截图，en/ja 站用英文截图
+const { lang } = useData()
 </script>
 
 <template>
   <div class="container">
     <img
-      src="/image/preview/window.png"
+      :src="lang === 'zh-CN' ? '/image/preview/window.png' : '/image/en/preview/window.png'"
       alt="AutoBangumi WebUI Preview"
       class="webui-preview"
       data-zoomable

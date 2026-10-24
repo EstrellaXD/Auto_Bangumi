@@ -91,18 +91,6 @@ async def refresh(
     return await _refresh_cookie(response, token, service)
 
 
-@router.get("/refresh_token", response_model=AuthenticationSuccess, deprecated=True)
-async def refresh_legacy_get(
-    response: Response,
-    service: AuthService,
-    token: str | None = Cookie(None),
-):
-    """Compatibility alias; clients should use POST."""
-    response.headers["Deprecation"] = "true"
-    response.headers["Warning"] = '299 - "Use POST /auth/refresh_token"'
-    return await _refresh_cookie(response, token, service)
-
-
 @router.post("/logout", response_model=APIResponse)
 async def logout(
     response: Response,

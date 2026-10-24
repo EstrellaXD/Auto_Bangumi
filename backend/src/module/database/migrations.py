@@ -11,6 +11,7 @@
 import logging
 from dataclasses import dataclass
 from typing import Any, Callable, get_args, get_origin
+from urllib.parse import parse_qsl, urlsplit
 
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
@@ -21,6 +22,7 @@ from module.models import ApiToken, AuthSession, Bangumi, Movie, RenameOperation
 from module.models.inbox import InboxMessage
 from module.models.llm_credential import LLMCredential
 from module.models.passkey import Passkey
+from module.models.plugin_kv import PluginKV
 from module.models.rss import RSSItem
 from module.models.torrent import Torrent
 
@@ -39,6 +41,7 @@ TABLE_MODELS: list[type[SQLModel]] = [
     AuthSession,
     ApiToken,
     RenameOperation,
+    PluginKV,
 ]
 
 # already_applied 守卫：接收 inspector，返回该迁移是否已生效
@@ -85,6 +88,9 @@ class Migration:
     statements: tuple[str, ...]
     already_applied: AppliedCheck
     guarded_statements: tuple[GuardedStatement, ...] = ()
+    # 一次性的数据修复：在 SQL 语句之后、同一 SAVEPOINT 内执行；
+    # already_applied 为真时跳过
+    data_step: Callable[[Connection], None] | None = None
 
     def pending_statements(self, inspector) -> tuple[str, ...]:
         if self.guarded_statements:
@@ -96,6 +102,86 @@ class Migration:
         if self.already_applied(inspector):
             return ()
         return self.statements
+
+
+# 规则与订阅的 downloader_id 为空表示「用默认实例」，存量行保持为空；
+# 种子记录实际所在的实例，存量种子都在 3.3 的下载器，即实例 default
+_DOWNLOADER_ID_COLUMNS = {
+    "bangumi": "downloader_id VARCHAR",
+    "movie": "downloader_id VARCHAR",
+    "rssitem": "downloader_id VARCHAR",
+    "torrent": "downloader_id VARCHAR DEFAULT 'default'",
+}
+
+
+def _has_downloader_id(table: str) -> AppliedCheck:
+    # 表不存在时由 create_all 按模型建表，自带该列
+    def check(inspector) -> bool:
+        return table not in inspector.get_table_names() or column_exists(
+            table, "downloader_id"
+        )(inspector)
+
+    return check
+
+
+def _strip_search_keyword_episodes(conn: Connection) -> None:
+    """旧版本从搜索结果建的订阅把集号写进了搜索关键词（如 S03E02），刷新时
+    一直按存下的 URL 拉取，订阅锁死在单集（#1138）。
+
+    只改搜索源 URL（主机、路径与某个搜索源模板一致，且带模板里 ``%s`` 所在的
+    关键词参数）：按引用该 URL 的番剧存下的 season_raw，把关键词里的季集写法
+    换成只含季的写法，其余参数与编码原样保留；番剧 rss_link 里的同一 URL 一并
+    替换。Mikan 番剧 RSS、用户手填的订阅不变。
+    """
+    # 延迟导入：searcher 依赖 rss/network，模块级导入会与 database 循环
+    from module.searcher.provider import available_sites, encode_keywords
+    from module.searcher.searcher import strip_season_episode
+
+    keyword_params: dict[tuple[str, str], str] = {}
+    for config in available_sites().values():
+        template = urlsplit(config["url"])
+        for name, value in parse_qsl(template.query):
+            if value == "%s":
+                keyword_params[(template.netloc, template.path)] = name
+    season_by_url: dict[str, str] = {}
+    for raw, rss_link in conn.execute(
+        text(
+            "SELECT season_raw, rss_link FROM bangumi "
+            "WHERE season_raw IS NOT NULL AND rss_link IS NOT NULL"
+        )
+    ):
+        for link in rss_link.split(","):
+            season_by_url.setdefault(link.strip(), raw)
+
+    for rss_id, url in conn.execute(text("SELECT id, url FROM rssitem")).all():
+        parts = urlsplit(url)
+        param_name = keyword_params.get((parts.netloc, parts.path))
+        season_raw = season_by_url.get(url)
+        if param_name is None or season_raw is None:
+            continue
+        old = f"+{encode_keywords([season_raw])}+"
+        new = f"+{encode_keywords([strip_season_episode(season_raw)])}+"
+        base, _, query = url.partition("?")
+        params = query.split("&")
+        for i, param in enumerate(params):
+            key, sep, value = param.partition("=")
+            if key == param_name and sep:
+                params[i] = f"{key}={f'+{value}+'.replace(old, new, 1)[1:-1]}"
+        new_url = f"{base}?{'&'.join(params)}"
+        if new_url == url:
+            continue
+        conn.execute(
+            text("UPDATE rssitem SET url = :new WHERE id = :id"),
+            {"new": new_url, "id": rss_id},
+        )
+        conn.execute(
+            text(
+                "UPDATE bangumi SET rss_link = replace(rss_link, :old, :new) "
+                "WHERE instr(rss_link, :old) > 0"
+            ),
+            {"old": url, "new": new_url},
+        )
+        logger.info(f"Search subscription keyword drops episode: {url} -> {new_url}")
 
 
 # 迁移按版本顺序执行；版本号与 3.2.x 的历史保持一致，旧数据库照常升级。
@@ -781,6 +867,75 @@ MIGRATIONS: tuple[Migration, ...] = (
             ),
         ),
     ),
+    Migration(
+        25,
+        "add plugin key-value store",
+        (
+            """CREATE TABLE IF NOT EXISTS plugin_kv (
+                id INTEGER NOT NULL PRIMARY KEY,
+                plugin_id VARCHAR NOT NULL,
+                key VARCHAR NOT NULL,
+                value VARCHAR NOT NULL,
+                updated_at DATETIME NOT NULL,
+                CONSTRAINT uq_plugin_kv UNIQUE (plugin_id, key)
+            )""",
+            "CREATE INDEX IF NOT EXISTS ix_plugin_kv_plugin_id ON plugin_kv (plugin_id)",
+        ),
+        table_exists("plugin_kv"),
+    ),
+    Migration(
+        26,
+        "add downloader_id to bangumi, movie, rssitem and torrent",
+        tuple(
+            f"ALTER TABLE {table} ADD COLUMN {column}"
+            for table, column in _DOWNLOADER_ID_COLUMNS.items()
+        ),
+        all_checks(*(_has_downloader_id(table) for table in _DOWNLOADER_ID_COLUMNS)),
+        tuple(
+            (f"ALTER TABLE {table} ADD COLUMN {column}", _has_downloader_id(table))
+            for table, column in _DOWNLOADER_ID_COLUMNS.items()
+        ),
+    ),
+    Migration(
+        27,
+        "scope aria2_gid by downloader instance",
+        # SQLite 不能修改主键，重建表；存量映射都属于 3.3 的下载器，即实例 default
+        (
+            """CREATE TABLE aria2_gid_new (
+                downloader_id VARCHAR NOT NULL,
+                gid VARCHAR NOT NULL,
+                bangumi_id INTEGER REFERENCES bangumi(id),
+                category VARCHAR,
+                dedup_key VARCHAR,
+                renamed_paths TEXT DEFAULT NULL,
+                rename_intent TEXT DEFAULT NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (downloader_id, gid)
+            )""",
+            "INSERT INTO aria2_gid_new (downloader_id, gid, bangumi_id, category, "
+            "dedup_key, renamed_paths, rename_intent, created_at) "
+            "SELECT 'default', gid, bangumi_id, category, dedup_key, renamed_paths, "
+            "rename_intent, created_at FROM aria2_gid",
+            "DROP TABLE aria2_gid",
+            "ALTER TABLE aria2_gid_new RENAME TO aria2_gid",
+            "CREATE INDEX ix_aria2_gid_dedup_key ON aria2_gid(dedup_key)",
+        ),
+        _has_downloader_id("aria2_gid"),
+    ),
+    Migration(
+        28,
+        "strip episode from search subscription keywords",
+        (),
+        # 数据修复没有可检查的 schema 痕迹，由 schema_version 保证只跑一次；
+        # 缺少这些列的库里没有要修的订阅
+        lambda inspector: (
+            not all_checks(
+                column_exists("bangumi", "season_raw"),
+                column_exists("bangumi", "rss_link"),
+            )(inspector)
+        ),
+        data_step=_strip_search_keyword_episodes,
+    ),
 )
 
 # 由迁移列表派生，新增迁移时无需手动同步
@@ -831,8 +986,12 @@ def run_migrations_conn(conn: Connection) -> None:
         if migration.version <= current:
             continue
         # 每轮重新 inspect：前一个迁移的 DDL 需要对守卫可见
-        pending = migration.pending_statements(inspect(conn))
-        if not pending:
+        inspector = inspect(conn)
+        pending = migration.pending_statements(inspector)
+        data_step = (
+            None if migration.already_applied(inspector) else migration.data_step
+        )
+        if not pending and data_step is None:
             logger.debug(
                 f"Migration v{migration.version} skipped "
                 f"(already applied): {migration.description}"
@@ -842,10 +1001,10 @@ def run_migrations_conn(conn: Connection) -> None:
             try:
                 for stmt in pending:
                     conn.execute(text(stmt))
+                if data_step is not None:
+                    data_step(conn)
                 savepoint.commit()
-                logger.info(
-                    f"Migration v{migration.version}: " f"{migration.description}"
-                )
+                logger.info(f"Migration v{migration.version}: {migration.description}")
             except Exception as e:
                 savepoint.rollback()
                 logger.error(f"Migration v{migration.version} failed: {e}")

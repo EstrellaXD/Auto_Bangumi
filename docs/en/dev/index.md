@@ -128,7 +128,12 @@ The development team will review contributor PRs and discuss or approve merging 
 
 ## Release Process
 
-Releases are currently triggered automatically after the development team manually merges a specific "release PR".
+Only a version tag that a maintainer pushes manually starts a release. A merged PR does not start a release.
+
+- **Beta**: a tag of the form `X.Y.Z-beta.N` (for example `4.0.0-beta.1`) on a development branch. CI builds the Docker image with two tags, the version and `dev-latest`. It also creates a pre-release on GitHub.
+- **Stable**: first a PR merges the development branch into `main`. Then a maintainer puts a tag of the form `X.Y.Z` on the merge commit on `main`. CI checks the tag format and makes sure that the commit is on `main`. Then it builds the image with two tags, the version and `latest`. It creates the GitHub release with the release notes from `docs/changelog/<X.Y>.md`.
+
+The attachments of each release include the WebUI, the online update bundle, the plugin SDK wheel and the plugin-development skill (refer to [Get the SDK](/en/dev/plugins/sdk)).
 
 Bug fix PRs are typically released quickly, usually within a week.
 

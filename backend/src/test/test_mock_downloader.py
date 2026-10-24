@@ -19,23 +19,16 @@ def mock_dl() -> MockDownloader:
 
 class TestMockDownloaderInit:
     def test_initial_state_is_empty(self, mock_dl):
-        """MockDownloader starts with no torrents, rules, or feeds."""
+        """MockDownloader starts with no torrents or rules."""
         state = mock_dl.get_state()
         assert state["torrents"] == {}
         assert state["rules"] == {}
-        assert state["feeds"] == {}
 
     def test_initial_categories(self, mock_dl):
         """Default categories include Bangumi and BangumiCollection."""
         state = mock_dl.get_state()
         assert "Bangumi" in state["categories"]
         assert "BangumiCollection" in state["categories"]
-
-    def test_initial_prefs(self, mock_dl):
-        """Default prefs are populated."""
-        # Access private attribute directly to confirm defaults
-        assert mock_dl._prefs["rss_auto_downloading_enabled"] is True
-        assert mock_dl._prefs["rss_max_articles_per_feed"] == 500
 
 
 # ---------------------------------------------------------------------------
@@ -55,31 +48,10 @@ class TestMockDownloaderAuth:
     async def test_logout_does_not_raise(self, mock_dl):
         await mock_dl.logout()
 
-    async def test_check_host_returns_true(self, mock_dl):
-        result = await mock_dl.check_host()
-        assert result is True
-
-    async def test_check_connection_returns_version_string(self, mock_dl):
-        result = await mock_dl.check_connection()
-        assert "mock" in result.lower()
-
 
 # ---------------------------------------------------------------------------
 # Prefs
 # ---------------------------------------------------------------------------
-
-
-class TestMockDownloaderPrefs:
-    async def test_prefs_init_updates_prefs(self, mock_dl):
-        """prefs_init merges given prefs into the internal store."""
-        await mock_dl.prefs_init({"rss_refresh_interval": 60, "custom_key": "val"})
-        assert mock_dl._prefs["rss_refresh_interval"] == 60
-        assert mock_dl._prefs["custom_key"] == "val"
-
-    async def test_get_app_prefs_returns_dict(self, mock_dl):
-        result = await mock_dl.get_app_prefs()
-        assert isinstance(result, dict)
-        assert "save_path" in result
 
 
 # ---------------------------------------------------------------------------
@@ -280,27 +252,6 @@ class TestMockDownloaderRename:
 # ---------------------------------------------------------------------------
 
 
-class TestMockDownloaderRssFeeds:
-    async def test_add_feed_stored(self, mock_dl):
-        await mock_dl.rss_add_feed(url="https://mikan.me/RSS/test", item_path="Mikan")
-        feeds = await mock_dl.rss_get_feeds()
-        assert "Mikan" in feeds
-        assert feeds["Mikan"]["url"] == "https://mikan.me/RSS/test"
-
-    async def test_remove_feed(self, mock_dl):
-        await mock_dl.rss_add_feed(url="https://example.com", item_path="Feed1")
-        await mock_dl.rss_remove_item(item_path="Feed1")
-        feeds = await mock_dl.rss_get_feeds()
-        assert "Feed1" not in feeds
-
-    async def test_remove_nonexistent_feed_no_error(self, mock_dl):
-        await mock_dl.rss_remove_item(item_path="nonexistent")
-
-    async def test_get_feeds_initially_empty(self, mock_dl):
-        feeds = await mock_dl.rss_get_feeds()
-        assert feeds == {}
-
-
 # ---------------------------------------------------------------------------
 # Rules
 # ---------------------------------------------------------------------------
@@ -310,22 +261,9 @@ class TestMockDownloaderRules:
     async def test_set_rule_stored(self, mock_dl):
         rule_def = {"enable": True, "mustContain": "Anime"}
         await mock_dl.rss_set_rule("rule1", rule_def)
-        rules = await mock_dl.get_download_rule()
+        rules = mock_dl.get_state()["rules"]
         assert "rule1" in rules
         assert rules["rule1"]["mustContain"] == "Anime"
-
-    async def test_remove_rule(self, mock_dl):
-        await mock_dl.rss_set_rule("rule1", {"enable": True})
-        await mock_dl.remove_rule("rule1")
-        rules = await mock_dl.get_download_rule()
-        assert "rule1" not in rules
-
-    async def test_remove_nonexistent_rule_no_error(self, mock_dl):
-        await mock_dl.remove_rule("nonexistent")
-
-    async def test_get_download_rule_initially_empty(self, mock_dl):
-        rules = await mock_dl.get_download_rule()
-        assert rules == {}
 
 
 # ---------------------------------------------------------------------------
@@ -345,15 +283,6 @@ class TestMockDownloaderMovePath:
         await mock_dl.move_torrent(hashes=f"{h1}|{h2}", new_location="/new")
         assert mock_dl._torrents[h1]["save_path"] == "/new"
         assert mock_dl._torrents[h2]["save_path"] == "/new"
-
-    async def test_get_torrent_path_known_hash(self, mock_dl):
-        h = mock_dl.add_mock_torrent("Anime", save_path="/downloads/Bangumi")
-        path = await mock_dl.get_torrent_path(h)
-        assert path == "/downloads/Bangumi"
-
-    async def test_get_torrent_path_unknown_hash_returns_default(self, mock_dl):
-        path = await mock_dl.get_torrent_path("nonexistent")
-        assert path == "/tmp/mock-downloads"
 
 
 # ---------------------------------------------------------------------------

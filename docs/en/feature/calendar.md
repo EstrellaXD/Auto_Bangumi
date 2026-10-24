@@ -2,7 +2,7 @@
 
 Since v3.2, AB includes a calendar view that shows your subscribed anime organized by broadcast day.
 
-![Calendar](/image/feature/calendar.png)
+![Calendar](/image/en/feature/calendar.png)
 
 ## Features
 

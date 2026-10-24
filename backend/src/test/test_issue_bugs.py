@@ -379,19 +379,6 @@ class TestIssue990NumberPrefixTitle:
         bangumi.title_aliases = '[null, "valid_alias", null, "another"]'
         assert _get_aliases_list(bangumi) == ["valid_alias", "another"]
 
-    async def test_get_all_title_patterns_skips_none_title_raw(self, db_session):
-        """get_all_title_patterns should return empty list when title_raw is None."""
-        from module.database.bangumi import BangumiDatabase
-        from module.models import Bangumi
-
-        db = BangumiDatabase(db_session)
-        bangumi = Bangumi(official_title="Test Anime")
-        bangumi.title_raw = None  # type: ignore[assignment]  # simulating corrupted data
-        bangumi.title_aliases = None
-
-        patterns = db.get_all_title_patterns(bangumi)
-        assert patterns == []
-
     async def test_match_torrent_no_crash_on_none_title_raw(self, db_session):
         """match_torrent should not crash when a bangumi has None title_raw."""
         from module.database.bangumi import BangumiDatabase

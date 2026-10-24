@@ -6,9 +6,10 @@ from fastapi.testclient import TestClient
 
 from module.api.deps import get_context
 from module.api.setup import SENTINEL_PATH, router
+from module.models.config import Config
 from module.models.user import User
 from module.security.api import get_auth_service
-from module.security.jwt import get_password_hash
+from module.security.password import get_password_hash
 
 
 @pytest.fixture
@@ -56,12 +57,10 @@ def mock_first_run():
     with (
         patch("module.api.setup.SENTINEL_PATH") as mock_sentinel,
         patch("module.api.setup.settings") as mock_settings,
-        patch("module.api.setup.Config") as mock_config,
     ):
         mock_sentinel.exists.return_value = False
-        mock_settings.dict.return_value = {"test": "default"}
-        mock_config.return_value.dict.return_value = {"test": "default"}
-        yield
+        mock_settings.model_dump.side_effect = lambda: Config().model_dump()
+        yield mock_settings
 
 
 @pytest.fixture
@@ -97,8 +96,8 @@ class TestSetupStatus:
             ),  # Non-dev version to test config check
         ):
             mock_sentinel.exists.return_value = False
-            mock_settings.dict.return_value = {"test": "changed"}
-            mock_config.return_value.dict.return_value = {"test": "default"}
+            mock_settings.model_dump.return_value = {"test": "changed"}
+            mock_config.return_value.model_dump.return_value = {"test": "default"}
             response = client.get("/api/v1/setup/status")
             assert response.status_code == 200
             data = response.json()
@@ -159,11 +158,11 @@ class TestSetupGuard:
 class TestTestDownloader:
     def test_private_ip_accepted(self, client, mock_first_run):
         """Issue #1001: Private IPs must not be rejected for downloader test."""
-        import httpx
+        import httpx2
 
-        with patch("module.api.setup.httpx.AsyncClient") as mock_client_cls:
+        with patch("module.api.setup.httpx2.AsyncClient") as mock_client_cls:
             mock_instance = AsyncMock()
-            mock_instance.get.side_effect = httpx.ConnectError("refused")
+            mock_instance.get.side_effect = httpx2.ConnectError("refused")
             mock_client_cls.return_value.__aenter__ = AsyncMock(
                 return_value=mock_instance
             )
@@ -187,11 +186,11 @@ class TestTestDownloader:
 
     def test_loopback_ip_accepted(self, client, mock_first_run):
         """Issue #1001: Loopback IPs must not be rejected for downloader test."""
-        import httpx
+        import httpx2
 
-        with patch("module.api.setup.httpx.AsyncClient") as mock_client_cls:
+        with patch("module.api.setup.httpx2.AsyncClient") as mock_client_cls:
             mock_instance = AsyncMock()
-            mock_instance.get.side_effect = httpx.ConnectError("refused")
+            mock_instance.get.side_effect = httpx2.ConnectError("refused")
             mock_client_cls.return_value.__aenter__ = AsyncMock(
                 return_value=mock_instance
             )
@@ -212,11 +211,11 @@ class TestTestDownloader:
             assert data["success"] is False
 
     def test_connection_timeout(self, client, mock_first_run):
-        import httpx
+        import httpx2
 
-        with patch("module.api.setup.httpx.AsyncClient") as mock_client_cls:
+        with patch("module.api.setup.httpx2.AsyncClient") as mock_client_cls:
             mock_instance = AsyncMock()
-            mock_instance.get.side_effect = httpx.TimeoutException("timeout")
+            mock_instance.get.side_effect = httpx2.TimeoutException("timeout")
             mock_client_cls.return_value.__aenter__ = AsyncMock(
                 return_value=mock_instance
             )
@@ -237,11 +236,11 @@ class TestTestDownloader:
             assert data["success"] is False
 
     def test_connection_refused(self, client, mock_first_run):
-        import httpx
+        import httpx2
 
-        with patch("module.api.setup.httpx.AsyncClient") as mock_client_cls:
+        with patch("module.api.setup.httpx2.AsyncClient") as mock_client_cls:
             mock_instance = AsyncMock()
-            mock_instance.get.side_effect = httpx.ConnectError("refused")
+            mock_instance.get.side_effect = httpx2.ConnectError("refused")
             mock_client_cls.return_value.__aenter__ = AsyncMock(
                 return_value=mock_instance
             )
@@ -328,7 +327,7 @@ class TestRequestValidation:
 
 class TestSetupComplete:
     """Issue: setup wizard must route config reload through AppContext, not
-    mutate settings.__dict__ directly (the shared httpx client, notifier, and
+    mutate settings.__dict__ directly (the shared httpx2 client, notifier, and
     scheduler must be rebuilt after first-run setup)."""
 
     @staticmethod
@@ -349,6 +348,60 @@ class TestSetupComplete:
             "notification_token": "",
             "notification_chat_id": "",
         }
+
+    def test_complete_writes_downloader_to_default_instance(
+        self, client, mock_first_run, auth_service
+    ):
+        auth_service.authenticate_session.return_value = User(
+            id=7, username="admin", password="hashed-password", enabled=True
+        )
+        client.cookies.set("token", "pre-setup-session")
+        payload = self._payload() | {"downloader_type": "aria2"}
+        response = client.post("/api/v1/setup/complete", json=payload)
+
+        assert response.status_code == 200
+        saved = mock_first_run.save.call_args.args[0]
+        assert "downloader" not in saved
+        assert saved["plugins"]["instances"] == [
+            {
+                "id": "default",
+                "point": "downloader",
+                "provider": "aria2",
+                "options": {
+                    "host": "localhost:8080",
+                    "username": "admin",
+                    "password": "admin",
+                    "path": "/downloads",
+                    "ssl": False,
+                },
+            }
+        ]
+
+    @pytest.mark.parametrize(
+        ("provider", "field", "old", "value"),
+        [
+            ("bark", "device_key", "notification_token", "bark-key"),
+            ("wecom", "webhook_url", "notification_chat_id", "https://wecom/hook"),
+        ],
+    )
+    def test_complete_notification_alias_saved_to_provider_field(
+        self, client, mock_first_run, auth_service, provider, field, old, value
+    ):
+        """向导的通用 token / chat_id 输入要写成渠道实际读取的字段。"""
+        auth_service.authenticate_session.return_value = User(
+            id=7, username="admin", password="hashed-password", enabled=True
+        )
+        client.cookies.set("token", "pre-setup-session")
+        payload = self._payload() | {
+            "notification_enable": True,
+            "notification_type": provider,
+            old: value,
+        }
+        response = client.post("/api/v1/setup/complete", json=payload)
+
+        assert response.status_code == 200
+        saved = mock_first_run.save.call_args.args[0]
+        assert saved["notification"]["providers"][0][field] == value
 
     def test_complete_routes_through_ctx_reload_settings(
         self, client, mock_first_run, mock_ctx, auth_service
@@ -432,6 +485,41 @@ class TestSetupComplete:
         auth_service.update_user.assert_not_awaited()
 
 
+@pytest.mark.parametrize(
+    ("provider", "field", "body"),
+    [
+        ("bark", "device_key", {"token": "bark-key"}),
+        ("wecom", "webhook_url", {"token": "k", "chat_id": "https://wecom/hook"}),
+    ],
+)
+def test_test_notification_alias_reaches_provider_field(
+    client, mock_first_run, provider, field, body
+):
+    """测试通知用的配置与保存的一致：Bark 读 device_key，WeCom 读 webhook_url。"""
+    seen = []
+
+    class StubProvider:
+        def __init__(self, config):
+            seen.append(config)
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *exc):
+            return False
+
+        async def test(self):
+            return True, ""
+
+    with patch.dict("module.api.setup.PROVIDER_REGISTRY", {provider: StubProvider}):
+        response = client.post(
+            "/api/v1/setup/test-notification", json={"type": provider, **body}
+        )
+
+    assert response.json()["success"] is True
+    assert getattr(seen[0], field) == list(body.values())[-1]
+
+
 class TestSentinelPath:
     def test_sentinel_path_is_in_config_dir(self):
         assert str(SENTINEL_PATH) == "config/.setup_complete"
@@ -449,7 +537,7 @@ class TestTestDownloaderHardening:
         else:
             mock_instance.get.return_value = get_resp
         mock_instance.post.return_value = login_resp
-        cls_patch = patch("module.api.setup.httpx.AsyncClient")
+        cls_patch = patch("module.api.setup.httpx2.AsyncClient")
         mock_cls = cls_patch.start()
         mock_cls.return_value.__aenter__ = AsyncMock(return_value=mock_instance)
         mock_cls.return_value.__aexit__ = AsyncMock(return_value=False)

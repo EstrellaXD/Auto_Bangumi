@@ -1,0 +1,4 @@
+repo = "EstrellaXD/Auto_Bangumi"
+commit = "f3359b17fde62ebfe32179071e7ae579431fd0cd"
+path = "examples/plugins/custom-rss-site"
+sha256 = "a0af05e45f7837f81b744354cec569cfbdaf4a8fd6fd8beb7fdcbd9b22d23e6b"

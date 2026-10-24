@@ -22,7 +22,7 @@ def _qb() -> QbDownloader:
 
 
 def _aria2() -> Aria2Downloader:
-    return Aria2Downloader("http://localhost:6800", "u", "p")
+    return Aria2Downloader("http://localhost:6800", "u", "p", "default")
 
 
 def _mock() -> MockDownloader:

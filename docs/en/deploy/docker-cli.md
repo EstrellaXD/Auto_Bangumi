@@ -1,5 +1,9 @@
 # Deploy with Docker CLI
 
+::: tip Upgrade from 3.3
+The commands on this page use the `latest` tag, which installs the 4.0 stable release. If you use 3.3 now, read [Upgrade from 3.3 to 4.0](./upgrade-4.0) before you pull the new image. To stay on 3.3, set the tag to `3.3.7`. The 4.0 hard link plugin also needs the media library directory mounted into the container. Refer to [Bangumi Manager](../config/manager).
+:::
+
 ## Note on New Versions
 
 Since AutoBangumi 2.6, you can configure everything directly in the WebUI. You can start the container first and then configure it in the WebUI. Environment variable configuration from older versions will be automatically migrated. Environment variables still work but only take effect on the first startup.

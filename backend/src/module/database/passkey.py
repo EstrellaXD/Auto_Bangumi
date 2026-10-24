@@ -42,17 +42,6 @@ class PasskeyDatabase:
         result = await self.session.execute(statement)
         return list(result.scalars().all())
 
-    async def get_passkey_by_id(self, passkey_id: int, user_id: int) -> Passkey:
-        """获取特定 Passkey（带权限检查）"""
-        statement = select(Passkey).where(
-            Passkey.id == passkey_id, Passkey.user_id == user_id
-        )
-        result = await self.session.execute(statement)
-        passkey = result.scalar_one_or_none()
-        if not passkey:
-            raise HTTPException(status_code=404, detail="Passkey not found")
-        return passkey
-
     async def update_passkey_usage(self, passkey: Passkey, new_sign_count: int):
         """更新 Passkey 使用记录（签名计数器 + 最后使用时间）"""
         passkey.sign_count = new_sign_count

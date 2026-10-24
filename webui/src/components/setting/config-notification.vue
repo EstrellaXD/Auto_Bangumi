@@ -1,19 +1,35 @@
 <script lang="ts" setup>
+import {
+  Bell,
+  BellRing,
+  Eye,
+  EyeOff,
+  LoaderCircle,
+  Pencil,
+  Play,
+  Plus,
+  Smartphone,
+  Trash2,
+  Webhook,
+} from '@lucide/vue';
+import type { Component } from 'vue';
 import { NSelect } from 'naive-ui';
 import { useConfirm } from '@/hooks/useConfirm';
 import type { NotificationProviderConfig, NotificationType } from '#/config';
 import type { TupleToUnion } from '#/utils';
 import { apiNotification } from '@/api/notification';
+import { usePluginProviders } from '@/hooks/usePluginProviders';
 
 const { t, returnUserLangText } = useMyI18n();
 const { confirm } = useConfirm();
-const { getSettingGroup } = useConfigStore();
+const configStore = useConfigStore();
+const { getSettingGroup } = configStore;
 
 const notificationRef = getSettingGroup('notification');
 
 // Provider types with display names
-const providerTypes: {
-  value: TupleToUnion<NotificationType>;
+const builtinProviderTypes: {
+  value: TupleToUnion<NotificationType> | (string & {});
   label: string;
 }[] = [
   { value: 'telegram', label: 'Telegram' },
@@ -25,14 +41,25 @@ const providerTypes: {
   { value: 'pushover', label: 'Pushover' },
   { value: 'webhook', label: 'Webhook' },
 ];
+const pluginProviders = usePluginProviders();
+// 插件提供的渠道追加在内置渠道之后；其凭据在插件自己的配置里填写
+const providerTypes = computed(() => [
+  ...builtinProviderTypes,
+  ...pluginProviders.value.notifier.map((id) => ({
+    value: id,
+    label: t('config.notification_set.plugin_label', { id }),
+  })),
+]);
 
 // Provider field configurations
 const providerFields: Record<
   string,
   {
     key: keyof NotificationProviderConfig;
-    label: string;
+    label: string | (() => string);
     placeholder: string;
+    // 有选项时渲染为可清空的下拉框
+    options?: string[];
   }[]
 > = {
   telegram: [
@@ -47,11 +74,41 @@ const providerFields: Record<
     },
   ],
   bark: [
-    { key: 'device_key', label: 'Device Key', placeholder: 'device key' },
+    {
+      key: 'device_key',
+      label: () => t('config.notification_set.device_key'),
+      placeholder: 'device key',
+    },
     {
       key: 'server_url',
-      label: 'Server URL (optional)',
+      label: () => t('config.notification_set.server_url_optional'),
       placeholder: 'https://api.day.app',
+    },
+    {
+      key: 'sound',
+      label: () => t('config.notification_set.bark_sound'),
+      placeholder: 'minuet',
+    },
+    {
+      key: 'group',
+      label: () => t('config.notification_set.bark_group'),
+      placeholder: 'AutoBangumi',
+    },
+    {
+      key: 'level',
+      label: () => t('config.notification_set.bark_level'),
+      placeholder: 'active',
+      options: ['active', 'timeSensitive', 'passive', 'critical'],
+    },
+    {
+      key: 'icon',
+      label: () => t('config.notification_set.bark_icon'),
+      placeholder: 'https://example.com/icon.png',
+    },
+    {
+      key: 'url',
+      label: () => t('config.notification_set.bark_url'),
+      placeholder: 'https://example.com',
     },
   ],
   'server-chan': [{ key: 'token', label: 'SendKey', placeholder: 'sendkey' }],
@@ -62,7 +119,7 @@ const providerFields: Record<
   gotify: [
     {
       key: 'server_url',
-      label: 'Server URL',
+      label: () => t('config.notification_set.server_url'),
       placeholder: 'https://gotify.example.com',
     },
     { key: 'token', label: 'App Token', placeholder: 'app token' },
@@ -79,7 +136,7 @@ const providerFields: Record<
     },
     {
       key: 'template',
-      label: 'Template (JSON)',
+      label: () => t('config.notification_set.template'),
       placeholder: '{"title": "{{title}}", "episode": {{episode}}}',
     },
   ],
@@ -94,9 +151,22 @@ const newProvider = ref<NotificationProviderConfig>({
   enabled: true,
 });
 
-// Testing state
+// Testing state：列表与对话框各用一份结果，互不串扰
+interface TestResult {
+  success: boolean;
+  message: string;
+}
 const testingIndex = ref(-1);
-const testResult = ref<{ success: boolean; message: string } | null>(null);
+const listResult = ref<TestResult | null>(null);
+const dialogResult = ref<TestResult | null>(null);
+// 对话框打开或关闭都清掉上一次的测试结果
+watch([showAddDialog, showEditDialog], () => {
+  dialogResult.value = null;
+});
+// 插件提供的渠道没有内置字段，凭据在插件自己的配置里填写
+const isPluginType = computed(
+  () => !(newProvider.value.type in providerFields)
+);
 
 // Computed properties to access notification settings
 const notificationEnabled = computed({
@@ -119,36 +189,40 @@ if (!notificationRef.value.providers) {
 }
 
 function getProviderLabel(type: string): string {
-  return providerTypes.find((p) => p.value === type)?.label || type;
+  return providerTypes.value.find((p) => p.value === type)?.label || type;
 }
 
-function getProviderIcon(type: string): string {
-  const icons: Record<string, string> = {
-    telegram: 'i-simple-icons-telegram',
-    discord: 'i-simple-icons-discord',
-    bark: 'i-carbon-notification',
-    'server-chan': 'i-simple-icons-wechat',
-    wecom: 'i-simple-icons-wechat',
-    gotify: 'i-carbon-notification-filled',
-    pushover: 'i-carbon-mobile',
-    webhook: 'i-carbon-webhook',
-  };
-  return icons[type] || 'i-carbon-notification';
-}
+// 品牌图标走 simple-icons，其余类型用 Lucide，未知（插件）类型回落到 Bell
+const brandIcons: Record<string, string> = {
+  telegram: 'i-simple-icons-telegram',
+  discord: 'i-simple-icons-discord',
+  'server-chan': 'i-simple-icons-wechat',
+  wecom: 'i-simple-icons-wechat',
+};
+const lucideIcons: Record<string, Component> = {
+  bark: Bell,
+  gotify: BellRing,
+  pushover: Smartphone,
+  webhook: Webhook,
+};
 
 function openAddDialog() {
   newProvider.value = {
     type: 'telegram',
     enabled: true,
   };
-  testResult.value = null;
   showAddDialog.value = true;
+}
+
+// 新增时切换类型：清掉上一类型的字段。Bark 也读 url（点击跳转），
+// 残留的 Webhook URL 会被一起发出去
+function changeType(type: NotificationProviderConfig['type']) {
+  newProvider.value = { type, enabled: newProvider.value.enabled };
 }
 
 function openEditDialog(index: number) {
   editingIndex.value = index;
   newProvider.value = { ...providers.value[index] };
-  testResult.value = null;
   showEditDialog.value = true;
 }
 
@@ -192,14 +266,12 @@ function toggleProvider(index: number) {
   providers.value = newProviders;
 }
 
-async function testProvider(index: number) {
-  testingIndex.value = index;
-  testResult.value = null;
+async function runTest(
+  request: () => ReturnType<typeof apiNotification.testProvider>
+): Promise<TestResult> {
   try {
-    const response = await apiNotification.testProvider({
-      provider_index: index,
-    });
-    testResult.value = {
+    const response = await request();
+    return {
       success: response.data.success,
       message: returnUserLangText({
         en: response.data.message_en,
@@ -207,37 +279,41 @@ async function testProvider(index: number) {
       }),
     };
   } catch {
-    testResult.value = {
+    return {
       success: false,
       message: t('config.notification_set.test_failed'),
     };
-  } finally {
-    testingIndex.value = -1;
   }
+}
+
+// 已保存且未改动的行按下标使用后端保存的配置：前端拿到的密钥是掩码，
+// 发回去必然失败；插件渠道的自带字段也只有后端的完整配置里才有。
+// 其余行（新增、删除后下标错位、已编辑）在后端没有对应项，按当前配置测试
+async function testProvider(index: number) {
+  testingIndex.value = index;
+  listResult.value = null;
+  const provider = providers.value[index];
+  const saved = configStore.savedConfig.notification.providers?.[index];
+  const unchanged = JSON.stringify(saved) === JSON.stringify(provider);
+  const result = await runTest(() =>
+    unchanged
+      ? apiNotification.testProvider({ provider_index: index })
+      : apiNotification.testProviderConfig(provider as any)
+  );
+  listResult.value = {
+    ...result,
+    message: `${getProviderLabel(provider.type)}: ${result.message}`,
+  };
+  testingIndex.value = -1;
 }
 
 async function testNewProvider() {
   testingIndex.value = -999; // Special index for new provider
-  testResult.value = null;
-  try {
-    const response = await apiNotification.testProviderConfig(
-      newProvider.value as any
-    );
-    testResult.value = {
-      success: response.data.success,
-      message: returnUserLangText({
-        en: response.data.message_en,
-        'zh-CN': response.data.message_zh,
-      }),
-    };
-  } catch {
-    testResult.value = {
-      success: false,
-      message: t('config.notification_set.test_failed'),
-    };
-  } finally {
-    testingIndex.value = -1;
-  }
+  dialogResult.value = null;
+  dialogResult.value = await runTest(() =>
+    apiNotification.testProviderConfig(newProvider.value as any)
+  );
+  testingIndex.value = -1;
 }
 
 function getFieldsForType(type: string) {
@@ -247,7 +323,7 @@ function getFieldsForType(type: string) {
 
 <template>
   <ab-fold-panel :title="$t('config.notification_set.title')">
-    <div space-y-8>
+    <div class="space-y-8">
       <!-- Global enable switch -->
       <ab-setting
         v-model:data="notificationEnabled"
@@ -258,7 +334,7 @@ function getFieldsForType(type: string) {
       />
 
       <!-- Provider list -->
-      <div v-if="notificationEnabled" space-y-8>
+      <div v-if="notificationEnabled" class="space-y-8">
         <div
           v-for="(provider, index) in providers"
           :key="index"
@@ -267,11 +343,14 @@ function getFieldsForType(type: string) {
         >
           <div class="provider-info">
             <div class="provider-name">
-              <div :class="getProviderIcon(provider.type)" />
+              <div v-if="brandIcons[provider.type]" :class="brandIcons[provider.type]" />
+              <component :is="lucideIcons[provider.type] ?? Bell" v-else :size="16" />
               {{ getProviderLabel(provider.type) }}
-              <span v-if="!provider.enabled" class="disabled-badge">
-                {{ $t('config.notification_set.disabled') }}
-              </span>
+              <ab-tag
+                v-if="!provider.enabled"
+                type="danger"
+                :title="$t('config.notification_set.disabled')"
+              />
             </div>
           </div>
           <div class="provider-actions">
@@ -281,19 +360,15 @@ function getFieldsForType(type: string) {
               :label="$t('config.notification_set.test')"
               @click="testProvider(index)"
             >
-              <div
-                v-if="testingIndex === index"
-                i-carbon-circle-dash
-                animate-spin
-              />
-              <div v-else i-carbon-play />
+              <LoaderCircle v-if="testingIndex === index" :size="16" class="animate-spin" />
+              <Play v-else :size="16" />
             </ab-icon-button>
             <ab-icon-button
               size="sm"
               :label="$t('config.notification_set.edit')"
               @click="openEditDialog(index)"
             >
-              <div i-carbon-edit />
+              <Pencil :size="16" />
             </ab-icon-button>
             <ab-icon-button
               size="sm"
@@ -304,11 +379,7 @@ function getFieldsForType(type: string) {
               "
               @click="toggleProvider(index)"
             >
-              <div
-                :class="
-                  provider.enabled ? 'i-carbon-view' : 'i-carbon-view-off'
-                "
-              />
+              <component :is="provider.enabled ? Eye : EyeOff" :size="16" />
             </ab-icon-button>
             <ab-icon-button
               size="sm"
@@ -316,26 +387,26 @@ function getFieldsForType(type: string) {
               :label="$t('config.notification_set.remove')"
               @click="onRemoveProvider(index)"
             >
-              <div i-carbon-trash-can />
+              <Trash2 :size="16" />
             </ab-icon-button>
           </div>
         </div>
 
         <!-- Test result message -->
-        <div
-          v-if="testResult"
+        <ab-alert
+          v-if="listResult"
           class="test-result"
-          :class="testResult.success ? 'test-success' : 'test-error'"
+          :type="listResult.success ? 'info' : 'danger'"
         >
-          {{ testResult.message }}
-        </div>
+          {{ listResult.message }}
+        </ab-alert>
 
-        <div line></div>
+        <div class="line" />
 
         <!-- Add provider button -->
-        <div flex="~ justify-end">
+        <div class="flex justify-end">
           <ab-button size="sm" variant="primary" @click="openAddDialog">
-            <div i-carbon-add />
+            <Plus :size="16" />
             {{ $t('config.notification_set.add_provider') }}
           </ab-button>
         </div>
@@ -348,12 +419,13 @@ function getFieldsForType(type: string) {
       size="sm"
       :title="$t('config.notification_set.add_provider')"
     >
-      <div space-y-16>
+      <div class="space-y-16">
         <ab-field :label="$t('config.notification_set.type')">
           <NSelect
-            v-model:value="newProvider.type"
+            :value="newProvider.type"
             :options="providerTypes"
             class="provider-type-select"
+            @update:value="changeType"
           />
         </ab-field>
 
@@ -362,8 +434,15 @@ function getFieldsForType(type: string) {
           :key="field.key"
           :label="field.label"
         >
+          <NSelect
+            v-if="field.options"
+            v-model:value="(newProvider as any)[field.key]"
+            :options="field.options.map((value) => ({ label: value, value }))"
+            :placeholder="field.placeholder"
+            clearable
+          />
           <ab-input
-            v-if="field.key !== 'template'"
+            v-else-if="field.key !== 'template'"
             v-model="(newProvider as any)[field.key]"
             :placeholder="field.placeholder"
           />
@@ -376,24 +455,29 @@ function getFieldsForType(type: string) {
           />
         </ab-field>
 
-        <div
-          v-if="testResult"
+        <p v-if="isPluginType" class="plugin-hint">
+          {{ $t('config.notification_set.plugin_hint') }}
+        </p>
+
+        <ab-alert
+          v-if="dialogResult"
           class="test-result"
-          :class="testResult.success ? 'test-success' : 'test-error'"
+          :type="dialogResult.success ? 'info' : 'danger'"
         >
-          {{ testResult.message }}
-        </div>
+          {{ dialogResult.message }}
+        </ab-alert>
       </div>
 
       <template #footer>
         <ab-button
+          v-if="!isPluginType"
           size="sm"
           class="footer-test"
           :disabled="testingIndex === -999"
           @click="testNewProvider"
         >
-          <div v-if="testingIndex === -999" i-carbon-circle-dash animate-spin />
-          <div v-else i-carbon-play />
+          <LoaderCircle v-if="testingIndex === -999" :size="16" class="animate-spin" />
+          <Play v-else :size="16" />
           {{ $t('config.notification_set.test') }}
         </ab-button>
         <ab-button size="sm" @click="showAddDialog = false">
@@ -411,7 +495,7 @@ function getFieldsForType(type: string) {
       size="sm"
       :title="$t('config.notification_set.edit_provider')"
     >
-      <div space-y-16>
+      <div class="space-y-16">
         <ab-field :label="$t('config.notification_set.type')">
           <NSelect
             v-model:value="newProvider.type"
@@ -426,8 +510,15 @@ function getFieldsForType(type: string) {
           :key="field.key"
           :label="field.label"
         >
+          <NSelect
+            v-if="field.options"
+            v-model:value="(newProvider as any)[field.key]"
+            :options="field.options.map((value) => ({ label: value, value }))"
+            :placeholder="field.placeholder"
+            clearable
+          />
           <ab-input
-            v-if="field.key !== 'template'"
+            v-else-if="field.key !== 'template'"
             v-model="(newProvider as any)[field.key]"
             :placeholder="field.placeholder"
           />
@@ -440,24 +531,29 @@ function getFieldsForType(type: string) {
           />
         </ab-field>
 
-        <div
-          v-if="testResult"
+        <p v-if="isPluginType" class="plugin-hint">
+          {{ $t('config.notification_set.plugin_hint') }}
+        </p>
+
+        <ab-alert
+          v-if="dialogResult"
           class="test-result"
-          :class="testResult.success ? 'test-success' : 'test-error'"
+          :type="dialogResult.success ? 'info' : 'danger'"
         >
-          {{ testResult.message }}
-        </div>
+          {{ dialogResult.message }}
+        </ab-alert>
       </div>
 
       <template #footer>
         <ab-button
+          v-if="!isPluginType"
           size="sm"
           class="footer-test"
           :disabled="testingIndex === -999"
           @click="testNewProvider"
         >
-          <div v-if="testingIndex === -999" i-carbon-circle-dash animate-spin />
-          <div v-else i-carbon-play />
+          <LoaderCircle v-if="testingIndex === -999" :size="16" class="animate-spin" />
+          <Play v-else :size="16" />
           {{ $t('config.notification_set.test') }}
         </ab-button>
         <ab-button size="sm" @click="showEditDialog = false">
@@ -483,23 +579,20 @@ function getFieldsForType(type: string) {
   justify-content: space-between;
   gap: 12px;
   padding: 12px;
-  background: var(--color-surface-elevated, #f9fafb);
-  border-radius: 8px;
-  transition: background-color var(--transition-normal),
-    opacity var(--transition-normal);
-
-  :root.dark & {
-    background: var(--color-surface-elevated, #1f2937);
-  }
-}
-
-.provider-disabled {
-  opacity: 0.5;
+  background: var(--color-surface-2);
+  border-radius: var(--radius-md);
+  transition: background-color var(--transition-normal);
 }
 
 .provider-info {
   flex: 1;
   min-width: 0;
+  transition: opacity var(--transition-normal);
+
+  // 停用只淡化信息区，“重新启用”等操作按钮保持可点的样子
+  .provider-disabled & {
+    opacity: 0.5;
+  }
 }
 
 .provider-name {
@@ -507,18 +600,13 @@ function getFieldsForType(type: string) {
   font-size: 14px;
   color: var(--color-text);
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-}
 
-.disabled-badge {
-  font-size: 11px;
-  font-weight: 500;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: var(--color-danger);
-  color: white;
-  opacity: 0.8;
+  > :first-child {
+    flex-shrink: 0;
+  }
 }
 
 .provider-actions {
@@ -567,23 +655,8 @@ function getFieldsForType(type: string) {
   }
 }
 
-.test-result {
+.plugin-hint {
   font-size: 12px;
-  padding: 8px 12px;
-  border-radius: 6px;
-}
-
-.test-success {
-  color: var(--color-success, #22c55e);
-  background: color-mix(
-    in srgb,
-    var(--color-success, #22c55e) 10%,
-    transparent
-  );
-}
-
-.test-error {
-  color: var(--color-danger, #ef4444);
-  background: color-mix(in srgb, var(--color-danger, #ef4444) 10%, transparent);
+  color: var(--color-text-secondary);
 }
 </style>

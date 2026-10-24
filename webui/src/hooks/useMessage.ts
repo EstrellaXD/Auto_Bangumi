@@ -1,6 +1,5 @@
 import { createDiscreteApi } from 'naive-ui';
 import type { GlobalThemeOverrides } from 'naive-ui';
-import { createSharedComposable } from '@vueuse/core';
 
 // Soft Ink toast：反色墨条 —— 所有类型同一深底，语义色只出现在图标上。
 // （组件级 token 可以用 CSS 变量；只有 common 必须是字面量）
@@ -27,9 +26,12 @@ const toastTheme: GlobalThemeOverrides = {
   },
 };
 
-export const useMessage = createSharedComposable(() => {
-  const { message } = createDiscreteApi(['message'], {
-    configProviderProps: { themeOverrides: toastTheme },
-  });
-  return message;
+// 在模块加载时创建：首次调用若发生在路由守卫的 app.runWithContext() 中，
+// discrete app 会从外层应用查找 n-message-provider 而失败（#1145）。
+const { message } = createDiscreteApi(['message'], {
+  configProviderProps: { themeOverrides: toastTheme },
 });
+
+export function useMessage() {
+  return message;
+}

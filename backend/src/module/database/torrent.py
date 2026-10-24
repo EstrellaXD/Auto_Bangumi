@@ -3,9 +3,9 @@ from collections import defaultdict
 
 from sqlalchemy import delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import and_, select, true
+from sqlmodel import and_, col, select, true
 
-from module.models import Torrent
+from module.models import Bangumi, RSSItem, Torrent
 
 logger = logging.getLogger(__name__)
 
@@ -33,11 +33,6 @@ class TorrentDatabase:
         self.session.add_all(datas)
         await self.session.commit()
 
-    async def update_one_user(self, data: Torrent):
-        self.session.add(data)
-        await self.session.commit()
-        logger.debug("Update %s in database.", data.name)
-
     async def search(self, _id: int) -> Torrent | None:
         result = await self.session.execute(select(Torrent).where(Torrent.id == _id))
         return result.scalar_one_or_none()
@@ -52,23 +47,34 @@ class TorrentDatabase:
         )
         return list(result.scalars().all())
 
-    async def check_new(self, torrents_list: list[Torrent]) -> list[Torrent]:
+    async def check_new(
+        self, torrents_list: list[Torrent], rss: RSSItem | None = None
+    ) -> list[Torrent]:
+        """返回库中没有记录的种子。
+
+        给出 ``rss`` 时只看该订阅已匹配、且所属番剧的 ``rss_link`` 已包含该
+        订阅当前 URL 的记录（与 BangumiDatabase.match_list 的追加判断一致）：
+        未匹配的孤儿每轮仍要重新分析，新番或上次分析失败的种子才能生成规则；
+        订阅改了 URL 时仍要匹配，才能把新 URL 追加到 rss_link（#1053）。
+        """
         if not torrents_list:
             return []
         urls = [t.url for t in torrents_list]
         # SQLModel 类属性在 mypy 看来是普通字段类型而非 InstrumentedAttribute，
         # 无法识别 .in_()/.is_() 等查询方法（无官方 mypy 插件支持）。
         statement = select(Torrent.url).where(Torrent.url.in_(urls))  # type: ignore[attr-defined]
+        if rss is not None:
+            # instr 区分大小写，与 Python 的 ``in`` 一致（LIKE 不区分）
+            statement = statement.join(
+                Bangumi,
+                Bangumi.id == Torrent.bangumi_id,  # type: ignore[arg-type]
+            ).where(
+                Torrent.rss_id == rss.id,
+                func.instr(Bangumi.rss_link, rss.url) > 0,
+            )
         result = await self.session.execute(statement)
         existing_urls = set(result.scalars().all())
         return [t for t in torrents_list if t.url not in existing_urls]
-
-    async def search_by_qb_hash(self, qb_hash: str) -> Torrent | None:
-        """Find torrent by qBittorrent hash."""
-        result = await self.session.execute(
-            select(Torrent).where(Torrent.qb_hash == qb_hash)
-        )
-        return result.scalar_one_or_none()
 
     async def search_by_qb_hashes(self, qb_hashes: list[str]) -> list[Torrent]:
         """Find torrents by multiple qBittorrent hashes (batch query)."""
@@ -116,14 +122,15 @@ class TorrentDatabase:
 
         Returns the number of deleted records.
         """
-        statement = select(Torrent).where(Torrent.bangumi_id == bangumi_id)
-        result = await self.session.execute(statement)
-        torrents = list(result.scalars().all())
-        count = len(torrents)
-        for t in torrents:
-            await self.session.delete(t)
+        # 单条 DELETE：逐行 ORM 删除会拉长写事务，与其他写入争 SQLite 锁（#1113）
+        result = await self.session.execute(
+            delete(Torrent)
+            .where(col(Torrent.bangumi_id) == bangumi_id)
+            .execution_options(synchronize_session=False)
+        )
+        await self.session.commit()
+        count = result.rowcount  # type: ignore[attr-defined]
         if count > 0:
-            await self.session.commit()
             logger.debug(
                 "Deleted %s torrent records for bangumi_id %s.", count, bangumi_id
             )
@@ -165,19 +172,3 @@ class TorrentDatabase:
         await self.session.delete(torrent)
         await self.session.commit()
         logger.debug("Deleted torrent %s.", torrent.id)
-
-    async def search_by_url(self, url: str) -> Torrent | None:
-        """Find torrent by URL."""
-        result = await self.session.execute(select(Torrent).where(Torrent.url == url))
-        return result.scalar_one_or_none()
-
-    async def update_qb_hash(self, torrent_id: int, qb_hash: str) -> bool:
-        """Update the qb_hash for a torrent."""
-        torrent = await self.search(torrent_id)
-        if torrent:
-            torrent.qb_hash = qb_hash
-            self.session.add(torrent)
-            await self.session.commit()
-            logger.debug("Updated qb_hash for torrent %s: %s", torrent_id, qb_hash)
-            return True
-        return False

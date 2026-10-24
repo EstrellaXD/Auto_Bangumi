@@ -4,7 +4,7 @@ import time
 from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import and_, false, select
+from sqlmodel import and_, select
 
 from module.models.movie import Movie, MovieUpdate
 
@@ -167,10 +167,3 @@ class MovieDatabase:
             await self.session.commit()
             _invalidate_movie_cache()
         return unmatched
-
-    async def not_added(self) -> list[Movie]:
-        conditions = select(Movie).where(
-            Movie.added == false(),
-        )
-        result = await self.session.execute(conditions)
-        return list(result.scalars().all())

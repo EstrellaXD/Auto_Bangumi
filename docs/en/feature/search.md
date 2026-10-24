@@ -10,9 +10,11 @@ The search feature relies on the main program's parser. The current version does
 
 The search bar is located in the AB top bar. Click to open the search panel.
 
-![Search Panel](/image/feature/search-panel.png)
+![Search Panel](/image/en/feature/search-panel.png)
 
 Select the source site, enter keywords, and AB will automatically parse and display search results. To add an anime, click the add button on the right side of the card.
+
+A series that you add from search uses the default downloader. When you have more than one downloader, you can change it later in the Advanced Settings of the series. See [Multiple Downloaders](./downloaders.md).
 
 ::: tip
 When the source is **Mikan**, AB uses the `mikan` parser by default. For other sources, the TMDB parser is used.
@@ -26,13 +28,13 @@ Since v3.2, you can manage search sources directly in the Settings page without 
 
 Navigate to **Config** → **Search Provider** to access the settings panel.
 
-![Search Provider Settings](/image/feature/search-provider.png)
+![Search Provider Settings](/image/en/feature/search-provider.png)
 
 From here you can:
 - **View** all configured search sources
 - **Add** new search sources with the "Add Provider" button
 - **Edit** existing source URLs
-- **Delete** custom sources (default sources mikan, nyaa, dmhy cannot be deleted)
+- **Delete** custom sources (default sources mikan, anibt, nyaa, dmhy cannot be deleted)
 
 ### URL Template Format
 
@@ -52,6 +54,7 @@ The following sources are built-in and cannot be deleted:
 | Source | URL Template |
 |--------|--------------|
 | mikan | `https://mikanani.me/RSS/Search?searchstr=%s` |
+| anibt | `https://anibt.net/rss/magnets.xml?q=%s` |
 | nyaa | `https://nyaa.si/?page=rss&q=%s&c=0_0&f=0` |
 | dmhy | `http://dmhy.org/topics/rss/rss.xml?keyword=%s` |
 

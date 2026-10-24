@@ -1,0 +1,9 @@
+[plugin]
+id = "nfo-writer"
+name = "NFO 写入"
+version = "0.1.0"
+sdk = ">=0.5,<1"
+entry = "nfo_writer:NfoWriter"
+description = "示例插件：种子整理完成后，在每个正片旁写一个 Kodi / Jellyfin 格式的 .nfo。演示 torrent.organized 事件与路径映射"
+authors = ["AutoBangumi"]
+permissions = ["filesystem"]

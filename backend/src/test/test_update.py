@@ -1,7 +1,7 @@
 """在线自动更新测试：check / apply / rollback、boot_overlay 覆盖层、以及三个
 端点的 path+verb+鉴权契约。
 
-网络与文件系统全部 mock：GitHub Release API 与下载走 httpx.MockTransport，
+网络与文件系统全部 mock：GitHub Release API 与下载走 httpx2.MockTransport，
 覆盖层落地走 tmp_path，进程退出被打桩以确保测试不会真的退出。
 """
 
@@ -15,7 +15,7 @@ import zipfile
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import httpx
+import httpx2
 import pytest
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
@@ -49,7 +49,9 @@ def _write_test_pubkey(dest_dir: Path) -> Path:
 # ---------------------------------------------------------------------------
 
 
-def _make_bundle(version: str, min_image_version: str = "3.3.0-beta.1") -> bytes:
+def _make_bundle(
+    version: str, min_image_version: str = "3.3.0-beta.1", with_sdk: bool = True
+) -> bytes:
     """构造一个合法的 update bundle zip（内存字节）。"""
     lock_content = f"# uv.lock for {version}\n".encode()
     lock_sha = hashlib.sha256(lock_content).hexdigest()
@@ -62,6 +64,8 @@ def _make_bundle(version: str, min_image_version: str = "3.3.0-beta.1") -> bytes
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as zf:
         zf.writestr("backend/src/module/__marker__.txt", f"module {version}")
+        if with_sdk:
+            zf.writestr("backend/src/ab_sdk/__marker__.txt", f"sdk {version}")
         zf.writestr("backend/pyproject.toml", "[project]\nname='x'\n")
         zf.writestr("backend/uv.lock", lock_content)
         zf.writestr("webui-dist/index.html", f"<html>{version}</html>")
@@ -119,8 +123,8 @@ def _releases_payload(bundle_bytes: bytes, sha_text: str) -> list[dict]:
     ]
 
 
-def _make_client(handler) -> httpx.AsyncClient:
-    return httpx.AsyncClient(transport=httpx.MockTransport(handler))
+def _make_client(handler) -> httpx2.AsyncClient:
+    return httpx2.AsyncClient(transport=httpx2.MockTransport(handler))
 
 
 def _seed_schema_db(path: Path, version: int) -> None:
@@ -149,21 +153,21 @@ def _default_handler(bundle_bytes: bytes, sha_hex: str, sig_b64: str | None = No
     """路由 GitHub API 与下载 URL 到对应的响应。"""
     signature = sig_b64 if sig_b64 is not None else _sign_bytes(bundle_bytes)
 
-    def handler(request: httpx.Request) -> httpx.Response:
+    def handler(request: httpx2.Request) -> httpx2.Response:
         url = str(request.url)
         if "api.github.com" in url and "/releases" in url:
-            return httpx.Response(200, json=_releases_payload(bundle_bytes, sha_hex))
+            return httpx2.Response(200, json=_releases_payload(bundle_bytes, sha_hex))
         if url.endswith("bundle.zip"):
-            return httpx.Response(
+            return httpx2.Response(
                 200,
                 content=bundle_bytes,
                 headers={"content-length": str(len(bundle_bytes))},
             )
         if url.endswith("bundle.sha256"):
-            return httpx.Response(200, text=sha_hex + "\n")
+            return httpx2.Response(200, text=sha_hex + "\n")
         if url.endswith("bundle.sig"):
-            return httpx.Response(200, text=signature + "\n")
-        return httpx.Response(404)
+            return httpx2.Response(200, text=signature + "\n")
+        return httpx2.Response(404)
 
     return handler
 
@@ -233,30 +237,6 @@ class TestCheckUpdate:
         assert res.is_prerelease is True
         assert res.has_update is True
 
-    @pytest.mark.parametrize(
-        "channel, expected", [("stable", "3.3.7"), ("beta", "3.3.8-beta.1")]
-    )
-    def test_next_major_release_is_not_offered(self, tmp_path, channel, expected):
-        """4.x 的更新包要求 4.x 镜像，3.x 镜像只能更换镜像标签升级。"""
-        releases = [
-            {"tag_name": tag, "prerelease": "beta" in tag}
-            for tag in ("4.0.0", "4.0.0-beta.9", "3.3.8-beta.1", "3.3.7")
-        ]
-        up = Updater(
-            root=tmp_path / "u", current_version="3.3.6", image_version="3.3.6"
-        )
-        picked = up._pick_release(releases, channel)
-        assert picked is not None
-        assert picked["tag_name"] == expected
-
-    def test_unparseable_image_version_is_offered_nothing(self, tmp_path):
-        """开发/本地构建不能应用更新包，也不应提示有更新。"""
-        releases = [{"tag_name": "3.3.7", "prerelease": False}]
-        up = Updater(
-            root=tmp_path / "u", current_version="3.3.6", image_version="DEV_VERSION"
-        )
-        assert up._pick_release(releases, "stable") is None
-
     @pytest.mark.asyncio
     async def test_no_update_when_current_is_latest(self, tmp_path, bundle):
         data, sha = bundle
@@ -273,7 +253,7 @@ class TestCheckUpdate:
     @pytest.mark.asyncio
     async def test_network_error_is_graceful(self, tmp_path):
         def handler(request):
-            raise httpx.ConnectError("boom")
+            raise httpx2.ConnectError("boom")
 
         up = Updater(
             root=tmp_path / "u",
@@ -445,14 +425,23 @@ class TestApplyUpdate:
         assert (tmp_path / "u" / "bundle.zip.sig").exists()
 
     @pytest.mark.asyncio
-    async def test_incompatible_min_image_version_aborts(self, tmp_path):
-        data = _make_bundle("3.3.0-beta.2", min_image_version="9.9.9")
+    @pytest.mark.parametrize(
+        ("image", "min_image_version"),
+        # 第二组：已发布的 3.3 镜像在 beta 通道拿到 4.x bundle（缺 ab_sdk 与新依赖）
+        [("3.3.0-beta.1", "9.9.9"), ("3.3.6", "4.0.0-beta.1")],
+    )
+    async def test_incompatible_min_image_version_aborts(
+        self, tmp_path, image, min_image_version
+    ):
+        data = _make_bundle("4.0.0-beta.2", min_image_version=min_image_version)
         sha = hashlib.sha256(data).hexdigest()
-        up = _updater_for_apply(tmp_path, data, sha, image="3.3.0-beta.1")
+        up = _updater_for_apply(tmp_path, data, sha, image=image)
         res = await up.apply_update("beta")
         assert res.success is False
         assert "too old" in res.message.lower()
         assert not (tmp_path / "u" / "current").exists()
+        # boot_overlay 不看 min_image_version，只要没有留存的 bundle 就不会应用
+        assert not (tmp_path / "u" / "bundle.zip").exists()
 
     @pytest.mark.asyncio
     async def test_second_apply_moves_current_to_backup(self, tmp_path, bundle):
@@ -696,7 +685,9 @@ class TestRollback:
 
 
 class TestBootOverlay:
-    def _seed(self, tmp_path, overlay_version, sign=True, stage_venv=True):
+    def _seed(
+        self, tmp_path, overlay_version, sign=True, stage_venv=True, with_sdk=True
+    ):
         """构造一个假的 /app 布局 + 已验签覆盖层。返回相关路径。
 
         module 树与前端 dist 现在从已验签的 bundle.zip 解包，不再从 current/
@@ -707,10 +698,12 @@ class TestBootOverlay:
         (app / "module" / "old.txt").write_text("image module")
         (app / "dist").mkdir(parents=True)
         (app / "dist" / "old.html").write_text("image dist")
+        (app / "ab_sdk").mkdir(parents=True)
+        (app / "ab_sdk" / "old.txt").write_text("image sdk")
 
         updates = app / "config" / "updates"
         updates.mkdir(parents=True)
-        bundle_bytes = _make_bundle(overlay_version)
+        bundle_bytes = _make_bundle(overlay_version, with_sdk=with_sdk)
         (updates / "bundle.zip").write_bytes(bundle_bytes)
         sig = _sign_bytes(bundle_bytes)
         if not sign:
@@ -746,8 +739,27 @@ class TestBootOverlay:
         # module 树来自 zip 内 backend/src/module/__marker__.txt
         assert (app / "module" / "__marker__.txt").exists()
         assert not (app / "module" / "old.txt").exists()  # tree replaced, not merged
+        # module 依赖同版本的 ab_sdk，两者一起替换
+        assert (app / "ab_sdk" / "__marker__.txt").exists()
+        assert not (app / "ab_sdk" / "old.txt").exists()
         assert (app / "dist" / "index.html").exists()
         assert (app / ".venv" / "pyvenv.cfg").read_text() == "overlay venv"
+
+    def test_skips_overlay_without_sdk_tree(self, tmp_path):
+        """只换 module 不换 ab_sdk 会让新 module 在旧 SDK 上 ImportError。"""
+        import boot_overlay
+
+        app, updates, ivp, lock, pubkey = self._seed(tmp_path, "3.4.0", with_sdk=False)
+        applied = boot_overlay.apply_overlay(
+            app_root=app,
+            updates_root=updates,
+            image_version_path=ivp,
+            baseline_lock=lock,
+            pubkey_path=pubkey,
+        )
+        assert applied is False
+        assert (app / "module" / "old.txt").exists()
+        assert (app / "ab_sdk" / "old.txt").exists()
 
     def test_applies_overlay_when_rename_hits_exdev(self, tmp_path, monkeypatch):
         """overlayfs refuses to rename a lower-layer dir (EXDEV); the overlay

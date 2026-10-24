@@ -9,6 +9,7 @@ from module.database import Database
 from module.models.bangumi import Notification
 from module.notification.events import SystemEvent
 from module.notification.inbox import record_event
+from module.plugin.host import publish
 
 if TYPE_CHECKING:
     from module.models.config import NotificationProvider as ProviderConfig
@@ -20,9 +21,10 @@ logger = logging.getLogger(__name__)
 class NotificationManager:
     """Manager for handling notifications across multiple providers."""
 
-    def __init__(self):
+    def __init__(self, load_providers: bool = True):
         self.providers: list["NotificationProvider"] = []
-        self._load_providers()
+        if load_providers:
+            self._load_providers()
 
     def rebuild(self):
         """Reload providers from current settings, mutating in place.
@@ -35,22 +37,21 @@ class NotificationManager:
 
     def _load_providers(self):
         """Initialize providers from configuration."""
-        from module.notification.providers import PROVIDER_REGISTRY
+        from module.notification.resolve import build_provider
 
         for cfg in settings.notification.providers:
             if not cfg.enabled:
                 continue
-
-            provider_cls = PROVIDER_REGISTRY.get(cfg.type.lower())
-            if provider_cls:
-                try:
-                    provider = provider_cls(cfg)
-                    self.providers.append(provider)
-                    logger.debug("Loaded notification provider: %s", cfg.type)
-                except Exception as e:
-                    logger.warning(f"Failed to load provider {cfg.type}: {e}")
-            else:
+            try:
+                provider = build_provider(cfg)
+            except Exception as e:
+                logger.warning(f"Failed to load provider {cfg.type}: {e}")
+                continue
+            if provider is None:
                 logger.warning(f"Unknown notification provider type: {cfg.type}")
+                continue
+            self.providers.append(provider)
+            logger.debug("Loaded notification provider: %s", cfg.type)
 
     async def _get_poster(self, notification: Notification):
         """Fetch poster path from database if not already set."""
@@ -118,8 +119,9 @@ class NotificationManager:
     async def send_event(self, event: SystemEvent):
         """Persist a system event to the in-app inbox, then broadcast it.
 
-        持久化不受 ``settings.notification.enable`` 影响（该开关只管外部
-        推送），失败也不阻塞外部广播。
+        顺序：写入站内通知中心 → 发布到插件事件总线 → 推送到外部渠道。
+        持久化与总线发布不受 ``settings.notification.enable`` 影响（该开关只管
+        外部推送），持久化失败也不阻塞后两步。
 
         Args:
             event: The system event to send.
@@ -132,6 +134,8 @@ class NotificationManager:
                 type(event).__name__,
                 exc_info=True,
             )
+        # 插件 @subscribe(event.kind) 的订阅者在各自队列中异步处理，不阻塞这里
+        publish(event)
         if not settings.notification.enable:
             return
 
@@ -144,23 +148,16 @@ class NotificationManager:
         await self._broadcast("system event", send_one)
 
     async def test_provider(self, index: int) -> tuple[bool, str]:
-        """Test a specific provider by index.
+        """按下标测试已保存的渠道。
 
-        Args:
-            index: The index of the provider in the providers list.
-
-        Returns:
-            A tuple of (success, message).
+        下标对应 ``settings.notification.providers`` 的完整列表（含停用项），
+        与前端列表一致；``self.providers`` 只含已启用且构造成功的渠道，不能
+        按它取下标。使用保存的配置，密钥是真实值而非前端拿到的掩码。
         """
-        if index < 0 or index >= len(self.providers):
+        providers = settings.notification.providers
+        if index < 0 or index >= len(providers):
             return False, f"Invalid provider index: {index}"
-
-        provider = self.providers[index]
-        try:
-            async with provider:
-                return await provider.test()
-        except Exception as e:
-            return False, f"Test failed: {e}"
+        return await self.test_provider_config(providers[index])
 
     @staticmethod
     async def test_provider_config(config: "ProviderConfig") -> tuple[bool, str]:
@@ -172,14 +169,12 @@ class NotificationManager:
         Returns:
             A tuple of (success, message).
         """
-        from module.notification.providers import PROVIDER_REGISTRY
-
-        provider_cls = PROVIDER_REGISTRY.get(config.type.lower())
-        if not provider_cls:
-            return False, f"Unknown provider type: {config.type}"
+        from module.notification.resolve import build_provider
 
         try:
-            provider = provider_cls(config)
+            provider = build_provider(config)
+            if provider is None:
+                return False, f"Unknown provider type: {config.type}"
             async with provider:
                 return await provider.test()
         except Exception as e:

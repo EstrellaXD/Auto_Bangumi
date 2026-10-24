@@ -1,6 +1,7 @@
 <script lang="ts" setup>
-import { NProgress, NSpin, NSwitch, NTag } from 'naive-ui';
+import { NProgress, NSpin } from 'naive-ui';
 import { useConfirm } from '@/hooks/useConfirm';
+import { renderMarkdown } from '@/utils/markdown';
 import type { UpdateChannel, UpdateInfo } from '#/update';
 
 const { t } = useMyI18n();
@@ -90,30 +91,8 @@ const phaseLabel = computed(() => {
   return phase ? map[phase] ?? '' : '';
 });
 
-/**
- * 极简且防 XSS 的 Release 说明渲染：先转义所有 HTML，再对少量 markdown 语法
- * 做替换（标题/加粗/行内代码/链接/无序列表/换行）。输入来自项目固定的 GitHub
- * Release，但仍先转义以确保安全。
- */
-function renderNotes(md: string): string {
-  if (!md) return '';
-  const escaped = md
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-  return escaped
-    .replace(/^###?\s?#*\s*(.*)$/gm, '<strong>$1</strong>')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/`([^`]+?)`/g, '<code>$1</code>')
-    .replace(
-      /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
-      '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>'
-    )
-    .replace(/^[-*]\s+(.*)$/gm, '• $1')
-    .replace(/\n/g, '<br>');
-}
-
-const notesHtml = computed(() => renderNotes(info.value?.notes ?? ''));
+// 与插件 README 同一个安全渲染器：先转义全部 HTML，链接只接受 http(s)
+const notesHtml = computed(() => renderMarkdown(info.value?.notes ?? ''));
 
 // 上次检查完成的时刻；用户主动点检查时每次刷新，给出"确实检查过了"的反馈。
 const lastCheckedAt = ref<Date | null>(null);
@@ -229,7 +208,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <ab-container :title="$t('update.title')">
+  <ab-fold-panel :title="$t('update.title')">
     <div class="update-card">
       <!-- 版本信息 -->
       <div class="update-row">
@@ -240,9 +219,11 @@ onBeforeUnmount(() => {
         <span class="update-key">{{ $t('update.latest_version') }}</span>
         <span class="update-val">
           {{ info.latest }}
-          <NTag v-if="hasUpdate" type="success" size="small" round>
-            {{ $t('update.update_available') }}
-          </NTag>
+          <ab-tag
+            v-if="hasUpdate"
+            type="success"
+            :title="$t('update.update_available')"
+          />
         </span>
       </div>
 
@@ -257,11 +238,11 @@ onBeforeUnmount(() => {
           <span :class="{ dim: channel === 'beta' }">
             {{ $t('update.channel_stable') }}
           </span>
-          <NSwitch
-            :value="channel === 'beta'"
+          <ab-switch
+            :model-value="channel === 'beta'"
             :disabled="applying || restarting"
             :aria-label="$t('update.channel')"
-            @update:value="onChannelToggle"
+            @update:model-value="onChannelToggle"
           />
           <span :class="{ dim: channel === 'stable' }">
             {{ $t('update.channel_beta') }}
@@ -272,11 +253,11 @@ onBeforeUnmount(() => {
       <!-- 自动检查 -->
       <div class="update-row">
         <span class="update-key">{{ $t('update.auto_check') }}</span>
-        <NSwitch
-          :value="autoCheck"
+        <ab-switch
+          :model-value="autoCheck"
           :disabled="applying || restarting"
           :aria-label="$t('update.auto_check')"
-          @update:value="onAutoCheckToggle"
+          @update:model-value="onAutoCheckToggle"
         />
       </div>
 
@@ -287,9 +268,11 @@ onBeforeUnmount(() => {
 
       <!-- Release 说明 -->
       <div v-if="hasUpdate && notesHtml" class="update-notes-wrap">
-        <div class="update-key">{{ $t('update.release_notes') }}</div>
+        <div class="update-key">
+          {{ $t('update.release_notes') }}
+        </div>
         <!-- eslint-disable-next-line vue/no-v-html -->
-        <div class="update-notes" v-html="notesHtml"></div>
+        <div class="update-notes" v-html="notesHtml" />
       </div>
 
       <!-- 进度条（apply 期间） -->
@@ -300,7 +283,9 @@ onBeforeUnmount(() => {
           :processing="!isDownloading"
           :indicator-placement="isDownloading ? 'outside' : 'inside'"
         />
-        <div class="update-phase">{{ phaseLabel || progress.message }}</div>
+        <div class="update-phase">
+          {{ phaseLabel || progress.message }}
+        </div>
       </div>
 
       <!-- 重启中 -->
@@ -318,7 +303,9 @@ onBeforeUnmount(() => {
       </p>
 
       <!-- 需要 restart: unless-stopped 的说明 -->
-      <p class="update-note">{{ $t('update.restart_note') }}</p>
+      <p class="update-note">
+        {{ $t('update.restart_note') }}
+      </p>
 
       <!-- 操作按钮 -->
       <div class="update-actions">
@@ -352,7 +339,7 @@ onBeforeUnmount(() => {
         </ab-button>
       </div>
     </div>
-  </ab-container>
+  </ab-fold-panel>
 </template>
 
 <style lang="scss" scoped>
@@ -370,8 +357,8 @@ onBeforeUnmount(() => {
 }
 
 .update-key {
-  font-size: 13px;
-  color: var(--color-text-muted);
+  font-size: 14px;
+  color: var(--color-text);
 }
 
 .update-val {
@@ -379,7 +366,14 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 8px;
   font-size: 14px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
   color: var(--color-text);
+
+  // 标签是文字，不用等宽
+  .ab-tag {
+    font-family: var(--font-family);
+  }
 }
 
 .update-channel {
@@ -439,11 +433,45 @@ onBeforeUnmount(() => {
   color: var(--color-text-secondary);
   word-break: break-word;
 
+  :deep(:is(p, ul, ol, h3, h4, h5, h6)) {
+    margin: 0 0 4px;
+  }
+
+  :deep(:is(h3, h4, h5, h6)) {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text);
+  }
+
+  :deep(ul) {
+    padding-left: 18px;
+    list-style: disc;
+  }
+
+  :deep(ol) {
+    padding-left: 18px;
+    list-style: decimal;
+  }
+
   :deep(code) {
     padding: 1px 4px;
     border-radius: 3px;
     background: var(--color-border);
+    font-family: var(--font-mono);
     font-size: 11px;
+  }
+
+  :deep(pre) {
+    margin: 4px 0;
+    padding: 8px;
+    border-radius: var(--radius-sm);
+    background: var(--color-surface-2);
+    overflow-x: auto;
+
+    code {
+      padding: 0;
+      background: none;
+    }
   }
 }
 

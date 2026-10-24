@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import { watchOnce } from '@vueuse/core';
 import { useConfirm } from '@/hooks/useConfirm';
 import { countLogLevels, parseLogLines } from '@/utils/log-parse';
 import type { LogLevel } from '@/utils/log-parse';
@@ -84,7 +83,7 @@ function clearFilters() {
   searchQuery.value = '';
 }
 
-const logContainer = ref<HTMLElement | null>(null);
+const logContainer = useTemplateRef<HTMLElement>('logContainer');
 
 function scrollBehavior(): ScrollBehavior {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -113,13 +112,14 @@ onActivated(() => {
   } else {
     // SSE 只在日志变化时推送：新会话首次进入时主动拉一次全量日志
     getLog(true);
-    watchOnce(
+    watch(
       () => log.value,
       () => {
         nextTick(() => {
           backToBottom();
         });
-      }
+      },
+      { once: true }
     );
   }
 });
@@ -133,22 +133,22 @@ onDeactivated(() => {
   <div class="page-log">
     <div class="log-layout">
       <div class="log-main">
-        <div
+        <ab-alert
           v-if="hasProblems"
-          class="log-health"
-          :class="{ 'has-errors': errorCount > 0 }"
-          role="status"
-        >
-          <b>{{
+          :type="errorCount > 0 ? 'danger' : 'warning'"
+          :title="
             $t('log.health_summary', {
               errors: errorCount,
               warnings: warningCount,
             })
-          }}</b>
-          <ab-button size="sm" @click="jumpToFirstProblem">
-            {{ $t('log.jump_first') }} ↓
-          </ab-button>
-        </div>
+          "
+        >
+          <template #action>
+            <ab-button size="sm" @click="jumpToFirstProblem">
+              {{ $t('log.jump_first') }} ↓
+            </ab-button>
+          </template>
+        </ab-alert>
 
         <div class="log-viewer-card">
           <div class="log-toolbar">
@@ -204,7 +204,9 @@ onDeactivated(() => {
                   {{ $t('log.clear_filters') }}
                 </ab-button>
               </template>
-              <p v-else>{{ $t('log.empty') }}</p>
+              <p v-else>
+                {{ $t('log.empty') }}
+              </p>
             </div>
             <div v-else class="log-content">
               <div
@@ -241,35 +243,28 @@ onDeactivated(() => {
                 href="https://github.com/EstrellaXD/Auto_Bangumi"
                 target="_blank"
                 rel="noopener"
-                >GitHub <span aria-hidden="true">↗</span></a
-              >
+              >GitHub <span aria-hidden="true">↗</span></a>
             </li>
             <li>
-              <a href="https://autobangumi.org" target="_blank" rel="noopener"
-                >{{ $t('log.website') }} <span aria-hidden="true">↗</span></a
-              >
+              <a href="https://autobangumi.org" target="_blank" rel="noopener">{{ $t('log.website') }} <span aria-hidden="true">↗</span></a>
             </li>
             <li>
-              <a href="https://t.me/autobangumi" target="_blank" rel="noopener"
-                >{{ $t('log.telegram_group') }}
-                <span aria-hidden="true">↗</span></a
-              >
+              <a href="https://t.me/autobangumi" target="_blank" rel="noopener">{{ $t('log.telegram_group') }}
+                <span aria-hidden="true">↗</span></a>
             </li>
             <li>
               <a
                 href="https://twitter.com/Estrella_Pan"
                 target="_blank"
                 rel="noopener"
-                >X <span aria-hidden="true">↗</span></a
-              >
+              >X <span aria-hidden="true">↗</span></a>
             </li>
             <li>
               <a
                 href="https://github.com/EstrellaXD/Auto_Bangumi/issues"
                 target="_blank"
                 rel="noopener"
-                >{{ $t('log.report_bug') }} <span aria-hidden="true">↗</span></a
-              >
+              >{{ $t('log.report_bug') }} <span aria-hidden="true">↗</span></a>
             </li>
           </ul>
         </ab-container>
@@ -302,27 +297,9 @@ onDeactivated(() => {
   gap: 10px;
 }
 
-.log-health {
-  display: flex;
+// 健康摘要只有一行引导词：与右侧按钮垂直居中
+.log-main > :deep(.ab-alert) {
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 8px 12px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-warning-border);
-  background: var(--color-warning-bg);
-  color: var(--color-warning-text);
-  font-size: 13px;
-
-  &.has-errors {
-    border-color: color-mix(in srgb, var(--color-danger) 35%, transparent);
-    background: color-mix(
-      in srgb,
-      var(--color-danger) 8%,
-      var(--color-surface)
-    );
-    color: var(--color-danger);
-  }
 }
 
 .log-viewer-card {
@@ -341,10 +318,21 @@ onDeactivated(() => {
   border-bottom: 1px solid var(--color-border);
 }
 
+// 筛选项不换行：放不下时整组单独占一行并横向滚动，
+// 搜索框与操作按钮落到下一行，不出现 3+1 的零散换行；
+// 手机上 4 个筛选项排成 2×2，全部可见，不靠横向滚动
 .filter-chips {
   display: flex;
-  flex-wrap: wrap;
   gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+
+  @media (max-width: 639px) {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    flex-basis: 100%;
+    overflow: visible;
+  }
 }
 
 .filter-chip {
@@ -360,10 +348,19 @@ onDeactivated(() => {
   font-variant-numeric: tabular-nums;
 }
 
-.log-search {
-  flex: 1;
-  min-width: 140px;
-  max-width: 260px;
+// 与同行 sm 按钮等高（ab-input 默认 34px）；窄屏时与操作按钮共用一行并占满剩余宽度
+.log-toolbar .log-search {
+  flex: 1 1 100px;
+  min-width: 0;
+  height: 28px;
+
+  @include forDesktop {
+    max-width: 260px;
+  }
+
+  @include forTouch {
+    height: var(--touch-target);
+  }
 }
 
 .log-actions {
@@ -418,42 +415,36 @@ onDeactivated(() => {
   }
 }
 
+// 级别：方块语义标记 + 墨色文字（与 ab-tag 一致），不用着色填充
 .log-level {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  min-width: 58px;
-  padding: 1px 6px;
-  border-radius: var(--radius-sm);
+  gap: 6px;
   font-size: 10.5px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.04em;
+  color: var(--color-text-secondary);
 
-  &.level-info {
-    background: var(--color-surface-hover);
-    color: var(--color-text-secondary);
+  &::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 2px;
+    flex-shrink: 0;
+    background: var(--color-text-muted);
   }
 
-  &.level-debug {
+  &.level-debug::before {
     background: transparent;
-    border: 1px dashed var(--color-border-hover);
-    color: var(--color-text-secondary);
+    box-shadow: inset 0 0 0 1px var(--color-text-muted);
   }
 
-  &.level-warning {
-    background: var(--color-warning-bg);
-    border: 1px solid var(--color-warning-border);
-    color: var(--color-warning-text);
+  &.level-warning::before {
+    background: var(--color-warning);
   }
 
-  &.level-error {
-    background: color-mix(
-      in srgb,
-      var(--color-danger) 12%,
-      var(--color-surface)
-    );
-    border: 1px solid color-mix(in srgb, var(--color-danger) 40%, transparent);
-    color: var(--color-danger);
+  &.level-error::before {
+    background: var(--color-danger);
   }
 }
 

@@ -30,7 +30,6 @@ from module.security.api import (
     require_session_principal,
 )
 from module.security.auth_strategy import PasskeyAuthStrategy
-from module.security.webauthn import get_webauthn_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/passkey", tags=["passkey"])
@@ -55,6 +54,9 @@ def _get_webauthn_from_request(request: Request):
     这些请求头在反向代理场景下可能被客户端伪造，因此建议生产环境显式配置。
     """
     from urllib.parse import urlparse
+
+    # webauthn 库较重（约 11 MB），只在用到 Passkey 时导入
+    from module.security.webauthn import get_webauthn_service
 
     origin = settings.security.webauthn_origin
     if not origin:
