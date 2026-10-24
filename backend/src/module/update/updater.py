@@ -217,6 +217,7 @@ class Updater:
 
     async def _fetch_releases(self) -> list[dict]:
         client = await self._get_client()
+        # ponytail: 只取第一页；之后的 4.x 发布超过 100 个时，再按页往后找 3.x
         url = f"{_API_BASE}/repos/{self.owner}/{self.repo}/releases?per_page=100"
         resp = await client.get(url, headers=_API_HEADERS)
         resp.raise_for_status()
@@ -281,7 +282,8 @@ class Updater:
             ver = _parse_semver(rel.get("tag_name") or "")
             if ver is None:
                 continue
-            if image is not None and ver.major != image.major:
+            # 镜像版本无法解析（开发/本地构建）时 _image_supports 拒绝任何更新包
+            if image is None or ver.major != image.major:
                 continue
             candidates.append((ver, rel))
         if not candidates:

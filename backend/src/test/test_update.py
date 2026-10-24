@@ -249,6 +249,14 @@ class TestCheckUpdate:
         assert picked is not None
         assert picked["tag_name"] == expected
 
+    def test_unparseable_image_version_is_offered_nothing(self, tmp_path):
+        """开发/本地构建不能应用更新包，也不应提示有更新。"""
+        releases = [{"tag_name": "3.3.7", "prerelease": False}]
+        up = Updater(
+            root=tmp_path / "u", current_version="3.3.6", image_version="DEV_VERSION"
+        )
+        assert up._pick_release(releases, "stable") is None
+
     @pytest.mark.asyncio
     async def test_no_update_when_current_is_latest(self, tmp_path, bundle):
         data, sha = bundle
