@@ -8,6 +8,7 @@ import {
   Refresh,
   Search,
 } from '@icon-park/vue-next';
+import { basePath } from '@/utils/base-path';
 import { ruleTemplate } from '#/bangumi';
 
 const { t, changeLocale } = useMyI18n();
@@ -93,7 +94,7 @@ onUnmounted(() => {
     <!-- Logo -->
     <div class="topbar-brand">
       <img
-        :src="isDark ? '/images/logo-light.svg' : '/images/logo.svg'"
+        :src="`${basePath()}/images/${isDark ? 'logo-light.svg' : 'logo.svg'}`"
         alt="favicon"
         class="topbar-logo"
       />
@@ -101,7 +102,7 @@ onUnmounted(() => {
         v-if="!isMobile"
         v-show="onSearchFocus === false"
         :src="
-          isDark ? '/images/AutoBangumi.svg' : '/images/AutoBangumi-dark.svg'
+          `${basePath()}/images/${isDark ? 'AutoBangumi.svg' : 'AutoBangumi-dark.svg'}`
         "
         alt="AutoBangumi"
         class="topbar-wordmark"
