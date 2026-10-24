@@ -105,6 +105,25 @@ def test_upgrade_after_rollback_replaces_stale_database_backup(
     assert not (tmp_path / "data.db.v3.bak.tmp").exists()
 
 
+def test_backup_ignores_torn_temp_file_from_crashed_backup(paths, tmp_path):
+    (tmp_path / "version.info").write_text("3.3.6\n")
+    (tmp_path / "data.db.v3.bak.tmp").write_bytes(b"torn")
+    vc.version_check()
+    with closing(sqlite3.connect(tmp_path / "data.db.v3.bak")) as conn:
+        tables = {r[0] for r in conn.execute("SELECT name FROM sqlite_master")}
+    assert tables == {"bangumi", "rssitem"}
+
+
+def test_empty_schema_version_table_is_not_backed_up(paths, tmp_path):
+    """4.x 建库后迁移失败：表在、版本行还没写，这不是 3.3 的数据库。"""
+    version_path, _ = paths
+    with closing(sqlite3.connect(tmp_path / "data.db")) as conn:
+        conn.execute("CREATE TABLE schema_version (id INTEGER, version INTEGER)")
+    version_path.write_text("4.0.0\n")
+    vc.version_check()
+    assert not (tmp_path / "data.db.v3.bak").exists()
+
+
 def test_same_version_is_not_duplicated(paths):
     version_path, _ = paths
     version_path.write_text("4.0.0\n")

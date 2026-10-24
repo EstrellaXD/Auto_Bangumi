@@ -86,16 +86,15 @@ def _read_v3_version() -> semver.Version | None:
         return None
 
 
-def _is_v3_schema() -> bool:
+def _is_v3_schema(conn: sqlite3.Connection) -> bool:
     """数据库仍是 3.x 结构（4.0 的迁移从 v25 开始）。"""
-    with closing(sqlite3.connect(DATABASE_PATH)) as conn:
-        try:
-            row = conn.execute(
-                "SELECT version FROM schema_version WHERE id = 1"
-            ).fetchone()
-        except sqlite3.OperationalError:  # 没有 schema_version 表
-            return True
-    return row is None or row[0] <= V3_SCHEMA_VERSION
+    if not conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'schema_version'"
+    ).fetchone():
+        return True
+    row = conn.execute("SELECT version FROM schema_version WHERE id = 1").fetchone()
+    # 3.3 总会写入版本行；空表只会是 4.x 建库后迁移失败
+    return row is not None and row[0] <= V3_SCHEMA_VERSION
 
 
 def _backup_v3_database() -> None:
@@ -104,16 +103,16 @@ def _backup_v3_database() -> None:
     回退 3.3 后再升级也会重新备份：当前库包含旧备份的全部内容，所以替换旧备份。
     只留一份：迁移失败导致的重启循环不会堆积备份。
     """
-    if not _is_v3_schema():
-        return
     backup = DATABASE_PATH.with_name(DATABASE_PATH.name + ".v3.bak")
     tmp = backup.with_name(backup.name + ".tmp")
-    # 用 SQLite 备份接口而不是复制文件：WAL 中未合并的数据也要带上
-    with (
-        closing(sqlite3.connect(DATABASE_PATH)) as src,
-        closing(sqlite3.connect(tmp)) as dst,
-    ):
-        src.backup(dst)
+    with closing(sqlite3.connect(DATABASE_PATH)) as src:
+        if not _is_v3_schema(src):
+            return
+        # 上次备份中途崩溃留下的半个文件会让 backup() 报错
+        tmp.unlink(missing_ok=True)
+        # 用 SQLite 备份接口而不是复制文件：WAL 中未合并的数据也要带上
+        with closing(sqlite3.connect(tmp)) as dst:
+            src.backup(dst)
     # 写完再替换：中途崩溃不会破坏旧备份
     os.replace(tmp, backup)
     logger.info(f"Backed up the 3.x database to {backup}.")
