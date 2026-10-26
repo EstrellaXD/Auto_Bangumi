@@ -5,6 +5,6 @@ version = "0.1.0"
 sdk = ">=0.5,<1"
 entry = "wpush_notifier:WPushNotifier"
 description = "把通知发到 WPUSH（微信、短信、邮件等多渠道）。在「设置 → 通知 → 添加渠道」选择类型 wpush"
-authors = ["AutoBangumi"]
+authors = ["AutoBangumi", "anhao"]
 permissions = ["network"]
 extension_points = ["notifier"]
