@@ -1,33 +1,57 @@
 <script lang="ts" setup>
-import { CheckOne, Copy } from '@icon-park/vue-next';
+import { CheckOne, Copy, PreviewOpen } from '@icon-park/vue-next';
 
 const props = defineProps<{
   link: string;
   copied: boolean;
+  previewRuleFilter?: string[];
+  previewVisible?: boolean;
 }>();
 
 const emit = defineEmits<{
   (e: 'copy'): void;
 }>();
+
+const showPreview = ref(false);
 </script>
 
 <template>
   <div v-if="props.link" class="rss-section">
     <div class="info-row">
       <span class="info-label">{{ $t('search.confirm.rss') }}:</span>
-      <span class="info-value info-value--link">{{ props.link }}</span>
-      <ab-icon-button
-        size="sm"
-        class="copy-btn"
-        :class="{ copied: props.copied }"
-        :label="$t('common.copy')"
-        @click="emit('copy')"
-      >
-        <CheckOne v-if="props.copied" theme="outline" size="14" />
-        <Copy v-else theme="outline" size="14" />
-      </ab-icon-button>
+      <span class="info-value info-value--link">{{ props.link || '-' }}</span>
+      <div class="info-actions">
+        <ab-icon-button
+          size="sm"
+          class="action-btn copy-btn"
+          :class="{ copied: props.copied }"
+          :label="$t('common.copy')"
+          :disabled="!props.link"
+          @click="emit('copy')"
+        >
+          <CheckOne v-if="props.copied" theme="outline" size="14" />
+          <Copy v-else theme="outline" size="14" />
+        </ab-icon-button>
+        <ab-icon-button
+          v-if="props.previewVisible"
+          size="sm"
+          class="action-btn preview-btn"
+          :label="$t('search.confirm.preview_open')"
+          :disabled="!props.link"
+          @click="showPreview = true"
+        >
+          <PreviewOpen theme="outline" size="14" />
+        </ab-icon-button>
+      </div>
     </div>
   </div>
+
+  <bangumi-rss-preview-dialog
+    v-if="props.previewRuleFilter"
+    v-model:show="showPreview"
+    :rss-link="props.link"
+    :rule-filter="props.previewRuleFilter"
+  />
 </template>
 
 <style lang="scss" scoped>
@@ -70,7 +94,13 @@ const emit = defineEmits<{
   }
 }
 
-.copy-btn {
+.info-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.action-btn {
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -88,7 +118,9 @@ const emit = defineEmits<{
     border-color: var(--color-primary);
     color: var(--color-primary);
   }
+}
 
+.copy-btn {
   &.copied {
     background: var(--color-success);
     border-color: var(--color-success);

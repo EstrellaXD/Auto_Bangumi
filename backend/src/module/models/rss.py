@@ -1,5 +1,6 @@
 from typing import Optional
 
+from pydantic import BaseModel
 from sqlmodel import Field, SQLModel
 
 
@@ -21,3 +22,14 @@ class RSSUpdate(SQLModel):
     aggregate: Optional[bool] = Field(True, alias="aggregate")
     parser: Optional[str] = Field("mikan", alias="parser")
     enabled: Optional[bool] = Field(True, alias="enabled")
+
+
+class RSSPreviewItem(BaseModel):
+    name: str = Field(...)
+    url: str = Field(...)
+    homepage: str | None = Field(None)
+
+
+class RSSPreviewResponse(BaseModel):
+    items: list[RSSPreviewItem] = Field(...)
+    global_filter: list[str] = Field(default_factory=list)
