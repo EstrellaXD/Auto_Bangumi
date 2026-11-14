@@ -74,6 +74,15 @@ def index_exists(table: str, index: str) -> AppliedCheck:
     return check
 
 
+def index_exists_or_table_missing(table: str, index: str) -> AppliedCheck:
+    def check(inspector) -> bool:
+        return table not in inspector.get_table_names() or index_exists(table, index)(
+            inspector
+        )
+
+    return check
+
+
 def all_checks(*checks: AppliedCheck) -> AppliedCheck:
     def check(inspector) -> bool:
         return all(item(inspector) for item in checks)
@@ -935,6 +944,15 @@ MIGRATIONS: tuple[Migration, ...] = (
             )(inspector)
         ),
         data_step=_strip_search_keyword_episodes,
+    ),
+    Migration(
+        29,
+        "index case-insensitive torrent hash lookups",
+        (
+            "CREATE INDEX IF NOT EXISTS ix_torrent_qb_hash_nocase "
+            "ON torrent (qb_hash COLLATE NOCASE)",
+        ),
+        index_exists_or_table_missing("torrent", "ix_torrent_qb_hash_nocase"),
     ),
 )
 
