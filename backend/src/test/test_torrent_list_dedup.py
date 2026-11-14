@@ -213,9 +213,25 @@ async def test_missing_or_ambiguous_bangumi_tags_fall_back_to_instance_order(
     assert _listed_keys(await list_torrents()) == [(HASH_A, "a")]
 
 
-async def test_numeric_bangumi_tag_with_auxiliary_ab_tag_is_ambiguous(qb_lists):
+async def test_renamed_marker_does_not_make_bangumi_tag_ambiguous(qb_lists):
     torrent = _torrent(HASH_A)
     torrent["tags"] = "ab:7, ab:renamed"
+    qb_lists(
+        [_instance("a", "qb:8080", "/a"), _instance("b", "qb:8080", "/b")],
+        {"http://qb:8080": [torrent]},
+    )
+    async with Database() as db:
+        db.add(
+            Bangumi(id=7, official_title="Show", title_raw="Show", downloader_id="b")
+        )
+        await db.commit()
+
+    assert _listed_keys(await list_torrents()) == [(HASH_A, "b")]
+
+
+async def test_unknown_ab_tag_keeps_bangumi_association_ambiguous(qb_lists):
+    torrent = _torrent(HASH_A)
+    torrent["tags"] = "ab:7, ab:legacy"
     qb_lists(
         [_instance("a", "qb:8080", "/a"), _instance("b", "qb:8080", "/b")],
         {"http://qb:8080": [torrent]},

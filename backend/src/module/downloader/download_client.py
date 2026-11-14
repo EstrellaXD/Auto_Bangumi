@@ -601,9 +601,12 @@ def _bangumi_id_from_tags(tags: object) -> int | None:
     ab_tags = [
         tag.strip() for tag in tags.split(",") if tag.strip().lower().startswith("ab:")
     ]
-    if len(ab_tags) != 1:
+    # ab:renamed marks completed file organization; it does not compete with
+    # the unique Bangumi association tag on the same torrent.
+    association_tags = [tag for tag in ab_tags if tag.lower() != "ab:renamed"]
+    if len(association_tags) != 1:
         return None
-    match = re.fullmatch(r"ab:([0-9]{1,19})", ab_tags[0])
+    match = re.fullmatch(r"ab:([0-9]{1,19})", association_tags[0])
     if match is None:
         return None
     bangumi_id = int(match.group(1))
