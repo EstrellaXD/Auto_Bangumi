@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import re
 from collections import defaultdict
 from contextlib import AsyncExitStack
 from urllib.parse import urlparse
@@ -7,6 +8,7 @@ from urllib.parse import urlparse
 from ab_sdk import points
 from ab_sdk.ingest import AddRequest
 from module.conf import settings
+from module.database import Database
 from module.models import Bangumi, Torrent
 from module.models.config import DOWNLOADER_POINT, DownloaderInstance
 from module.network import RequestContent
@@ -28,6 +30,9 @@ logger = logging.getLogger(__name__)
 # 会触发 nyaa 等站点的 429 限流；与 rss/engine.py 的 RSS_PER_HOST_DELAY 同思路，
 # 但这里是收集接口内的一次性批量抓取，取 1s 以控制接口延迟（24 集约 +23s）。
 TORRENT_FETCH_PER_HOST_DELAY = 1.0
+
+# Ownership lookup must remain bounded for callers that do not set a per-list timeout.
+_OWNER_LOOKUP_TIMEOUT_SECONDS = 3.0
 
 
 async def _fetch_torrent_files(
@@ -575,6 +580,143 @@ class DownloaderPool:
         return self._clients[instance_id]
 
 
+def _qb_connection_identity(client: DownloadClient) -> tuple | None:
+    """Only compare known qB clients with exactly matching connection settings.
+
+    The identity stays in memory and must never be logged or returned: it
+    contains credentials. Paths are deliberately excluded.
+    """
+    from .client.qb_downloader import QbDownloader
+
+    instance = client.instance
+    if instance.type != "qbittorrent" or type(client.client) is not QbDownloader:
+        return None
+    return (client.client.host, instance.username, instance.password)
+
+
+def _bangumi_id_from_tags(tags: object) -> int | None:
+    """Return the unique numeric AutoBangumi Bangumi tag, if present."""
+    if not isinstance(tags, str):
+        return None
+    ab_tags = [
+        tag.strip() for tag in tags.split(",") if tag.strip().lower().startswith("ab:")
+    ]
+    # ab:renamed marks completed file organization; it does not compete with
+    # the unique Bangumi association tag on the same torrent.
+    association_tags = [tag for tag in ab_tags if tag.lower() != "ab:renamed"]
+    if len(association_tags) != 1:
+        return None
+    match = re.fullmatch(r"ab:([0-9]{1,19})", association_tags[0])
+    if match is None:
+        return None
+    bangumi_id = int(match.group(1))
+    return bangumi_id if 0 < bangumi_id <= 2**63 - 1 else None
+
+
+async def _deduplicate_qb_torrents(
+    entries: list[tuple[dict, tuple | None]], timeout: float | None
+) -> list[dict]:
+    """Prefer a known owner, otherwise the first successful instance."""
+    groups: dict[tuple, list[int]] = defaultdict(list)
+    for index, (torrent, identity) in enumerate(entries):
+        torrent_hash = torrent.get("hash")
+        if (
+            identity is not None
+            and isinstance(torrent_hash, str)
+            and re.fullmatch(r"(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64})", torrent_hash)
+        ):
+            groups[(identity, torrent_hash.lower())].append(index)
+
+    duplicates = {key: indices for key, indices in groups.items() if len(indices) > 1}
+    if not duplicates:
+        return [torrent for torrent, _ in entries]
+
+    owners: dict[str, set[str]] = defaultdict(set)
+    bangumi_owners: dict[int, str | None] = {}
+    bangumi_torrent_owners: dict[int, set[str]] = defaultdict(set)
+    hashes = list({key[1] for key in duplicates})
+    tagged_groups: dict[tuple, int] = {}
+    for key, indices in duplicates.items():
+        bangumi_ids = {
+            _bangumi_id_from_tags(entries[i][0].get("tags")) for i in indices
+        }
+        if len(bangumi_ids) == 1:
+            bangumi_id = next(iter(bangumi_ids))
+            if bangumi_id is not None:
+                tagged_groups[key] = bangumi_id
+    bangumi_ids_to_lookup = list(set(tagged_groups.values()))
+    lookup_timeout = timeout if timeout is not None else _OWNER_LOOKUP_TIMEOUT_SECONDS
+    try:
+        async with asyncio.timeout(lookup_timeout):
+            async with Database() as db:
+                # Keep each IN query below SQLite's common parameter limits.
+                for start in range(0, len(hashes), 500):
+                    records = await db.torrent.search_by_qb_hashes(
+                        hashes[start : start + 500]
+                    )
+                    for record in records:
+                        if record.qb_hash:
+                            owners[record.qb_hash.lower()].add(record.downloader_id)
+                for start in range(0, len(bangumi_ids_to_lookup), 500):
+                    batch = bangumi_ids_to_lookup[start : start + 500]
+                    for bangumi in await db.bangumi.search_ids(batch):
+                        if bangumi.id is not None:
+                            bangumi_owners[bangumi.id] = bangumi.downloader_id
+                    downloaded = await db.torrent.search_downloaded_by_bangumi_ids(
+                        batch
+                    )
+                    for bangumi_id, records in downloaded.items():
+                        bangumi_torrent_owners[bangumi_id].update(
+                            record.downloader_id for record in records
+                        )
+    except Exception:
+        # A lookup failure must not make the live downloader list unavailable.
+        logger.warning("Could not resolve torrent owners; using instance order")
+        owners.clear()
+        bangumi_owners.clear()
+        bangumi_torrent_owners.clear()
+
+    omitted: set[int] = set()
+    replacements: dict[int, dict] = {}
+    for key, indices in duplicates.items():
+        _, torrent_hash = key
+        available = {entries[i][0]["downloader_id"] for i in indices}
+        preferred = None
+
+        # The current Bangumi downloader is the best display label when the
+        # qB task has one unambiguous ab:<id> tag and that instance responded.
+        bangumi_id = tagged_groups.get(key)
+        current_owner = (
+            bangumi_owners.get(bangumi_id) if bangumi_id is not None else None
+        )
+        if current_owner in available:
+            preferred = current_owner
+
+        # Fall back to exact historical ownership, then to a unique owner among
+        # successfully downloaded Torrent rows for this Bangumi.
+        if preferred is None:
+            matches = owners.get(torrent_hash, set()) & available
+            if len(matches) == 1:
+                preferred = next(iter(matches))
+        if preferred is None and bangumi_id is not None:
+            matches = bangumi_torrent_owners.get(bangumi_id, set()) & available
+            if len(matches) == 1:
+                preferred = next(iter(matches))
+
+        selected = next(
+            (i for i in indices if entries[i][0]["downloader_id"] == preferred),
+            indices[0],
+        )
+        replacements[indices[0]] = entries[selected][0]
+        omitted.update(indices[1:])
+
+    return [
+        replacements.get(i, torrent)
+        for i, (torrent, _) in enumerate(entries)
+        if i not in omitted
+    ]
+
+
 async def list_torrents(
     status_filter: str | None = None, timeout: float | None = None
 ) -> list[dict] | None:
@@ -583,23 +725,24 @@ async def list_torrents(
     不可用（或超过 ``timeout`` 秒）的实例跳过；全部实例都不可用时返回 None。
     """
 
-    async def one(instance_id: str) -> list[dict]:
-        async with DownloadClient(instance_id) as client:
-            torrents = await client.get_torrent_info(
-                category="Bangumi", status_filter=status_filter
-            )
-        return [{**t, "downloader_id": instance_id} for t in torrents]
+    async def one(instance_id: str) -> tuple[list[dict], tuple | None]:
+        async with asyncio.timeout(timeout):
+            async with DownloadClient(instance_id) as client:
+                identity = _qb_connection_identity(client)
+                torrents = await client.get_torrent_info(
+                    category="Bangumi", status_filter=status_filter
+                )
+            return ([{**t, "downloader_id": instance_id} for t in torrents], identity)
 
     ids = downloader_ids()
-    results = await asyncio.gather(
-        *(asyncio.wait_for(one(i), timeout) for i in ids), return_exceptions=True
-    )
-    listed: list[dict] = []
+    results = await asyncio.gather(*(one(i) for i in ids), return_exceptions=True)
+    entries: list[tuple[dict, tuple | None]] = []
     reachable = False
     for instance_id, result in zip(ids, results):
         if isinstance(result, BaseException):
             logger.debug("Downloader instance %s unavailable: %s", instance_id, result)
             continue
         reachable = True
-        listed.extend(result)
-    return listed if reachable else None
+        torrents, identity = result
+        entries.extend((torrent, identity) for torrent in torrents)
+    return await _deduplicate_qb_torrents(entries, timeout) if reachable else None

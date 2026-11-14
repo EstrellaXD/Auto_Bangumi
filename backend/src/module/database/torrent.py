@@ -81,7 +81,9 @@ class TorrentDatabase:
         if not qb_hashes:
             return []
         result = await self.session.execute(
-            select(Torrent).where(Torrent.qb_hash.in_(qb_hashes))  # type: ignore[union-attr]
+            select(Torrent).where(
+                Torrent.qb_hash.collate("NOCASE").in_(qb_hashes)  # type: ignore[union-attr]
+            )
         )
         return list(result.scalars().all())
 

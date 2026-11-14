@@ -973,3 +973,19 @@ class TestSearchKeywordEpisodeMigration:
         assert rss is not None
         assert rss.url == (expected or url)
         assert bangumi.rss_link == f"{other},{expected or url}"
+
+
+class TestTorrentHashLookupIndex:
+    def test_case_insensitive_hash_query_uses_expression_index(self):
+        engine = _make_v0_engine()
+        run_migrations(engine)
+
+        with engine.connect() as conn:
+            plan = conn.execute(
+                text(
+                    "EXPLAIN QUERY PLAN SELECT * FROM torrent "
+                    "WHERE qb_hash COLLATE NOCASE IN ('abc')"
+                )
+            ).all()
+
+        assert any("ix_torrent_qb_hash_nocase" in row[-1] for row in plan)

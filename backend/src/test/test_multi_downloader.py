@@ -366,6 +366,41 @@ async def test_list_torrents_one_instance_down_lists_the_other(two_instances):
     assert [(t["hash"], t["downloader_id"]) for t in listed or []] == [("ha", "a")]
 
 
+async def test_list_torrents_deduplicates_same_qb_with_different_paths(monkeypatch):
+    """同一 qB 的多个路径配置查询到同一种子时，无归属记录也只显示一次。"""
+    from module.downloader.client.qb_downloader import QbDownloader
+
+    instances = [
+        PluginInstance(
+            id=instance_id,
+            point="downloader",
+            provider="qbittorrent",
+            options={"host": "qb:8080", "path": path},
+        )
+        for instance_id, path in [
+            ("default", "/downloads/default"),
+            ("guoman", "/downloads/guoman"),
+            ("local", "/downloads/local"),
+        ]
+    ]
+    monkeypatch.setattr(
+        settings,
+        "plugins",
+        Plugins(instances=instances, slots=Slots(downloader="default")),
+    )
+    torrent_hash = "0123456789abcdef0123456789abcdef01234567"
+    torrent = _completed("Episode", torrent_hash, "/downloads/guoman/Show")
+    with (
+        patch.object(QbDownloader, "auth", AsyncMock(return_value=True)),
+        patch.object(QbDownloader, "torrents_info", AsyncMock(return_value=[torrent])),
+    ):
+        listed = await list_torrents()
+
+    assert [(t["hash"], t["downloader_id"]) for t in listed or []] == [
+        (torrent_hash, "default")
+    ]
+
+
 class TestRuleOnAnotherInstance:
     """规则换到另一个实例后，旧种子留在原实例；删除规则时两边的种子都删。"""
 
