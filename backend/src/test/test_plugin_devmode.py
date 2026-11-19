@@ -70,7 +70,7 @@ def strategy(manager: PluginManager) -> str | None:
 
 async def eventually(check: Callable[[], bool], timeout: float = 3.0) -> None:
     async with asyncio.timeout(timeout):
-        while not check():
+        while not check():  # noqa: ASYNC110 轮询外部条件（文件系统/重载结果），没有可等待的事件
             await asyncio.sleep(0.02)
 
 

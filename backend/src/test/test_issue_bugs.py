@@ -5,6 +5,7 @@ the current (buggy) behavior and the expected (fixed) behavior.
 """
 
 import re
+from typing import ClassVar
 
 import pytest
 
@@ -25,7 +26,7 @@ from module.parser.analyser.raw_parser import get_group, raw_parser
 class TestIssue986AtlasSubGroupFormat:
     """Issue #986: Parser now handles Atlas subtitle group naming convention."""
 
-    ATLAS_TITLES = [
+    ATLAS_TITLES: ClassVar[list[str]] = [
         "[阿特拉斯字幕组·雪原市出差所][命运-奇异赝品_Fate／strange Fake][04_半神们的卡农曲][简繁日内封PGS][日语配音版_Japanese Dub][Web-DL Remux][1080p AVC AAC].mkv",
         "[阿特拉斯字幕组·雪原市出差所][命运-奇异赝品_Fate／strange Fake][07_神自黄昏归来][简繁日内封PGS][日语配音版_Japanese Dub][Web-DL Remux][1080p AVC AAC].mkv",
         "[阿特拉斯字幕组·雪原市出差所][命运-奇异赝品_Fate／strange Fake][03_无英灵的战斗][简繁日内封PGS][日语配音版_Japanese Dub][Web-DL Remux][1080p AVC AAC].mkv",
@@ -467,7 +468,7 @@ class TestIssue992NonEpisodicAttributeError:
 
     # These formats triggered the original crash. The tokenizer now parses
     # both successfully, so keep an integration-level guard for that behavior.
-    FORMERLY_UNPARSEABLE_TITLES = [
+    FORMERLY_UNPARSEABLE_TITLES: ClassVar[list[tuple[str, str]]] = [
         (
             "[阿特拉斯字幕组·雪原市出差所][命运-奇异赝品_Fate／strange Fake][04_半神们的卡农曲][简繁日内封PGS][日语配音版_Japanese Dub][Web-DL Remux][1080p AVC AAC]",
             "Fate／strange Fake",

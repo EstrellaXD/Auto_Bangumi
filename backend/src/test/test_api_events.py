@@ -395,10 +395,7 @@ class TestNotificationEvent:
         return _event_generator(request, ctx), patches
 
     async def _collect(self, gen, n):
-        events = []
-        for _ in range(n):
-            events.append(await asyncio.wait_for(gen.__anext__(), timeout=1.0))
-        return events
+        return [await asyncio.wait_for(gen.__anext__(), timeout=1.0) for _ in range(n)]
 
     async def test_first_tick_emits_notification_frame(self, tmp_path, bus):
         from module.notification.inbox import inbox_revision

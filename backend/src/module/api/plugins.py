@@ -143,7 +143,7 @@ async def get_catalog():
     """签名目录（GitHub release ``plugins``）里可安装的插件。"""
     try:
         entries = await PluginInstaller(app_version=VERSION).fetch_catalog()
-    except Exception as e:  # noqa: BLE001 - 网络或验签失败统一报 502
+    except Exception as e:
         logger.warning("Plugin catalog unavailable: %s", e)
         raise HTTPException(
             status_code=502, detail=f"Plugin catalog unavailable: {e}"

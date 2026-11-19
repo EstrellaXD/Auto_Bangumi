@@ -644,7 +644,7 @@ class TestEventInboxContract:
             "channel": "beta",
             "notes": "",
         }
-        title, body = event.describe()
+        _title, body = event.describe()
         assert "3.3.1" in body
 
     def test_update_applied_event_kind_follows_success(self):

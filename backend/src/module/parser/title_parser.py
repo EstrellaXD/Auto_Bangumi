@@ -35,8 +35,8 @@ from module.plugin import host as plugin_host
 logger = logging.getLogger(__name__)
 
 
-# 保留 fire-and-forget 通知任务的强引用，防止其在运行完成前被 GC。
-_notify_tasks: set = set()
+# 保留 fire-and-forget 任务（通知、延迟关闭旧 client）的强引用，防止其在运行完成前被 GC。
+_notify_tasks: set[asyncio.Task] = set()
 
 
 def _notify_auth_failure(provider_id: str, message: str) -> None:
@@ -104,7 +104,9 @@ def reset_cache() -> None:
             await asyncio.sleep(grace)
             await parser.aclose()
 
-        loop.create_task(_close_after_grace())
+        task = loop.create_task(_close_after_grace())
+        _notify_tasks.add(task)
+        task.add_done_callback(_notify_tasks.discard)
 
 
 def _llm_config() -> LLM:

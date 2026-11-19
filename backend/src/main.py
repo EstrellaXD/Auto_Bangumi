@@ -191,10 +191,7 @@ else:
 
 
 if __name__ == "__main__":
-    if os.getenv("IPV6"):
-        host = "::"
-    else:
-        host = os.getenv("HOST", "0.0.0.0")
+    host = "::" if os.getenv("IPV6") else os.getenv("HOST", "0.0.0.0")
     uvicorn.run(
         app,
         host=host,

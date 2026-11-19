@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from .candidate import Candidate, Claims, Decision, DecisionStatus, Observation, Span
 from .resolver import Resolution, ResolutionWarning
@@ -39,7 +39,7 @@ class ParseTrace:
     segments: tuple[TraceSegment, ...] = ()
     observations: tuple[Observation, ...] = ()
     candidates: tuple[Candidate, ...] = ()
-    claims: Claims = Claims()
+    claims: Claims = field(default_factory=Claims)
     decisions: tuple[Decision, ...] = ()
     excluded_spans: tuple[Span, ...] = ()
     residuals: tuple[str, ...] = ()

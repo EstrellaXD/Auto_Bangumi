@@ -9,7 +9,7 @@ from .bangumi import BangumiDatabase
 from .engine import async_engine, async_session_factory
 from .inbox import InboxDatabase
 from .llm_credential import LLMCredentialDatabase
-from .migrations import (  # noqa: F401  (re-exported for existing importers)
+from .migrations import (
     CURRENT_SCHEMA_VERSION,
     MIGRATIONS,
     TABLE_MODELS,

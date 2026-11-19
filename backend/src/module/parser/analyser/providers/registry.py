@@ -55,7 +55,7 @@ class ProviderRegistry:
                 manifest = json.loads(
                     (version_dir / "plugin.json").read_text(encoding="utf-8")
                 )
-            except Exception as e:  # noqa: BLE001 - 单个坏插件不应拖垮列举
+            except Exception as e:
                 logger.warning("Skipping broken plugin %s: %s", plugin_dir.name, e)
                 continue
             result[manifest["id"]] = (version_dir, manifest)
@@ -77,9 +77,11 @@ class ProviderRegistry:
                 )
             )
         known = {info.id for info in infos}
-        for adapter_cls in self._extension_adapters().values():
-            if adapter_cls.info.id not in known:
-                infos.append(adapter_cls.info.model_copy(update={"builtin": False}))
+        infos.extend(
+            adapter_cls.info.model_copy(update={"builtin": False})
+            for adapter_cls in self._extension_adapters().values()
+            if adapter_cls.info.id not in known
+        )
         return infos
 
     @staticmethod

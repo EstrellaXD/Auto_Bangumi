@@ -16,6 +16,7 @@
 """
 
 import asyncio
+import contextlib
 import hashlib
 import json
 import logging
@@ -29,6 +30,7 @@ from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
+import anyio
 import httpx2
 import semver
 from pydantic import BaseModel
@@ -234,9 +236,10 @@ class Updater:
             resp.raise_for_status()
             total = int(resp.headers.get("content-length", 0) or 0)
             done = 0
-            with open(dest, "wb") as f:
+            # 写盘放到线程里，避免大文件下载时阻塞事件循环
+            async with await anyio.open_file(dest, "wb") as f:
                 async for chunk in resp.aiter_bytes(1 << 16):
-                    f.write(chunk)
+                    await f.write(chunk)
                     done += len(chunk)
                     if total:
                         self._set_progress(
@@ -487,10 +490,8 @@ class Updater:
         # 快照是 backup API 生成的独立文件；活库残留的 -wal/-shm 必须清掉。
         for suffix in ("-wal", "-shm"):
             sidecar = self.data_db.with_name(self.data_db.name + suffix)
-            try:
+            with contextlib.suppress(FileNotFoundError):
                 sidecar.unlink()
-            except FileNotFoundError:
-                pass
         shutil.rmtree(backup_db.parent, ignore_errors=True)
         return _read_db_schema_version(self.data_db)
 
@@ -594,7 +595,7 @@ class Updater:
                     restart_required=True,
                     message="update applied; restarting to take effect",
                 )
-            except Exception as exc:  # noqa: BLE001 - 任何失败都要优雅返回
+            except Exception as exc:
                 logger.exception("apply failed")
                 return self._fail(f"apply failed: {exc}")
 
@@ -607,10 +608,8 @@ class Updater:
                 backup = self.root / "backup"
                 applied = self.root / "applied.json"
                 applied_data: dict = {}
-                try:
+                with contextlib.suppress(OSError, ValueError):
                     applied_data = json.loads(applied.read_text(encoding="utf-8"))
-                except OSError, ValueError:
-                    pass
 
                 live_schema = _read_db_schema_version(self.data_db)
                 if live_schema is not None and live_schema > CURRENT_SCHEMA_VERSION:
@@ -732,7 +731,7 @@ class Updater:
                     restart_required=True,
                     message=message,
                 )
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 logger.exception("rollback failed")
                 return self._fail(f"rollback failed: {exc}")
 

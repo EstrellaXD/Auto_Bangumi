@@ -219,9 +219,11 @@ def check(plugin_dir: Path) -> tuple[PluginManifest | None, list[str]]:
         for candidate in (module.with_suffix(".py"), module / "__init__.py")
     ):
         problems.append(f"入口模块 {manifest.entry_module} 不存在")
-    for ui in manifest.ui:
-        if not (plugin_dir / ui.entry).is_file():
-            problems.append(f"前端入口 {ui.entry} 不存在")
+    problems.extend(
+        f"前端入口 {ui.entry} 不存在"
+        for ui in manifest.ui
+        if not (plugin_dir / ui.entry).is_file()
+    )
     problems += [
         f"含原生扩展 {p}，只允许纯 Python 代码" for p in native_files(plugin_dir)
     ]

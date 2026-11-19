@@ -29,12 +29,12 @@ PROVIDER_REGISTRY: dict[str, type[NotificationProvider]] = {
 
 __all__ = [
     "PROVIDER_REGISTRY",
-    "TelegramProvider",
-    "DiscordProvider",
     "BarkProvider",
-    "ServerChanProvider",
-    "WecomProvider",
+    "DiscordProvider",
     "GotifyProvider",
     "PushoverProvider",
+    "ServerChanProvider",
+    "TelegramProvider",
     "WebhookProvider",
+    "WecomProvider",
 ]

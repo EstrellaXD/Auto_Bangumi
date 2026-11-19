@@ -144,7 +144,7 @@ class TestGithubCopilot:
         assert challenge.method == "device_code"
         # device_code 藏在 state 里（不作为 user_code 下发）
         assert "DC-secret" in challenge.state
-        assert "DC-secret" != challenge.user_code
+        assert challenge.user_code != "DC-secret"
         await adapter.aclose()
         registry.invalidate()
 

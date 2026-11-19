@@ -396,7 +396,7 @@ class TestHostContext:
         bus = EventBus()
         ctx = HostPluginContext("demo", None, bus, tmp_path)
         ctx.bus.publish(DemoEvent(1))
-        with pytest.raises(ValueError, match="demo."):
+        with pytest.raises(ValueError, match=r"demo\."):
             ctx.bus.publish(PluginDisabled(plugin_id="x", reason="fake"))
         await bus.close()
 

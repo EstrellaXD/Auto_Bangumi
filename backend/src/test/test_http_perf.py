@@ -1,6 +1,7 @@
 """HTTP 层性能头：gzip 压缩与 SPA 静态文件的缓存策略。"""
 
 import asyncio
+import contextlib
 from unittest.mock import MagicMock
 
 import pytest
@@ -96,10 +97,8 @@ class TestGzip:
                     started.update(message)
                     raise asyncio.CancelledError  # 只取响应头，随后断开
 
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await app(scope, receive, send)
-            except asyncio.CancelledError:
-                pass
 
         asyncio.run(drive())
         headers = {k.decode(): v.decode() for k, v in started["headers"]}

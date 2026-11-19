@@ -5,6 +5,7 @@
 """
 
 import asyncio
+import contextlib
 import logging
 from collections.abc import Awaitable, Callable
 
@@ -60,9 +61,8 @@ class PeriodicTask:
 
     async def _loop(self) -> None:
         try:
-            if self._initial_delay > 0:
-                if await self._wait(self._initial_delay):
-                    return
+            if self._initial_delay > 0 and await self._wait(self._initial_delay):
+                return
             while not self._stop_event.is_set():
                 try:
                     await self._run()
@@ -91,10 +91,8 @@ class PeriodicTask:
             return
         self._stop_event.set()
         self._task.cancel()
-        try:
+        with contextlib.suppress(asyncio.CancelledError):
             await self._task
-        except asyncio.CancelledError:
-            pass
         self._task = None
 
 

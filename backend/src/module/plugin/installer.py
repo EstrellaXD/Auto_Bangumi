@@ -172,7 +172,7 @@ class SignedCatalogInstaller:
         async with self._lock:
             try:
                 return await self._install(plugin_id, expected_version)
-            except Exception as e:  # noqa: BLE001 - 统一转成失败结果
+            except Exception as e:
                 logger.warning("Plugin install failed for %s: %s", plugin_id, e)
                 return InstallResult(success=False, message=str(e))
 

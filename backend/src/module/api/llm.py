@@ -217,7 +217,7 @@ async def _device_poll_loop(provider_id: str, handle: str, expires_in: int) -> N
                 tokens = await adapter.complete_auth(pending.blob)
             except AuthExpiredError:
                 continue  # authorization_pending / slow_down：继续轮询
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 logger.warning("device auth poll failed for %s: %s", provider_id, e)
                 continue
             await CredentialStore(provider_id).save(tokens)

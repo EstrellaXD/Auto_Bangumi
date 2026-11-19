@@ -128,7 +128,7 @@ webui/src/
 
 ## Code Style
 
-- Python: ruff format (88 char lines), Ruff linter (E, F, I, UP, B, C4, PIE rules), ty type checker, target Python 3.14
+- Python: ruff format (88 char lines), Ruff linter (E, F, I, UP, B, C4, PIE, SIM, ASYNC, PERF, RUF rules; see `ignore` in pyproject for the deliberate exceptions), ty type checker, target Python 3.14
   - Type-check suppressions use `# ty: ignore[<rule>]` (always name the rule; unused ones fail CI)
   - SQLModel column expressions go through `col()` (`col(Model.field).in_(...)`, `col(Model.field) == x` inside `where()`), so they type-check
 - TypeScript: oxlint (`.oxlintrc.json`) + oxfmt (`.oxfmtrc.json`); no ESLint/Prettier

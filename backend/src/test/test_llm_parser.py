@@ -57,9 +57,11 @@ class TestLLMParserInit:
             username="user",
             password="pass",
         )
-        with patch.object(settings, "proxy", proxy):
-            with patch("module.parser.analyser.llm.httpx2.AsyncClient") as mock_client:
-                llm_module._build_http_client(5.0)
+        with (
+            patch.object(settings, "proxy", proxy),
+            patch("module.parser.analyser.llm.httpx2.AsyncClient") as mock_client,
+        ):
+            llm_module._build_http_client(5.0)
 
         assert mock_client.call_args.kwargs["proxy"] == (
             "http://user:pass@proxy.local:7890"
@@ -67,9 +69,11 @@ class TestLLMParserInit:
 
     def test_socks_proxy_is_passed_to_injected_http_client(self):
         proxy = Proxy(enable=True, type="socks5", host="proxy.local", port=7891)
-        with patch.object(settings, "proxy", proxy):
-            with patch("module.parser.analyser.llm.httpx2.AsyncClient") as mock_client:
-                llm_module._build_http_client(5.0)
+        with (
+            patch.object(settings, "proxy", proxy),
+            patch("module.parser.analyser.llm.httpx2.AsyncClient") as mock_client,
+        ):
+            llm_module._build_http_client(5.0)
 
         assert mock_client.call_args.kwargs["proxy"] == "socks5://proxy.local:7891"
 

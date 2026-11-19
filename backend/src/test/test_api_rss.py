@@ -1,5 +1,6 @@
 """Tests for RSS API endpoints."""
 
+from typing import ClassVar
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -376,7 +377,7 @@ class TestSubscribe:
 
         assert response.status_code == 200
 
-    _PROVIDERS = {
+    _PROVIDERS: ClassVar[dict[str, dict[str, str]]] = {
         "mikan": {
             "url": "https://mikanani.me/RSS/Search?searchstr=%s",
             "parser": "mikan",

@@ -188,7 +188,7 @@ class WebAuthnService:
 
         except Exception as e:
             logger.error(f"Registration verification failed: {e}")
-            raise ValueError(f"Invalid registration response: {str(e)}") from e
+            raise ValueError(f"Invalid registration response: {e!s}") from e
 
     # ============ 认证流程 ============
 
@@ -284,7 +284,7 @@ class WebAuthnService:
 
         except Exception as e:
             logger.error(f"Authentication verification failed: {e}")
-            raise ValueError(f"Invalid authentication response: {str(e)}") from e
+            raise ValueError(f"Invalid authentication response: {e!s}") from e
 
     def verify_discoverable_authentication(
         self, credential: dict, passkey: Passkey
@@ -337,7 +337,7 @@ class WebAuthnService:
 
         except Exception as e:
             logger.error(f"Discoverable authentication verification failed: {e}")
-            raise ValueError(f"Invalid authentication response: {str(e)}") from e
+            raise ValueError(f"Invalid authentication response: {e!s}") from e
 
     # ============ 辅助方法 ============
 

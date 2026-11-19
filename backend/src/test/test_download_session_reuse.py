@@ -284,20 +284,22 @@ class TestRetiredClientLifecycle:
             async def aclose(self):
                 self.closed = True
 
-        with patch("module.downloader.download_client.settings") as mock_settings:
-            with patch(
+        with (
+            patch("module.downloader.download_client.settings") as mock_settings,
+            patch(
                 "module.downloader.client.qb_downloader.httpx2.AsyncClient",
                 side_effect=lambda *a, **k: _TrackedHTTP(),
-            ):
-                _patch_qb_settings(mock_settings, host="host-a:8080")
-                async with DownloadClient():
-                    pass  # A 已认证，连接池已打开
-                _patch_qb_settings(mock_settings, host="host-b:8080")
-                DownloadClient()  # 撤下 A（未 enter）
-                _patch_qb_settings(mock_settings, host="host-c:8080")
-                DownloadClient()  # 撤下 B——不得把 A 顶掉忘掉
-                async with DownloadClient():
-                    pass
+            ),
+        ):
+            _patch_qb_settings(mock_settings, host="host-a:8080")
+            async with DownloadClient():
+                pass  # A 已认证，连接池已打开
+            _patch_qb_settings(mock_settings, host="host-b:8080")
+            DownloadClient()  # 撤下 A（未 enter）
+            _patch_qb_settings(mock_settings, host="host-c:8080")
+            DownloadClient()  # 撤下 B——不得把 A 顶掉忘掉
+            async with DownloadClient():
+                pass
 
         assert fakes[0].closed is True  # A 的连接池被关闭，未泄漏
 
@@ -367,27 +369,29 @@ class TestRetiredClientLifecycle:
             async def aclose(self):
                 pass
 
-        with patch("module.downloader.download_client.settings") as mock_settings:
-            with patch(
+        with (
+            patch("module.downloader.download_client.settings") as mock_settings,
+            patch(
                 "module.downloader.client.qb_downloader.httpx2.AsyncClient",
                 side_effect=[_SlowLoginHTTP(), _FastHTTP()],
-            ):
-                _patch_qb_settings(mock_settings, host="host-a:8080")
+            ),
+        ):
+            _patch_qb_settings(mock_settings, host="host-a:8080")
 
-                async def block1():
-                    async with DownloadClient():
-                        events.append("block1-in")
-                    events.append("block1-out")
+            async def block1():
+                async with DownloadClient():
+                    events.append("block1-in")
+                events.append("block1-out")
 
-                task = asyncio.create_task(block1())
-                await login_started.wait()  # block1 正在 auth() 中途
+            task = asyncio.create_task(block1())
+            await login_started.wait()  # block1 正在 auth() 中途
 
-                _patch_qb_settings(mock_settings, host="host-b:8080")
-                async with DownloadClient():  # 撤下 A 并触发关闭决策
-                    pass
+            _patch_qb_settings(mock_settings, host="host-b:8080")
+            async with DownloadClient():  # 撤下 A 并触发关闭决策
+                pass
 
-                release_login.set()
-                await task
+            release_login.set()
+            await task
 
         assert "A-closed" in events
         # A 只能在 block1 成功 enter 之后关闭（由 block1 的 __aexit__ 收尾），

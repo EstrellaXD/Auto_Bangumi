@@ -88,9 +88,9 @@ class TestStartup:
             patch("module.update.version_check.LEGACY_DATA_PATH", legacy),
             patch("module.core.context.Checker.check_database", return_value=False),
             patch("module.core.context.first_run") as mock_first_run,
+            pytest.raises(UnsupportedUpgradeError, match=r"2\.x"),
         ):
-            with pytest.raises(UnsupportedUpgradeError, match="2.x"):
-                await ctx.startup()
+            await ctx.startup()
 
         mock_first_run.assert_not_called()
         assert ctx._startup_done is False
@@ -118,9 +118,9 @@ class TestStartup:
                 side_effect=UnsupportedUpgradeError("too old"),
             ),
             patch("module.core.context.run_migrations") as mock_run,
+            pytest.raises(UnsupportedUpgradeError),
         ):
-            with pytest.raises(UnsupportedUpgradeError):
-                await ctx.startup()
+            await ctx.startup()
 
         mock_run.assert_not_called()
         assert ctx._startup_done is False

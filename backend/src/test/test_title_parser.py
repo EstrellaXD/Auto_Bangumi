@@ -85,13 +85,15 @@ class TestRawParserLLMFallbackMode:
 
     async def test_regex_success_skips_llm(self):
         """正则解析成功时，即使启用了 LLM 也不得调用。"""
-        with patch.object(
-            settings, "llm", LLM(enable=True, api_key="k", mode="fallback")
-        ):
-            with patch(
+        with (
+            patch.object(
+                settings, "llm", LLM(enable=True, api_key="k", mode="fallback")
+            ),
+            patch(
                 "module.parser.title_parser._llm_parse", new_callable=AsyncMock
-            ) as mock_llm:
-                result = await TitleParser.raw_parser(RAW_TITLE)
+            ) as mock_llm,
+        ):
+            result = await TitleParser.raw_parser(RAW_TITLE)
 
         assert result is not None
         assert result.title_raw == "New Doraemon"
@@ -99,19 +101,21 @@ class TestRawParserLLMFallbackMode:
 
     async def test_regex_failure_falls_back_to_llm(self):
         """正则失败且启用 LLM 时，LLM 兜底解析并采用其结果。"""
-        with patch.object(
-            settings, "llm", LLM(enable=True, api_key="k", mode="fallback")
-        ):
-            with patch(
+        with (
+            patch.object(
+                settings, "llm", LLM(enable=True, api_key="k", mode="fallback")
+            ),
+            patch(
                 "module.parser.title_parser.parse_configured_release_title_with_trace",
                 return_value=_empty_parse_outcome(),
-            ) as mock_raw:
-                with patch(
-                    "module.parser.title_parser._llm_parse",
-                    new_callable=AsyncMock,
-                    return_value=_make_llm_episode(),
-                ) as mock_llm:
-                    result = await TitleParser.raw_parser("unparseable garbage title")
+            ) as mock_raw,
+            patch(
+                "module.parser.title_parser._llm_parse",
+                new_callable=AsyncMock,
+                return_value=_make_llm_episode(),
+            ) as mock_llm,
+        ):
+            result = await TitleParser.raw_parser("unparseable garbage title")
 
         mock_raw.assert_called_once()
         mock_llm.assert_awaited_once()
@@ -121,15 +125,17 @@ class TestRawParserLLMFallbackMode:
 
     async def test_regex_failure_llm_disabled_returns_none(self):
         """正则失败且 LLM 未启用时直接返回 None。"""
-        with patch.object(settings, "llm", LLM(enable=False, mode="fallback")):
-            with patch(
+        with (
+            patch.object(settings, "llm", LLM(enable=False, mode="fallback")),
+            patch(
                 "module.parser.title_parser.parse_configured_release_title_with_trace",
                 return_value=_empty_parse_outcome(),
-            ):
-                with patch(
-                    "module.parser.title_parser._llm_parse", new_callable=AsyncMock
-                ) as mock_llm:
-                    result = await TitleParser.raw_parser("unparseable garbage title")
+            ),
+            patch(
+                "module.parser.title_parser._llm_parse", new_callable=AsyncMock
+            ) as mock_llm,
+        ):
+            result = await TitleParser.raw_parser("unparseable garbage title")
 
         assert result is None
         mock_llm.assert_not_awaited()
@@ -143,19 +149,21 @@ class TestRawParserLLMPrimaryMode:
 
     async def test_llm_keeps_primary_titles_and_reads_deterministic_hints(self):
         """LLM 标题优先，同时确定性解析仍提供安全的结构提示。"""
-        with patch.object(
-            settings, "llm", LLM(enable=True, api_key="k", mode="primary")
-        ):
-            with patch(
+        with (
+            patch.object(
+                settings, "llm", LLM(enable=True, api_key="k", mode="primary")
+            ),
+            patch(
                 "module.parser.title_parser._llm_parse",
                 new_callable=AsyncMock,
                 return_value=_make_llm_episode(),
-            ) as mock_llm:
-                with patch(
-                    "module.parser.title_parser.parse_configured_release_title_with_trace",
-                    return_value=_empty_parse_outcome(),
-                ) as mock_raw:
-                    result = await TitleParser.raw_parser(RAW_TITLE)
+            ) as mock_llm,
+            patch(
+                "module.parser.title_parser.parse_configured_release_title_with_trace",
+                return_value=_empty_parse_outcome(),
+            ) as mock_raw,
+        ):
+            result = await TitleParser.raw_parser(RAW_TITLE)
 
         mock_llm.assert_awaited_once()
         mock_raw.assert_called_once_with(RAW_TITLE)
@@ -163,49 +171,55 @@ class TestRawParserLLMPrimaryMode:
         assert result.official_title == "LLM Title"
 
     async def test_raw_non_episodic_type_overrides_llm_episode_type(self):
-        with patch.object(
-            settings, "llm", LLM(enable=True, api_key="k", mode="primary")
-        ):
-            with patch(
+        with (
+            patch.object(
+                settings, "llm", LLM(enable=True, api_key="k", mode="primary")
+            ),
+            patch(
                 "module.parser.title_parser._llm_parse",
                 new_callable=AsyncMock,
                 return_value=_make_llm_episode(episode_type="episode"),
-            ):
-                result = await TitleParser.raw_parser("[Group] LLM Title Movie [1080P]")
+            ),
+        ):
+            result = await TitleParser.raw_parser("[Group] LLM Title Movie [1080P]")
 
         assert result is not None
         assert isinstance(result, Movie)
 
     async def test_llm_failure_falls_back_to_regex(self):
         """LLM 失败（返回 None）时用正则兜底，标题不丢失。"""
-        with patch.object(
-            settings, "llm", LLM(enable=True, api_key="k", mode="primary")
-        ):
-            with patch(
+        with (
+            patch.object(
+                settings, "llm", LLM(enable=True, api_key="k", mode="primary")
+            ),
+            patch(
                 "module.parser.title_parser._llm_parse",
                 new_callable=AsyncMock,
                 return_value=None,
-            ) as mock_llm:
-                result = await TitleParser.raw_parser(RAW_TITLE)
+            ) as mock_llm,
+        ):
+            result = await TitleParser.raw_parser(RAW_TITLE)
 
         mock_llm.assert_awaited_once()
         assert result is not None
         assert result.title_raw == "New Doraemon"
 
     async def test_llm_and_regex_both_fail_returns_none(self):
-        with patch.object(
-            settings, "llm", LLM(enable=True, api_key="k", mode="primary")
-        ):
-            with patch(
+        with (
+            patch.object(
+                settings, "llm", LLM(enable=True, api_key="k", mode="primary")
+            ),
+            patch(
                 "module.parser.title_parser._llm_parse",
                 new_callable=AsyncMock,
                 return_value=None,
-            ):
-                with patch(
-                    "module.parser.title_parser.parse_configured_release_title_with_trace",
-                    return_value=_empty_parse_outcome(),
-                ):
-                    result = await TitleParser.raw_parser("unparseable garbage title")
+            ),
+            patch(
+                "module.parser.title_parser.parse_configured_release_title_with_trace",
+                return_value=_empty_parse_outcome(),
+            ),
+        ):
+            result = await TitleParser.raw_parser("unparseable garbage title")
 
         assert result is None
 
@@ -385,44 +399,50 @@ class TestParsedReleaseAdmission:
         assert weak is None
 
     async def test_llm_movie_uses_same_movie_projection_as_deterministic_path(self):
-        with patch.object(
-            settings, "llm", LLM(enable=True, api_key="k", mode="primary")
-        ):
-            with patch(
+        with (
+            patch.object(
+                settings, "llm", LLM(enable=True, api_key="k", mode="primary")
+            ),
+            patch(
                 "module.parser.title_parser._llm_parse",
                 new_callable=AsyncMock,
                 return_value=_make_llm_episode(episode_type="movie"),
-            ):
-                result = await TitleParser.raw_parser("Opaque LLM Movie Title")
+            ),
+        ):
+            result = await TitleParser.raw_parser("Opaque LLM Movie Title")
 
         assert isinstance(result, Movie)
 
     async def test_primary_llm_cannot_override_explicit_episode_from_movie_group(self):
         raw = "[Movie-Fan] Ordinary Anime - 01 [1080p WEB-DL]"
-        with patch.object(
-            settings, "llm", LLM(enable=True, api_key="k", mode="primary")
-        ):
-            with patch(
+        with (
+            patch.object(
+                settings, "llm", LLM(enable=True, api_key="k", mode="primary")
+            ),
+            patch(
                 "module.parser.title_parser._llm_parse",
                 new_callable=AsyncMock,
                 return_value=_make_llm_episode(episode_type="movie"),
-            ):
-                result = await TitleParser.raw_parser(raw)
+            ),
+        ):
+            result = await TitleParser.raw_parser(raw)
 
         assert isinstance(result, Bangumi)
         assert result.episode_type == "episode"
 
     async def test_deterministic_episode_bundle_stays_atomic_in_primary_mode(self):
         raw = "[Group] Anime Title S02E12v2 [1080p WEB-DL]"
-        with patch.object(
-            settings, "llm", LLM(enable=True, api_key="k", mode="primary")
-        ):
-            with patch(
+        with (
+            patch.object(
+                settings, "llm", LLM(enable=True, api_key="k", mode="primary")
+            ),
+            patch(
                 "module.parser.title_parser._llm_parse",
                 new_callable=AsyncMock,
                 return_value=_make_llm_episode(),
-            ):
-                result = await TitleParser.raw_parser(raw)
+            ),
+        ):
+            result = await TitleParser.raw_parser(raw)
 
         assert isinstance(result, Bangumi)
         assert result.season == 2
@@ -430,15 +450,17 @@ class TestParsedReleaseAdmission:
 
     async def test_deterministic_ova_beats_wrong_llm_movie_type(self):
         raw = "[Group] Anime Title OVA [1080p WEB-DL]"
-        with patch.object(
-            settings, "llm", LLM(enable=True, api_key="k", mode="primary")
-        ):
-            with patch(
+        with (
+            patch.object(
+                settings, "llm", LLM(enable=True, api_key="k", mode="primary")
+            ),
+            patch(
                 "module.parser.title_parser._llm_parse",
                 new_callable=AsyncMock,
                 return_value=_make_llm_episode(episode_type="movie"),
-            ):
-                result = await TitleParser.raw_parser(raw)
+            ),
+        ):
+            result = await TitleParser.raw_parser(raw)
 
         assert isinstance(result, Bangumi)
         assert result.season == 0
@@ -474,15 +496,17 @@ class TestParsedReleaseAdmission:
         ),
     )
     async def test_primary_llm_cannot_bypass_deterministic_admission(self, raw: str):
-        with patch.object(
-            settings, "llm", LLM(enable=True, api_key="k", mode="primary")
-        ):
-            with patch(
+        with (
+            patch.object(
+                settings, "llm", LLM(enable=True, api_key="k", mode="primary")
+            ),
+            patch(
                 "module.parser.title_parser._llm_parse",
                 new_callable=AsyncMock,
                 return_value=_make_llm_episode(),
-            ):
-                result = await TitleParser.raw_parser(raw)
+            ),
+        ):
+            result = await TitleParser.raw_parser(raw)
 
         assert result is None
 
@@ -490,13 +514,15 @@ class TestParsedReleaseAdmission:
         "raw", ("[Group] Anime Title PV2 [1080p]", MIXED_COLLECTION)
     )
     async def test_fallback_does_not_call_llm_for_known_rejected_kind(self, raw: str):
-        with patch.object(
-            settings, "llm", LLM(enable=True, api_key="k", mode="fallback")
-        ):
-            with patch(
+        with (
+            patch.object(
+                settings, "llm", LLM(enable=True, api_key="k", mode="fallback")
+            ),
+            patch(
                 "module.parser.title_parser._llm_parse", new_callable=AsyncMock
-            ) as mock_llm:
-                result = await TitleParser.raw_parser(raw)
+            ) as mock_llm,
+        ):
+            result = await TitleParser.raw_parser(raw)
 
         assert result is None
         mock_llm.assert_not_awaited()
@@ -514,27 +540,31 @@ class TestParsedReleaseAdmission:
     async def test_titleless_structured_resource_never_reaches_llm(
         self, mode: Literal["primary", "fallback"], raw: str
     ):
-        with patch.object(settings, "llm", LLM(enable=True, api_key="k", mode=mode)):
-            with patch(
+        with (
+            patch.object(settings, "llm", LLM(enable=True, api_key="k", mode=mode)),
+            patch(
                 "module.parser.title_parser._llm_parse",
                 new_callable=AsyncMock,
                 return_value=_make_llm_episode(),
-            ) as mock_llm:
-                result = await TitleParser.raw_parser(raw)
+            ) as mock_llm,
+        ):
+            result = await TitleParser.raw_parser(raw)
 
         assert result is None
         mock_llm.assert_not_awaited()
 
     async def test_real_weak_title_uses_llm_fallback(self):
-        with patch.object(
-            settings, "llm", LLM(enable=True, api_key="k", mode="fallback")
-        ):
-            with patch(
+        with (
+            patch.object(
+                settings, "llm", LLM(enable=True, api_key="k", mode="fallback")
+            ),
+            patch(
                 "module.parser.title_parser._llm_parse",
                 new_callable=AsyncMock,
                 return_value=_make_llm_episode(),
-            ) as mock_llm:
-                result = await TitleParser.raw_parser("Bare Weak Anime Title")
+            ) as mock_llm,
+        ):
+            result = await TitleParser.raw_parser("Bare Weak Anime Title")
 
         assert isinstance(result, Bangumi)
         mock_llm.assert_awaited_once()
@@ -549,21 +579,25 @@ class TestLLMParseErrorHandling:
     async def test_llm_parser_exception_returns_none(self):
         mock_parser = AsyncMock()
         mock_parser.parse = AsyncMock(side_effect=RuntimeError("boom"))
-        with patch.object(settings, "llm", LLM(enable=True, api_key="k")):
-            with patch(
+        with (
+            patch.object(settings, "llm", LLM(enable=True, api_key="k")),
+            patch(
                 "module.parser.title_parser._get_llm_parser", return_value=mock_parser
-            ):
-                result = await title_parser_module._llm_parse("some title")
+            ),
+        ):
+            result = await title_parser_module._llm_parse("some title")
         assert result is None
 
     async def test_llm_non_dict_result_returns_none(self):
         mock_parser = AsyncMock()
         mock_parser.parse = AsyncMock(return_value=None)
-        with patch.object(settings, "llm", LLM(enable=True, api_key="k")):
-            with patch(
+        with (
+            patch.object(settings, "llm", LLM(enable=True, api_key="k")),
+            patch(
                 "module.parser.title_parser._get_llm_parser", return_value=mock_parser
-            ):
-                result = await title_parser_module._llm_parse("some title")
+            ),
+        ):
+            result = await title_parser_module._llm_parse("some title")
         assert result is None
 
     async def test_llm_success_is_cached(self):
@@ -582,12 +616,14 @@ class TestLLMParseErrorHandling:
                 "source": "",
             }
         )
-        with patch.object(settings, "llm", LLM(enable=True, api_key="k", cache_ttl=60)):
-            with patch(
+        with (
+            patch.object(settings, "llm", LLM(enable=True, api_key="k", cache_ttl=60)),
+            patch(
                 "module.parser.title_parser._get_llm_parser", return_value=mock_parser
-            ):
-                first = await title_parser_module._llm_parse("cached title")
-                second = await title_parser_module._llm_parse("cached title")
+            ),
+        ):
+            first = await title_parser_module._llm_parse("cached title")
+            second = await title_parser_module._llm_parse("cached title")
 
         assert first == second
         assert mock_parser.parse.await_count == 1
@@ -595,21 +631,23 @@ class TestLLMParseErrorHandling:
     async def test_llm_failures_are_cached(self):
         mock_parser = AsyncMock()
         mock_parser.parse = AsyncMock(side_effect=RuntimeError("boom"))
-        with patch.object(
-            settings,
-            "llm",
-            LLM(
-                enable=True,
-                api_key="k",
-                cache_ttl=60,
-                failure_threshold=10,
+        with (
+            patch.object(
+                settings,
+                "llm",
+                LLM(
+                    enable=True,
+                    api_key="k",
+                    cache_ttl=60,
+                    failure_threshold=10,
+                ),
+            ),
+            patch(
+                "module.parser.title_parser._get_llm_parser", return_value=mock_parser
             ),
         ):
-            with patch(
-                "module.parser.title_parser._get_llm_parser", return_value=mock_parser
-            ):
-                first = await title_parser_module._llm_parse("bad title")
-                second = await title_parser_module._llm_parse("bad title")
+            first = await title_parser_module._llm_parse("bad title")
+            second = await title_parser_module._llm_parse("bad title")
 
         assert first is None
         assert second is None
@@ -618,23 +656,25 @@ class TestLLMParseErrorHandling:
     async def test_llm_failure_breaker_skips_provider_calls(self):
         mock_parser = AsyncMock()
         mock_parser.parse = AsyncMock(side_effect=RuntimeError("boom"))
-        with patch.object(
-            settings,
-            "llm",
-            LLM(
-                enable=True,
-                api_key="k",
-                cache_ttl=0,
-                failure_threshold=2,
-                failure_backoff=60,
+        with (
+            patch.object(
+                settings,
+                "llm",
+                LLM(
+                    enable=True,
+                    api_key="k",
+                    cache_ttl=0,
+                    failure_threshold=2,
+                    failure_backoff=60,
+                ),
+            ),
+            patch(
+                "module.parser.title_parser._get_llm_parser", return_value=mock_parser
             ),
         ):
-            with patch(
-                "module.parser.title_parser._get_llm_parser", return_value=mock_parser
-            ):
-                assert await title_parser_module._llm_parse("bad title 1") is None
-                assert await title_parser_module._llm_parse("bad title 2") is None
-                assert await title_parser_module._llm_parse("bad title 3") is None
+            assert await title_parser_module._llm_parse("bad title 1") is None
+            assert await title_parser_module._llm_parse("bad title 2") is None
+            assert await title_parser_module._llm_parse("bad title 3") is None
 
         assert mock_parser.parse.await_count == 2
 

@@ -80,6 +80,7 @@ version = "4.0.0"
 source = { virtual = "." }
 dependencies = [
     { name = "anthropic" },
+    { name = "anyio" },
     { name = "bcrypt" },
     { name = "beautifulsoup4" },
     { name = "cryptography" },
@@ -115,6 +116,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "anthropic", specifier = ">=1.15.0" },
+    { name = "anyio", specifier = ">=4.16" },
     { name = "bcrypt", specifier = ">=4.1" },
     { name = "beautifulsoup4", specifier = ">=4.15.0" },
     { name = "cryptography", specifier = ">=50.0.2" },

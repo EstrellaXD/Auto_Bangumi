@@ -24,6 +24,7 @@ dependencies = [
     "google-genai>=2.31.0",
     "packaging>=26.3",
     "jsonschema>=4.20.0",
+    "anyio>=4.16",
 ]
 
 [dependency-groups]
@@ -60,6 +61,10 @@ select = [
     "B",     # flake8-bugbear
     "C4",    # flake8-comprehensions
     "PIE",   # flake8-pie
+    "SIM",   # flake8-simplify
+    "ASYNC", # flake8-async
+    "PERF",  # perflint
+    "RUF",   # ruff 自有规则
 ]
 ignore = [
     "E501",
@@ -67,6 +72,11 @@ ignore = [
     "B008",  # FastAPI 依赖注入惯用 `param = Depends(...)` 作为默认值
     "B905",  # zip(strict=...)：补上会改变运行时行为，不做批量修改
     "UP042", # str+Enum 改 StrEnum 会改变 str()/format() 的输出
+    "RUF001", # 以下三条把全角中文标点视为易混淆字符；本项目注释与文案为中文
+    "RUF002",
+    "RUF003",
+    "ASYNC109", # 公开 API 广泛使用 timeout 参数，改为 anyio.fail_after 需改签名
+    "ASYNC240", # 主要误报 os.path.relpath/normpath 等纯字符串运算；真实文件 IO 由 ASYNC230 等覆盖
 ]
 fixable = ["ALL"]
 unfixable = []

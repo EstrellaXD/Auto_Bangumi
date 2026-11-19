@@ -245,7 +245,9 @@ class TestRateLimit429:
         mock_sleep.assert_awaited_once_with(3.0)
 
     async def test_get_url_429_without_header_sleeps_fallback_delay(self):
-        result, calls, mock_sleep = await self._run([self._resp_429(), self._resp_ok()])
+        result, _calls, mock_sleep = await self._run(
+            [self._resp_429(), self._resp_ok()]
+        )
         assert result is not None
         mock_sleep.assert_awaited_once_with(HTTP_429_FALLBACK_DELAY)
 

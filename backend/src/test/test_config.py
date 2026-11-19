@@ -193,11 +193,13 @@ class TestSettingsLoad:
         with open(config_file, "w") as f:
             json.dump(config_data, f)
 
-        with patch("module.conf.config.CONFIG_PATH", config_file):
-            with patch("module.conf.config.VERSION", "3.2.0"):
-                s = Settings.__new__(Settings)
-                Config.__init__(s)
-                s.load()
+        with (
+            patch("module.conf.config.CONFIG_PATH", config_file),
+            patch("module.conf.config.VERSION", "3.2.0"),
+        ):
+            s = Settings.__new__(Settings)
+            Config.__init__(s)
+            s.load()
 
         assert s.program.rss_time == 1200
 
@@ -272,11 +274,13 @@ class TestEnvOverrides:
             "AB_DOWNLOAD_PATH": "/data/Bangumi",
             "AB_METHOD": "Advance",
         }
-        with patch.dict(os.environ, env, clear=False):
-            with patch("module.conf.config.CONFIG_PATH", config_file):
-                s = Settings.__new__(Settings)
-                Config.__init__(s)
-                s.init()
+        with (
+            patch.dict(os.environ, env, clear=False),
+            patch("module.conf.config.CONFIG_PATH", config_file),
+        ):
+            s = Settings.__new__(Settings)
+            Config.__init__(s)
+            s.init()
 
         assert (s.downloader.host, s.downloader.username, s.downloader.password) == (
             "192.168.1.100:9090",
@@ -294,26 +298,30 @@ class TestEnvOverrides:
         """AB_RSS_PARSER_ENGINE selects a supported parser engine."""
         config_file = tmp_path / "config.json"
 
-        with patch.dict(os.environ, {"AB_RSS_PARSER_ENGINE": "TOKENIZER"}, clear=False):
-            with patch("module.conf.config.CONFIG_PATH", config_file):
-                s = Settings.__new__(Settings)
-                Config.__init__(s)
-                s.init()
+        with (
+            patch.dict(os.environ, {"AB_RSS_PARSER_ENGINE": "TOKENIZER"}, clear=False),
+            patch("module.conf.config.CONFIG_PATH", config_file),
+        ):
+            s = Settings.__new__(Settings)
+            Config.__init__(s)
+            s.init()
 
         assert s.rss_parser.engine == "tokenizer"
 
     def test_revision_conflict_policy_from_env(self, tmp_path):
         config_file = tmp_path / "config.json"
 
-        with patch.dict(
-            os.environ,
-            {"AB_REVISION_CONFLICT_POLICY": "REPLACE"},
-            clear=False,
+        with (
+            patch.dict(
+                os.environ,
+                {"AB_REVISION_CONFLICT_POLICY": "REPLACE"},
+                clear=False,
+            ),
+            patch("module.conf.config.CONFIG_PATH", config_file),
         ):
-            with patch("module.conf.config.CONFIG_PATH", config_file):
-                s = Settings.__new__(Settings)
-                Config.__init__(s)
-                s.init()
+            s = Settings.__new__(Settings)
+            Config.__init__(s)
+            s.init()
 
         assert s.plugins.slots.conflict_policy == "replace"
 
@@ -518,7 +526,7 @@ class TestNetworkBaseUrls:
         import sys
         from unittest.mock import patch
 
-        import module.parser.analyser.tmdb_parser  # noqa: F401
+        import module.parser.analyser.tmdb_parser
 
         tp = sys.modules["module.parser.analyser.tmdb_parser"]
         with patch.object(

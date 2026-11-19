@@ -6,6 +6,7 @@ import importlib.util
 import re
 import sys
 from pathlib import Path
+from typing import ClassVar
 
 import pytest
 
@@ -152,8 +153,8 @@ def test_build_command_uses_only_the_temporary_context(tmp_path):
     )
 
     assert command[:2] == ["docker", "build"]
-    assert ["--build-arg", "VERSION=3.3.999-e2e.1"] == command[2:4]
-    assert ["--tag", "auto-bangumi:e2e"] == command[4:6]
+    assert command[2:4] == ["--build-arg", "VERSION=3.3.999-e2e.1"]
+    assert command[4:6] == ["--tag", "auto-bangumi:e2e"]
     assert command[-1] == str(tmp_path / "context")
 
 
@@ -283,7 +284,9 @@ def test_run_with_stack_always_stops_after_command_failure():
     class FakeStack:
         started = False
         stopped = False
-        environment = {"AB_E2E_BASE_URL": "http://127.0.0.1:1"}
+        environment: ClassVar[dict[str, str]] = {
+            "AB_E2E_BASE_URL": "http://127.0.0.1:1"
+        }
 
         def start(self):
             self.started = True
@@ -309,7 +312,7 @@ def test_run_with_stack_stops_after_start_failure():
 
     class FakeStack:
         stopped = False
-        environment = {}
+        environment: ClassVar[dict[str, str]] = {}
 
         def start(self):
             raise RuntimeError("startup failed")
@@ -374,7 +377,7 @@ def test_run_with_stack_handles_sigterm_and_restores_handlers(monkeypatch):
     monkeypatch.setattr(stack_module.signal, "signal", install)
 
     class FakeStack:
-        environment = {}
+        environment: ClassVar[dict[str, str]] = {}
 
         def __init__(self):
             self.stop_count = 0

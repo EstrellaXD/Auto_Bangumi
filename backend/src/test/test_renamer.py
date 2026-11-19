@@ -960,13 +960,15 @@ class TestRenameFlow:
             episode=1,
             suffix=".mkv",
         )
-        with patch.object(renamer._parser, "torrent_parser", return_value=ep):
-            with patch("module.manager.renamer.settings") as mock_settings:
-                mock_settings.plugins.slots.rename_strategy = "pn"
-                mock_settings.bangumi_manage.remove_bad_torrent = False
-                with patch("module.downloader.path.settings") as mock_path_settings:
-                    mock_path_settings.downloader.path = "/downloads/Bangumi"
-                    result = await renamer.rename()
+        with (
+            patch.object(renamer._parser, "torrent_parser", return_value=ep),
+            patch("module.manager.renamer.settings") as mock_settings,
+        ):
+            mock_settings.plugins.slots.rename_strategy = "pn"
+            mock_settings.bangumi_manage.remove_bad_torrent = False
+            with patch("module.downloader.path.settings") as mock_path_settings:
+                mock_path_settings.downloader.path = "/downloads/Bangumi"
+                result = await renamer.rename()
 
         assert len(result) == 1
         assert result[0].episode == 1
@@ -997,13 +999,15 @@ class TestRenameFlow:
                 suffix=".mkv",
             )
 
-        with patch.object(renamer._parser, "torrent_parser", side_effect=mock_parser):
-            with patch("module.manager.renamer.settings") as mock_settings:
-                mock_settings.plugins.slots.rename_strategy = "pn"
-                mock_settings.bangumi_manage.remove_bad_torrent = False
-                with patch("module.downloader.path.settings") as mock_path_settings:
-                    mock_path_settings.downloader.path = "/downloads/Bangumi"
-                    await renamer.rename()
+        with (
+            patch.object(renamer._parser, "torrent_parser", side_effect=mock_parser),
+            patch("module.manager.renamer.settings") as mock_settings,
+        ):
+            mock_settings.plugins.slots.rename_strategy = "pn"
+            mock_settings.bangumi_manage.remove_bad_torrent = False
+            with patch("module.downloader.path.settings") as mock_path_settings:
+                mock_path_settings.downloader.path = "/downloads/Bangumi"
+                await renamer.rename()
 
         renamer.client.client.set_category.assert_called_once_with(
             "h1", "BangumiCollection"
@@ -1025,17 +1029,19 @@ class TestRenameFlow:
         ]
         renamer.client.client.torrents_rename_file.return_value = True
 
-        with patch.object(
-            renamer,
-            "_batch_lookup_offsets",
-            AsyncMock(return_value={"h1": (0, "movie")}),
+        with (
+            patch.object(
+                renamer,
+                "_batch_lookup_offsets",
+                AsyncMock(return_value={"h1": (0, "movie")}),
+            ),
+            patch("module.manager.renamer.settings") as mock_settings,
         ):
-            with patch("module.manager.renamer.settings") as mock_settings:
-                mock_settings.plugins.slots.rename_strategy = "advance"
-                mock_settings.bangumi_manage.remove_bad_torrent = False
-                with patch("module.downloader.path.settings") as mock_path_settings:
-                    mock_path_settings.downloader.path = "/downloads/Bangumi"
-                    await renamer.rename()
+            mock_settings.plugins.slots.rename_strategy = "advance"
+            mock_settings.bangumi_manage.remove_bad_torrent = False
+            with patch("module.downloader.path.settings") as mock_path_settings:
+                mock_path_settings.downloader.path = "/downloads/Bangumi"
+                await renamer.rename()
 
         calls = renamer.client.client.torrents_rename_file.call_args_list
         by_old = {c.kwargs["old_path"]: c.kwargs["new_path"] for c in calls}

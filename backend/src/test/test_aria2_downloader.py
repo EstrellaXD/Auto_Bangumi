@@ -668,19 +668,23 @@ class TestTorrentsInfo:
 
     async def test_connection_query_failure_is_raised(self):
         aria2 = _aria2()
-        with patch.object(
-            aria2, "_call", AsyncMock(side_effect=Aria2ConnectionError("down"))
+        with (
+            patch.object(
+                aria2, "_call", AsyncMock(side_effect=Aria2ConnectionError("down"))
+            ),
+            pytest.raises(Aria2ConnectionError, match="down"),
         ):
-            with pytest.raises(Aria2ConnectionError, match="down"):
-                await aria2.torrents_info(status_filter=None, category=None)
+            await aria2.torrents_info(status_filter=None, category=None)
 
     async def test_rpc_query_failure_is_raised(self):
         aria2 = _aria2()
-        with patch.object(
-            aria2, "_call", AsyncMock(side_effect=Aria2RpcError(1, "failed"))
+        with (
+            patch.object(
+                aria2, "_call", AsyncMock(side_effect=Aria2RpcError(1, "failed"))
+            ),
+            pytest.raises(Aria2RpcError, match="failed"),
         ):
-            with pytest.raises(Aria2RpcError, match="failed"):
-                await aria2.torrents_info(status_filter=None, category=None)
+            await aria2.torrents_info(status_filter=None, category=None)
 
     async def test_torrent_exists_returns_true_for_known_gid(self):
         aria2 = _aria2()

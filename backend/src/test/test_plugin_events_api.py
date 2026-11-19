@@ -2,6 +2,7 @@
 
 import json
 from types import SimpleNamespace
+from typing import ClassVar
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import mcp.types as mcp_types
@@ -345,7 +346,7 @@ class TestApiRouter:
         assert client.get("/api/v1/plugins/demo/hello").status_code == 200
 
     def test_bad_factory_is_skipped(self, routes_client, registry, breaker):
-        client, routes = routes_client
+        _client, routes = routes_client
         add(registry, points.API_ROUTER, "api", "not a router", plugin_id="demo")
         routes.sync()
         assert routes.plugin_ids() == []
@@ -417,7 +418,7 @@ class TestMcp:
         )
         builtin = [t.name for t in await MCPServer.list_tools(mcp)]
         names = [t.name for t in await mcp.list_tools()]
-        assert names == builtin + ["demo__search"]
+        assert names == [*builtin, "demo__search"]
 
     async def test_call_dispatches_to_plugin(self, registry):
         from module.mcp import mcp
@@ -618,7 +619,7 @@ class FullPlugin(Plugin[Options]):
     """一个同时使用全部 P5 扩展点的插件。"""
 
     config_model = Options
-    seen: list[Event] = []
+    seen: ClassVar[list[Event]] = []
 
     @provider(points.API_ROUTER, id="api")
     def api(self):

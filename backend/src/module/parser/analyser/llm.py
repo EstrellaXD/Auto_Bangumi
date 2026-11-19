@@ -21,7 +21,7 @@ from module.network.request_url import proxy_url
 from .providers.base import AdapterContext
 from .providers.credentials import CredentialStore
 from .providers.registry import registry
-from .providers.schema import (  # noqa: F401  (re-exported for existing importers)
+from .providers.schema import (
     DEFAULT_PROMPT,
     EPISODE_JSON_SCHEMA,
     GEMINI_JSON_INSTRUCTION,
