@@ -34,6 +34,8 @@ class OpenAIAdapter(LLMProviderAdapter):
         super().__init__(ctx)
         from openai import AsyncOpenAI
 
+        if ctx.build_http_client is None:
+            raise RuntimeError("AdapterContext.build_http_client 未注入")
         self._http_client = ctx.build_http_client(ctx.timeout)
         self._openai_client = AsyncOpenAI(
             api_key=ctx.api_key,
@@ -124,6 +126,8 @@ class AnthropicAdapter(LLMProviderAdapter):
         super().__init__(ctx)
         import anthropic
 
+        if ctx.build_http_client is None:
+            raise RuntimeError("AdapterContext.build_http_client 未注入")
         self._http_client = ctx.build_http_client(ctx.timeout)
         self._anthropic_client = anthropic.AsyncAnthropic(
             api_key=ctx.api_key,

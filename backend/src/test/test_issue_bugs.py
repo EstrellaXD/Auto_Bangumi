@@ -248,6 +248,7 @@ class TestIssue974FilterPatternError:
         engine = RSSEngine.__new__(RSSEngine)
         engine._filter_cache = {}
         pattern = engine._get_filter_pattern("720,[字幕组")
+        assert pattern is not None
         # Should not raise — falls back to escaped literal matching
         assert pattern.search("720p video")
         assert pattern.search("[字幕组 release")
@@ -260,6 +261,7 @@ class TestIssue974FilterPatternError:
         engine = RSSEngine.__new__(RSSEngine)
         engine._filter_cache = {}
         pattern = engine._get_filter_pattern("720,test(v2")
+        assert pattern is not None
         assert pattern.search("720p")
         assert pattern.search("test(v2 stuff")
 
@@ -270,6 +272,7 @@ class TestIssue974FilterPatternError:
         engine = RSSEngine.__new__(RSSEngine)
         engine._filter_cache = {}
         pattern = engine._get_filter_pattern("720,path\\")
+        assert pattern is not None
         assert pattern.search("720p")
 
     def test_engine_default_filter_still_uses_regex(self):
@@ -279,6 +282,7 @@ class TestIssue974FilterPatternError:
         engine = RSSEngine.__new__(RSSEngine)
         engine._filter_cache = {}
         pattern = engine._get_filter_pattern(r"720,\d+-\d+")
+        assert pattern is not None
         assert pattern.search("720p video")
         assert pattern.search("01-12 batch")
         assert not pattern.search("1080p single episode")

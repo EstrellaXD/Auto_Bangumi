@@ -19,7 +19,7 @@ import threading
 from collections.abc import Callable, Mapping
 from pathlib import Path
 from time import monotonic
-from typing import Any, TypeVar
+from typing import Any
 
 import httpx2
 
@@ -31,7 +31,6 @@ WORKER_PATH = Path(__file__).with_name("worker.py")
 E2E_USERNAME = "testadmin"
 E2E_PASSWORD = "testpassword123"
 
-T = TypeVar("T")
 _POLL_EVENT = threading.Event()
 _MAX_BIND_ATTEMPTS = 3
 _BIND_FAILURE_MARKERS = (

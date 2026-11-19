@@ -39,6 +39,7 @@ from module.parser.release_policy import preference_identity, preference_revisio
 from module.parser.title_parser import _apply_title_hooks
 from module.plugin import host as plugin_host
 from module.plugin.views import bangumi_info, torrent_info
+from module.utils.filter_pattern import compile_filter
 
 if TYPE_CHECKING:
     from .analyser import RSSAnalyser
@@ -79,7 +80,7 @@ def _preference_score(release: ParsedRelease, bangumi: Bangumi) -> int:
 class RSSEngine:
     def __init__(self, db: Database):
         self.db = db
-        self._filter_cache: dict[str, re.Pattern] = {}
+        self._filter_cache: dict[str, re.Pattern[str] | None] = {}
 
     @staticmethod
     async def _get_torrents(rss: RSSItem) -> list[Torrent]:
@@ -176,21 +177,11 @@ class RSSEngine:
             logger.warning(f"Failed to fetch RSS {rss_item.name}: {e}")
             return [], str(e)
 
-    def _get_filter_pattern(self, filter_str: str) -> re.Pattern:
+    def _get_filter_pattern(self, filter_str: str) -> re.Pattern[str] | None:
         if filter_str not in self._filter_cache:
-            raw_pattern = filter_str.replace(",", "|")
-            try:
-                self._filter_cache[filter_str] = re.compile(raw_pattern, re.IGNORECASE)
-            except re.error:
-                # Filter contains invalid regex chars (e.g. unmatched '[')
-                # Fall back to escaping each term for literal matching
-                terms = filter_str.split(",")
-                escaped = "|".join(re.escape(t) for t in terms)
-                self._filter_cache[filter_str] = re.compile(escaped, re.IGNORECASE)
-                logger.warning(
-                    f"Filter '{filter_str}' contains invalid regex, "
-                    f"using literal matching"
-                )
+            self._filter_cache[filter_str] = compile_filter(
+                filter_str.split(","), re.IGNORECASE
+            )
         return self._filter_cache[filter_str]
 
     def match_torrent(
@@ -205,7 +196,7 @@ class RSSEngine:
                 torrent.bangumi_id = matched.id
                 return matched
             pattern = self._get_filter_pattern(matched.filter)
-            if not pattern.search(torrent.name):
+            if pattern is None or not pattern.search(torrent.name):
                 torrent.bangumi_id = matched.id
                 return matched
         return None

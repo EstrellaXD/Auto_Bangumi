@@ -84,6 +84,7 @@ def match_weekday(
         if (
             name_cn
             and len(name_cn) >= 4
+            and official_title_clean
             and (name_cn in official_title_clean or official_title_clean in name_cn)
         ):
             return item["air_weekday"]
@@ -92,6 +93,7 @@ def match_weekday(
         if (
             name
             and len(name) >= 4
+            and title_raw_clean
             and (name in title_raw_clean or title_raw_clean in name)
         ):
             return item["air_weekday"]

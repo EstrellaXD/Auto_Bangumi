@@ -9,7 +9,7 @@
     "test:build": "vue-tsc --noEmit",
     "build": "vite build",
     "dev": "vite",
-    "lint": "oxlint",
+    "lint": "oxlint --deny-warnings",
     "lint:fix": "oxlint --fix",
     "format": "oxfmt",
     "format:check": "oxfmt --check",

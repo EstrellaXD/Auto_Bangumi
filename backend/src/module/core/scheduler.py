@@ -70,12 +70,20 @@ class PeriodicTask:
                     raise
                 except Exception as e:
                     logger.error("%s tick failed: %s", self._name, e)
-                # 间隔 <= 0（配置为 0）会让循环空转、日志暴涨（#1117），退回 1 秒
-                interval = self._interval()
-                if await self._wait(interval if interval > 0 else 1):
+                if await self._wait(self._next_interval()):
                     return
         except asyncio.CancelledError:
             pass
+
+    def _next_interval(self) -> float:
+        """读取下一轮间隔。读取失败时退回 60 秒，避免循环因此永久停止。"""
+        try:
+            interval = self._interval()
+        except Exception as e:
+            logger.error("%s interval read failed, retrying in 60s: %s", self._name, e)
+            return 60.0
+        # 间隔 <= 0（配置为 0）会让循环空转、日志暴涨（#1117），退回 1 秒
+        return interval if interval > 0 else 1
 
     async def _wait(self, timeout: float) -> bool:
         """Sleep up to ``timeout`` seconds. Return True if a stop was requested."""
