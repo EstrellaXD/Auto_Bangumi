@@ -252,7 +252,7 @@ class DownloadClient:
         )
         # 只实现 CoreDownloaderClient 的后端（如 aria2 没有 qB 的 RSS 规则）
         # 由 _supports() 按 capabilities 跳过不支持的操作
-        return factory(conn)  # type: ignore[no-any-return]
+        return factory(conn)
 
     @property
     def last_auth_error(self) -> str | None:
@@ -283,7 +283,7 @@ class DownloadClient:
             # 避免逐 tick 累积到 qB 的 IP ban。checker/等待循环读的是
             # 具体客户端上的失败原因，这里补齐。
             if hasattr(self.client, "last_auth_error"):
-                self.client.last_auth_error = "credentials"  # type: ignore[attr-defined]
+                self.client.last_auth_error = "credentials"  # ty: ignore[invalid-assignment]
             raise ConnectionError(
                 "Download client credentials were rejected previously; "
                 "update the downloader settings to retry"
@@ -553,7 +553,7 @@ class DownloaderPool:
         self._clients: dict[str, DownloadClient] = {}
         self._failed: set[str] = set()
 
-    async def __aenter__(self) -> "DownloaderPool":
+    async def __aenter__(self) -> DownloaderPool:
         return self
 
     async def __aexit__(self, *_: object) -> None:

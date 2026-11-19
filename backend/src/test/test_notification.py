@@ -163,7 +163,7 @@ class TestNotificationManager:
             await manager.send_all(notify)
 
         for provider in manager.providers:
-            provider.send.assert_called_once_with(notify)  # type: ignore[attr-defined]
+            provider.send.assert_called_once_with(notify)  # ty: ignore[missing-attribute]
 
     async def test_test_provider_index_counts_disabled_rows(self, mock_settings):
         """下标对应已保存的完整渠道列表（含停用项），用保存的配置测试。"""
@@ -581,9 +581,7 @@ class TestSendEvent:
             await manager.send_event(event)
 
         for provider in manager.providers:
-            provider.send_event.assert_called_once_with(  # type: ignore[attr-defined]
-                event
-            )
+            provider.send_event.assert_called_once_with(event)  # ty: ignore[missing-attribute]
 
 
 class TestEventInboxContract:

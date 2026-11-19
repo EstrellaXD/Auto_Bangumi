@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class GotifyProvider(NotificationProvider):
     """Gotify notification provider."""
 
-    def __init__(self, config: "ProviderConfig"):
+    def __init__(self, config: ProviderConfig):
         super().__init__(config)
         server_url = config.server_url.rstrip("/")
         self.token = config.token

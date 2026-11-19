@@ -1,12 +1,12 @@
 """插件私有键值存储的行。值为 JSON 文本，由 PluginContext.kv 编解码。"""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlmodel import Field, SQLModel, UniqueConstraint
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class PluginKV(SQLModel, table=True):

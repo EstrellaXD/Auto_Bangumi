@@ -6,7 +6,7 @@
 
 import asyncio
 import logging
-from typing import Awaitable, Callable
+from collections.abc import Awaitable, Callable
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +82,7 @@ class PeriodicTask:
         try:
             await asyncio.wait_for(self._stop_event.wait(), timeout=timeout)
             return True
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return False
 
     async def stop(self) -> None:

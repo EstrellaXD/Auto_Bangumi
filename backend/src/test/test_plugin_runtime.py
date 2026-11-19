@@ -226,7 +226,7 @@ def runner_with(*hooks: tuple[str, str, object], threshold: int = 5):
     tripped: list[tuple[str, str]] = []
     breaker = CircuitBreaker(threshold, on_trip=lambda p, r: tripped.append((p, r)))
     for point, plugin_id, func in hooks:
-        registry.add_hook(point, HookEntry(plugin_id, func, 100, 0.05))  # type: ignore[arg-type]
+        registry.add_hook(point, HookEntry(plugin_id, func, 100, 0.05))  # ty: ignore[invalid-argument-type]
     return HookRunner(registry, breaker), tripped
 
 
@@ -474,7 +474,7 @@ class TestLoader:
         [candidate] = candidates
         assert candidate.source == "builtin" and candidate.signed
         cls = candidate.load()
-        assert cls.value == 42  # type: ignore[attr-defined]
+        assert cls.value == 42  # ty: ignore[missing-attribute]
         assert "ab_plugin_demo.helper" in sys.modules
         candidate.unload()
         assert "ab_plugin_demo" not in sys.modules
@@ -532,7 +532,7 @@ class TestLoader:
             entry_point_group="ab-test-none",
         )
         cls = candidates[0].load()
-        assert cls.value == "vendored"  # type: ignore[attr-defined]
+        assert cls.value == "vendored"  # ty: ignore[missing-attribute]
         candidates[0].unload()
         sys.modules.pop("ab_vendored_dep", None)
         assert str(tmp_path / "demo" / "vendor") not in sys.path
@@ -605,7 +605,7 @@ def candidate_for(
 ) -> PluginCandidate:
     return PluginCandidate(
         manifest=manifest(plugin_id, sdk, default_enabled),
-        source=source,  # type: ignore[arg-type]
+        source=source,  # ty: ignore[invalid-argument-type]
         load=lambda: cls,
     )
 
@@ -728,7 +728,7 @@ class TestManager:
         assert recorder.events == []
         assert (status.config_schema is not None) == expect_schema
         if expect_schema:
-            assert "min_size" in status.config_schema["properties"]  # type: ignore[index]
+            assert "min_size" in status.config_schema["properties"]
             manager.validate_options("demo", {"min_size": 3})
             with pytest.raises(ValidationError):
                 manager.validate_options("demo", {"min_size": "x"})
@@ -748,7 +748,7 @@ class TestManager:
         old = build_plugin(Recorder())
         candidates = [candidate_for(old, default_enabled=False)]
         if first_probe_fails:
-            candidates[0].load = broken  # type: ignore[method-assign]
+            candidates[0].load = broken
         manager, _ = make_manager(*candidates, tmp_path=tmp_path)
         await manager.start()
         assert (manager.statuses()[0].config_schema is None) == first_probe_fails
@@ -758,7 +758,7 @@ class TestManager:
         manager._discover = lambda: ([candidate_for(new, default_enabled=False)], [])
         await manager.apply_settings()
         [status] = manager.statuses()
-        assert list(status.config_schema["properties"]) == ["level"]  # type: ignore[index]
+        assert list(status.config_schema["properties"]) == ["level"]
 
     @pytest.mark.parametrize(
         "conf, sdk, message",

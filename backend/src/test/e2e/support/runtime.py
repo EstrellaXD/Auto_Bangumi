@@ -45,7 +45,7 @@ class _FatalProbeError(RuntimeError):
     """Readiness failure that cannot become healthy without a restart."""
 
 
-def wait_until(
+def wait_until[T](
     probe: Callable[[], T],
     predicate: Callable[[T], bool],
     *,
@@ -115,7 +115,7 @@ class HttpService:
         )
         self._started = False
 
-    def start(self, *, timeout: float = 5.0) -> "HttpService":
+    def start(self, *, timeout: float = 5.0) -> HttpService:
         self.thread.start()
         self._started = True
 
@@ -233,7 +233,7 @@ class BackendSandbox:
             trust_env=False,
         )
 
-    def start(self, *, timeout: float = 25.0) -> "BackendSandbox":
+    def start(self, *, timeout: float = 25.0) -> BackendSandbox:
         if self.process is not None:
             raise RuntimeError("Backend process is already started")
         for attempt in range(_MAX_BIND_ATTEMPTS):
@@ -297,7 +297,7 @@ class BackendSandbox:
             self._log_handle.close()
             self._log_handle = None
 
-    def restart(self) -> "BackendSandbox":
+    def restart(self) -> BackendSandbox:
         self.stop()
         return self.start()
 

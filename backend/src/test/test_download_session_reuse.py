@@ -43,7 +43,7 @@ class _FakeHTTP:
         resp = MagicMock()
         resp.status_code = 200
         resp.text = "Ok."
-        resp.json = lambda: []
+        resp.json = list
         return resp
 
     async def aclose(self):
@@ -91,7 +91,7 @@ class TestSessionReuse:
                 resp = MagicMock()
                 # First data request hits an expired session; retry succeeds.
                 resp.status_code = 403 if len(request_calls) == 1 else 200
-                resp.json = lambda: []
+                resp.json = list
                 return resp
 
             async def aclose(self):

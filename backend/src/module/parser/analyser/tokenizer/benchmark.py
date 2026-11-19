@@ -20,7 +20,7 @@ import time
 from collections import Counter
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -456,7 +456,7 @@ def run_benchmark(
     return {
         "schema_version": 1,
         "benchmark": "release-title-tokenizer",
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
         "corpus": {
             "path": corpus.path,
             "schema_version": corpus.schema_version,

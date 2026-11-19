@@ -31,14 +31,14 @@ class TestSharedClientLimits:
     async def test_client_has_keepalive_expiry(self):
         """Shared client should use a finite keepalive_expiry."""
         client = await get_shared_client()
-        pool = client._transport._pool  # type: ignore[attr-defined]
+        pool = client._transport._pool  # ty: ignore[missing-attribute]
         assert pool._keepalive_expiry is not None
         assert pool._keepalive_expiry > 0
 
     async def test_client_has_max_connections(self):
         """Shared client should have a connection pool limit."""
         client = await get_shared_client()
-        pool = client._transport._pool  # type: ignore[attr-defined]
+        pool = client._transport._pool  # ty: ignore[missing-attribute]
         assert pool._max_connections is not None
         assert pool._max_connections > 0
 

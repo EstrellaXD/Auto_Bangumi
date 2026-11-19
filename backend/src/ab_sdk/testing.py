@@ -105,7 +105,7 @@ class FakeContext:
         self.data_dir = data_dir
 
 
-def create_plugin(
+def create_plugin[P: Plugin[Any]](
     plugin_cls: type[P],
     options: dict[str, Any] | None = None,
     *,
@@ -125,7 +125,7 @@ def create_plugin(
 T = TypeVar("T")
 
 
-def _run(coro: Coroutine[Any, Any, T]) -> T:
+def _run[T](coro: Coroutine[Any, Any, T]) -> T:
     return asyncio.run(coro)
 
 

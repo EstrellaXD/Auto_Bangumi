@@ -1,5 +1,5 @@
-from datetime import datetime, timezone
-from typing import Literal, Optional
+from datetime import UTC, datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 from sqlmodel import Field, SQLModel
@@ -17,16 +17,16 @@ class User(SQLModel, table=True):
     )
     password: str = Field(default="", min_length=8)
     enabled: bool = Field(default=True, index=True)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class UserUpdate(SQLModel):
-    username: Optional[str] = Field(
+    username: str | None = Field(
         default=None, min_length=4, max_length=20, regex=r"^[a-zA-Z0-9_]+$"
     )
-    password: Optional[str] = Field(default=None, min_length=8)
-    enabled: Optional[bool] = None
+    password: str | None = Field(default=None, min_length=8)
+    enabled: bool | None = None
 
 
 class UserCredentialsUpdate(BaseModel):
@@ -34,10 +34,10 @@ class UserCredentialsUpdate(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    username: Optional[str] = Field(
+    username: str | None = Field(
         default=None, min_length=4, max_length=20, regex=r"^[a-zA-Z0-9_]+$"
     )
-    password: Optional[str] = Field(default=None, min_length=8)
+    password: str | None = Field(default=None, min_length=8)
 
 
 class UserCreate(SQLModel):

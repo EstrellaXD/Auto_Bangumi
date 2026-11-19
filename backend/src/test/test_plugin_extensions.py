@@ -299,7 +299,7 @@ class TestSearchSite:
 
     @pytest.mark.parametrize(
         "bad_factory",
-        [broken_factory, object, lambda: SearchSite(None)],  # type: ignore[arg-type]
+        [broken_factory, object, lambda: SearchSite(None)],  # ty: ignore[invalid-argument-type]
     )
     def test_available_sites_broken_factory_skipped(self, registry, bad_factory):
         from module.searcher import available_sites
@@ -397,9 +397,9 @@ class TestPluginTasks:
         [
             None,
             object(),
-            ScheduledTask(AsyncMock(), "abc"),  # type: ignore[arg-type]
+            ScheduledTask(AsyncMock(), "abc"),  # ty: ignore[invalid-argument-type]
             ScheduledTask(AsyncMock(), lambda: 1 / 0),
-            ScheduledTask(AsyncMock(), 60, initial_delay=None),  # type: ignore[arg-type]
+            ScheduledTask(AsyncMock(), 60, initial_delay=None),  # ty: ignore[invalid-argument-type]
         ],
     )
     async def test_sync_malformed_spec_skipped_and_recorded(self, registry, bad_spec):
@@ -734,7 +734,7 @@ class TestPluginChangeRebuildsState:
         ctx = AppContext.build(settings)
         ctx.notifier = MagicMock()
         with patch("module.core.context.reset_llm_parser") as reset_llm:
-            await ctx.plugins.on_change()  # type: ignore[misc]
+            await ctx.plugins.on_change()  # ty: ignore[not-callable]
         ctx.notifier.rebuild.assert_called_once()
         reset_llm.assert_called_once()
 

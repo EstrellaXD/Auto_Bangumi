@@ -37,7 +37,7 @@ _TMDB_AIRING_TTL = 24 * 3600.0
 # 未知）都可能继续更新集数
 FINAL_SERIES_STATUSES = frozenset({"Ended", "Canceled"})
 # 值为 (过期的 monotonic 时刻, 结果)；inf 表示不过期
-_tmdb_cache: OrderedDict[str, "tuple[float, TMDBInfo | None]"] = OrderedDict()
+_tmdb_cache: OrderedDict[str, tuple[float, TMDBInfo | None]] = OrderedDict()
 
 
 def reset_cache() -> None:

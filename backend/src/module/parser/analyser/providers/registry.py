@@ -12,7 +12,6 @@
 import json
 import logging
 from pathlib import Path
-from typing import Optional
 
 from ab_sdk import points
 
@@ -24,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 class ProviderRegistry:
-    def __init__(self, plugins_root: Optional[Path] = None) -> None:
+    def __init__(self, plugins_root: Path | None = None) -> None:
         # 延迟到实际使用时再解析默认值，避免 import 期触达文件系统
         self._plugins_root = plugins_root
         self._plugin_cache: dict[str, type[LLMProviderAdapter]] = {}

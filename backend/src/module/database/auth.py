@@ -2,7 +2,7 @@
 
 import hashlib
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import update
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
@@ -18,8 +18,8 @@ DEFAULT_SESSION_TTL = timedelta(days=1)
 
 def _utc(value: datetime) -> datetime:
     if value.tzinfo is None:
-        return value.replace(tzinfo=timezone.utc)
-    return value.astimezone(timezone.utc)
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC)
 
 
 def _hash_token(token: str) -> str:
@@ -45,7 +45,7 @@ class AuthDatabase:
         ttl: timedelta = DEFAULT_SESSION_TTL,
         commit: bool = True,
     ) -> str:
-        issued_at = _utc(now or datetime.now(timezone.utc))
+        issued_at = _utc(now or datetime.now(UTC))
         raw_token = secrets.token_urlsafe(48)
         self.session.add(
             AuthSession(
@@ -67,7 +67,7 @@ class AuthDatabase:
     ) -> User | None:
         if not raw_token:
             return None
-        current = _utc(now or datetime.now(timezone.utc))
+        current = _utc(now or datetime.now(UTC))
         result = await self.session.execute(
             select(AuthSession).where(
                 AuthSession.token_hash == _hash_token(raw_token),
@@ -89,7 +89,7 @@ class AuthDatabase:
         now: datetime | None = None,
         ttl: timedelta = DEFAULT_SESSION_TTL,
     ) -> User | None:
-        current = _utc(now or datetime.now(timezone.utc))
+        current = _utc(now or datetime.now(UTC))
         result = await self.session.execute(
             update(AuthSession)
             .where(
@@ -116,7 +116,7 @@ class AuthDatabase:
     ) -> bool:
         if not raw_token:
             return False
-        current = _utc(now or datetime.now(timezone.utc))
+        current = _utc(now or datetime.now(UTC))
         result = await self.session.execute(
             update(AuthSession)
             .where(
@@ -135,7 +135,7 @@ class AuthDatabase:
         now: datetime | None = None,
         commit: bool = True,
     ) -> int:
-        current = _utc(now or datetime.now(timezone.utc))
+        current = _utc(now or datetime.now(UTC))
         result = await self.session.execute(
             update(AuthSession)
             .where(
@@ -161,7 +161,7 @@ class AuthDatabase:
     ) -> tuple[ApiToken, str]:
         if scope not in {"api", "mcp"}:
             raise ValueError("Unsupported API token scope")
-        issued_at = _utc(now or datetime.now(timezone.utc))
+        issued_at = _utc(now or datetime.now(UTC))
         raw_token = f"ab_{scope}_{secrets.token_urlsafe(36)}"
         token = ApiToken(
             user_id=user_id,
@@ -197,7 +197,7 @@ class AuthDatabase:
                 scope=scope,
                 token_hash=token_hash,
                 prefix=_legacy_token_fingerprint(token_hash),
-                created_at=_utc(now or datetime.now(timezone.utc)),
+                created_at=_utc(now or datetime.now(UTC)),
             )
             .on_conflict_do_nothing(index_elements=["token_hash", "scope"])
         )
@@ -220,7 +220,7 @@ class AuthDatabase:
     ) -> tuple[User, int] | None:
         if not raw_token:
             return None
-        current = _utc(now or datetime.now(timezone.utc))
+        current = _utc(now or datetime.now(UTC))
         result = await self.session.execute(
             select(ApiToken).where(
                 ApiToken.token_hash == _hash_token(raw_token),
@@ -244,7 +244,7 @@ class AuthDatabase:
         self, token_id: int, *, now: datetime | None = None
     ) -> None:
         """Update best-effort usage metadata with a direct write transaction."""
-        current = _utc(now or datetime.now(timezone.utc))
+        current = _utc(now or datetime.now(UTC))
         await self.session.execute(
             update(ApiToken)
             .where(col(ApiToken.id) == token_id)
@@ -261,7 +261,7 @@ class AuthDatabase:
                 col(ApiToken.id) == token_id,
                 col(ApiToken.revoked_at).is_(None),
             )
-            .values(revoked_at=_utc(now or datetime.now(timezone.utc)))
+            .values(revoked_at=_utc(now or datetime.now(UTC)))
         )
         await self.session.commit()
         return bool(getattr(result, "rowcount", 0))

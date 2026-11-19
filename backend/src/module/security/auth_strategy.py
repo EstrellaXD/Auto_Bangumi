@@ -31,7 +31,6 @@ class AuthStrategy(ABC):
         Returns:
             ResponseModel with status and user info
         """
-        pass
 
 
 class PasskeyAuthStrategy(AuthStrategy):

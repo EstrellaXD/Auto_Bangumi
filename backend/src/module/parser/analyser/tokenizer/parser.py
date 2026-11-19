@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
+from typing import Any
 
 from .candidate import (
     Candidate,
@@ -267,7 +268,7 @@ class _CandidateCollector:
         kind: str,
         segment_index: int,
         match: re.Match[str],
-        **kwargs: object,
+        **kwargs: Any,
     ) -> Candidate:
         return self.add_span(
             rule_id=rule_id,
@@ -276,7 +277,7 @@ class _CandidateCollector:
             start=match.start(),
             end=match.end(),
             captures=match.groups(),
-            **kwargs,  # type: ignore[arg-type]
+            **kwargs,
         )
 
     def add_segments(

@@ -96,7 +96,7 @@ class TestOpenAIProvider:
             ]
         )
         mock_create = AsyncMock(return_value=stub_resp)
-        parser._openai_client.chat.completions.parse = mock_create  # type: ignore[method-assign]
+        parser._openai_client.chat.completions.parse = mock_create
 
         result = await parser.parse(RAW_TITLE)
 
@@ -109,7 +109,7 @@ class TestOpenAIProvider:
 
     async def test_parse_api_error_returns_none(self):
         parser = self._make_parser()
-        parser._openai_client.chat.completions.parse = AsyncMock(  # type: ignore[method-assign]
+        parser._openai_client.chat.completions.parse = AsyncMock(
             side_effect=openai_sdk.APIConnectionError(
                 request=httpx2.Request("POST", "https://api.openai.com/v1")
             )
@@ -121,9 +121,7 @@ class TestOpenAIProvider:
         stub_resp = SimpleNamespace(
             choices=[SimpleNamespace(message=SimpleNamespace(parsed=None))]
         )
-        parser._openai_client.chat.completions.parse = AsyncMock(  # type: ignore[method-assign]
-            return_value=stub_resp
-        )
+        parser._openai_client.chat.completions.parse = AsyncMock(return_value=stub_resp)
         assert await parser.parse(RAW_TITLE) is None
 
 
@@ -145,7 +143,7 @@ class TestAnthropicProvider:
         mock_create = AsyncMock(
             return_value=self._stub_response("end_turn", json.dumps(EPISODE_DICT))
         )
-        parser._anthropic_client.messages.create = mock_create  # type: ignore[method-assign]
+        parser._anthropic_client.messages.create = mock_create
 
         result = await parser.parse(RAW_TITLE)
 
@@ -161,14 +159,14 @@ class TestAnthropicProvider:
 
     async def test_parse_refusal_returns_none(self):
         parser = self._make_parser()
-        parser._anthropic_client.messages.create = AsyncMock(  # type: ignore[method-assign]
+        parser._anthropic_client.messages.create = AsyncMock(
             return_value=self._stub_response("refusal", "")
         )
         assert await parser.parse(RAW_TITLE) is None
 
     async def test_parse_api_error_returns_none(self):
         parser = self._make_parser()
-        parser._anthropic_client.messages.create = AsyncMock(  # type: ignore[method-assign]
+        parser._anthropic_client.messages.create = AsyncMock(
             side_effect=anthropic.APIConnectionError(
                 request=httpx2.Request("POST", "https://api.anthropic.com")
             )
@@ -181,7 +179,7 @@ class TestAnthropicProvider:
             status_code=429,
             request=httpx2.Request("POST", "https://api.anthropic.com"),
         )
-        parser._anthropic_client.messages.create = AsyncMock(  # type: ignore[method-assign]
+        parser._anthropic_client.messages.create = AsyncMock(
             side_effect=anthropic.RateLimitError(
                 "rate limited", response=response, body=None
             )
@@ -190,7 +188,7 @@ class TestAnthropicProvider:
 
     async def test_parse_invalid_json_returns_none(self):
         parser = self._make_parser()
-        parser._anthropic_client.messages.create = AsyncMock(  # type: ignore[method-assign]
+        parser._anthropic_client.messages.create = AsyncMock(
             return_value=self._stub_response("end_turn", "not json at all")
         )
         assert await parser.parse(RAW_TITLE) is None
@@ -207,7 +205,7 @@ class TestGeminiProvider:
         mock_generate = AsyncMock(
             return_value=SimpleNamespace(text=json.dumps(EPISODE_DICT))
         )
-        parser._gemini_client.aio.models.generate_content = mock_generate  # type: ignore[method-assign]
+        parser._gemini_client.aio.models.generate_content = mock_generate
 
         result = await parser.parse(RAW_TITLE)
 
@@ -220,21 +218,21 @@ class TestGeminiProvider:
 
     async def test_parse_api_error_returns_none(self):
         parser = self._make_parser()
-        parser._gemini_client.aio.models.generate_content = AsyncMock(  # type: ignore[method-assign]
+        parser._gemini_client.aio.models.generate_content = AsyncMock(
             side_effect=genai_errors.APIError(429, {"error": {"message": "quota"}})
         )
         assert await parser.parse(RAW_TITLE) is None
 
     async def test_parse_empty_text_returns_none(self):
         parser = self._make_parser()
-        parser._gemini_client.aio.models.generate_content = AsyncMock(  # type: ignore[method-assign]
+        parser._gemini_client.aio.models.generate_content = AsyncMock(
             return_value=SimpleNamespace(text=None)
         )
         assert await parser.parse(RAW_TITLE) is None
 
     async def test_parse_invalid_json_returns_none(self):
         parser = self._make_parser()
-        parser._gemini_client.aio.models.generate_content = AsyncMock(  # type: ignore[method-assign]
+        parser._gemini_client.aio.models.generate_content = AsyncMock(
             return_value=SimpleNamespace(text="not json")
         )
         assert await parser.parse(RAW_TITLE) is None
@@ -246,9 +244,7 @@ class TestListModels:
         stub = SimpleNamespace(
             data=[SimpleNamespace(id="gpt-5-mini"), SimpleNamespace(id="gpt-5")]
         )
-        parser._openai_client.models.list = AsyncMock(  # type: ignore[method-assign]
-            return_value=stub
-        )
+        parser._openai_client.models.list = AsyncMock(return_value=stub)
         assert await parser.list_models() == ["gpt-5", "gpt-5-mini"]
 
     async def test_anthropic_list_models_returns_sorted_ids(self):
@@ -259,9 +255,7 @@ class TestListModels:
                 SimpleNamespace(id="claude-haiku-4-5"),
             ]
         )
-        parser._anthropic_client.models.list = AsyncMock(  # type: ignore[method-assign]
-            return_value=stub
-        )
+        parser._anthropic_client.models.list = AsyncMock(return_value=stub)
         assert await parser.list_models() == [
             "claude-haiku-4-5",
             "claude-sonnet-4-5",
@@ -281,7 +275,7 @@ class TestListModels:
             )
             yield SimpleNamespace(name="models/gemini-2.5-pro", supported_actions=None)
 
-        parser._gemini_client = SimpleNamespace(  # type: ignore[assignment]
+        parser._gemini_client = SimpleNamespace(
             aio=SimpleNamespace(
                 models=SimpleNamespace(list=AsyncMock(return_value=agen()))
             )

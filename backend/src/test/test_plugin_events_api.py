@@ -553,8 +553,8 @@ class TestMcp:
     @pytest.mark.parametrize(
         "point, impl",
         [
-            (points.MCP_TOOL, McpTool("bad", _search, None)),  # type: ignore[arg-type]
-            (points.MCP_RESOURCE, McpResource(None, _search)),  # type: ignore[arg-type]
+            (points.MCP_TOOL, McpTool("bad", _search, None)),  # ty: ignore[invalid-argument-type]
+            (points.MCP_RESOURCE, McpResource(None, _search)),  # ty: ignore[invalid-argument-type]
         ],
     )
     async def test_list_malformed_plugin_spec_skipped_and_counted(
@@ -667,7 +667,7 @@ async def test_plugin_end_to_end(registry, monkeypatch, tmp_path):
     candidate = PluginCandidate(
         manifest=parse_manifest(MANIFEST),
         source="builtin",
-        load=lambda: FullPlugin,  # type: ignore[arg-type]
+        load=lambda: FullPlugin,
     )
     settings_obj = SimpleNamespace(
         plugins=Plugins(options={"full": {"greeting": "yo"}})

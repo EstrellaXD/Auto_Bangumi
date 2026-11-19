@@ -2,7 +2,8 @@
 
 import asyncio
 import logging
-from typing import TYPE_CHECKING, Awaitable, Callable
+from collections.abc import Awaitable, Callable
+from typing import TYPE_CHECKING
 
 from module.conf import settings
 from module.database import Database
@@ -22,7 +23,7 @@ class NotificationManager:
     """Manager for handling notifications across multiple providers."""
 
     def __init__(self, load_providers: bool = True):
-        self.providers: list["NotificationProvider"] = []
+        self.providers: list[NotificationProvider] = []
         if load_providers:
             self._load_providers()
 
@@ -64,7 +65,7 @@ class NotificationManager:
                 notification.poster_path = data.poster_link
 
     async def _broadcast(
-        self, label: str, send_one: Callable[["NotificationProvider"], Awaitable[None]]
+        self, label: str, send_one: Callable[[NotificationProvider], Awaitable[None]]
     ):
         """Run ``send_one`` against every provider in parallel, logging failures.
 
@@ -79,7 +80,7 @@ class NotificationManager:
             logger.debug("No notification providers configured")
             return
 
-        async def guarded(provider: "NotificationProvider"):
+        async def guarded(provider: NotificationProvider):
             try:
                 async with provider:
                     await send_one(provider)
@@ -106,7 +107,7 @@ class NotificationManager:
         # Fetch poster if needed
         await self._get_poster(notification)
 
-        async def send_one(provider: "NotificationProvider"):
+        async def send_one(provider: NotificationProvider):
             await provider.send(notification)
             logger.debug(
                 "Sent notification via %s: %s",
@@ -139,7 +140,7 @@ class NotificationManager:
         if not settings.notification.enable:
             return
 
-        async def send_one(provider: "NotificationProvider"):
+        async def send_one(provider: NotificationProvider):
             await provider.send_event(event)
             logger.debug(
                 "Sent system event via %s: %s", provider.__class__.__name__, event
@@ -160,7 +161,7 @@ class NotificationManager:
         return await self.test_provider_config(providers[index])
 
     @staticmethod
-    async def test_provider_config(config: "ProviderConfig") -> tuple[bool, str]:
+    async def test_provider_config(config: ProviderConfig) -> tuple[bool, str]:
         """Test a provider configuration without saving it.
 
         Args:

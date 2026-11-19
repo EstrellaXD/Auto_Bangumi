@@ -144,7 +144,7 @@ class PluginManifest(BaseModel):
         return value
 
     @model_validator(mode="after")
-    def _check_ui_elements(self) -> "PluginManifest":
+    def _check_ui_elements(self) -> PluginManifest:
         # custom element 名是全局的：限定在 ab-plugin-<id> 命名空间内，
         # 一个插件才不会占用别的插件的元素名
         for ui in self.ui:

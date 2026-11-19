@@ -1,4 +1,4 @@
-from typing import Literal, Optional
+from typing import Literal
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
@@ -29,8 +29,8 @@ class TMDBSummary(BaseModel):
     title: str
     total_seasons: int
     season_episode_counts: dict[int, int]
-    status: Optional[str]
-    virtual_season_starts: Optional[dict[int, list[int]]] = None  # {1: [1, 29], ...}
+    status: str | None
+    virtual_season_starts: dict[int, list[int]] | None = None  # {1: [1, 29], ...}
 
 
 class OffsetSuggestionDetail(BaseModel):
@@ -43,7 +43,7 @@ class OffsetSuggestionDetail(BaseModel):
 
 
 class SetWeekdayRequest(BaseModel):
-    weekday: Optional[int] = None  # 0-6 for Mon-Sun, None to reset
+    weekday: int | None = None  # 0-6 for Mon-Sun, None to reset
 
 
 class DetectOffsetRequest(BaseModel):
@@ -58,8 +58,8 @@ class DetectOffsetResponse(BaseModel):
     """Response for detect-offset endpoint."""
 
     has_mismatch: bool
-    suggestion: Optional[OffsetSuggestionDetail]
-    tmdb_info: Optional[TMDBSummary]
+    suggestion: OffsetSuggestionDetail | None
+    tmdb_info: TMDBSummary | None
 
 
 router = APIRouter(

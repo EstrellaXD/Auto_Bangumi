@@ -10,8 +10,9 @@ LLM 设置里选择该 id 即可使用。
 """
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
-from typing import Any, Callable, ClassVar, Literal, Optional
+from collections.abc import Callable
+from dataclasses import dataclass, field
+from typing import Any, ClassVar, Literal, Optional
 
 import httpx2
 from pydantic import BaseModel
@@ -30,16 +31,16 @@ class ProviderInfo(BaseModel):
     # OpenAI 兼容端点是否支持 json_schema 结构化输出；False 时降级为
     # json_object + schema 写入提示词（DeepSeek/MiniMax）。
     supports_json_schema: bool = True
-    plugin_version: Optional[str] = None
+    plugin_version: str | None = None
 
 
 class AuthChallenge(BaseModel):
     """begin_auth 的产物：引导用户完成授权所需的全部信息。"""
 
     method: Literal["redirect_paste", "device_code"]
-    authorize_url: Optional[str] = None
-    user_code: Optional[str] = None
-    verification_uri: Optional[str] = None
+    authorize_url: str | None = None
+    user_code: str | None = None
+    verification_uri: str | None = None
     expires_in: int = 600
     state: str
 
@@ -49,13 +50,17 @@ class TokenSet(BaseModel):
 
     access_token: str
     refresh_token: str = ""
-    expires_at: Optional[float] = None  # epoch 秒
+    expires_at: float | None = None  # epoch 秒
     account_label: str = ""
     extra: dict = {}
 
 
 class AuthExpiredError(Exception):
     """凭据失效且刷新失败——调用方应立即熔断并通知用户重新连接。"""
+
+
+def _http_client_not_injected(timeout: float) -> httpx2.AsyncClient:
+    raise RuntimeError("AdapterContext.build_http_client 未注入")
 
 
 @dataclass
@@ -68,7 +73,9 @@ class AdapterContext:
     timeout: float = 20.0
     # llm._build_http_client——代理感知的 httpx2 客户端工厂（保持其
     # patch 路径在 llm.py，因此以依赖注入方式传入）。
-    build_http_client: Callable[[float], httpx2.AsyncClient] = None  # type: ignore[assignment]
+    build_http_client: Callable[[float], httpx2.AsyncClient] = field(
+        default=_http_client_not_injected
+    )
     # M3 起为 CredentialStore；api_key 类适配器恒为 None。
     credentials: Any = None
 
@@ -78,7 +85,7 @@ class LLMProviderAdapter(ABC):
 
     info: ClassVar[ProviderInfo]
 
-    _http_client: Optional[httpx2.AsyncClient] = None
+    _http_client: httpx2.AsyncClient | None = None
 
     def __init__(self, ctx: AdapterContext) -> None:
         self.ctx = ctx
@@ -110,5 +117,5 @@ class LLMProviderAdapter(ABC):
     async def refresh(self, tokens: TokenSet) -> TokenSet:
         raise NotImplementedError(f"{self.info.id} does not support token refresh")
 
-    async def revoke(self, tokens: TokenSet) -> None:
+    async def revoke(self, tokens: TokenSet) -> None:  # noqa: B027 默认无操作，子类按需覆盖
         """注销远端凭据，尽力而为；默认无操作。"""

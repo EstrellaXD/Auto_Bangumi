@@ -8,7 +8,6 @@ import json
 import logging
 import time
 from collections import OrderedDict
-from typing import List, Optional
 
 from webauthn import (
     generate_authentication_options,
@@ -93,7 +92,7 @@ class WebAuthnService:
     # ============ 注册流程 ============
 
     def generate_registration_options(
-        self, username: str, user_id: int, existing_passkeys: List[Passkey]
+        self, username: str, user_id: int, existing_passkeys: list[Passkey]
     ) -> dict:
         """
         生成 WebAuthn 注册选项
@@ -189,12 +188,12 @@ class WebAuthnService:
 
         except Exception as e:
             logger.error(f"Registration verification failed: {e}")
-            raise ValueError(f"Invalid registration response: {str(e)}")
+            raise ValueError(f"Invalid registration response: {str(e)}") from e
 
     # ============ 认证流程 ============
 
     def generate_authentication_options(
-        self, username: str, passkeys: List[Passkey]
+        self, username: str, passkeys: list[Passkey]
     ) -> dict:
         """
         生成 WebAuthn 认证选项
@@ -285,7 +284,7 @@ class WebAuthnService:
 
         except Exception as e:
             logger.error(f"Authentication verification failed: {e}")
-            raise ValueError(f"Invalid authentication response: {str(e)}")
+            raise ValueError(f"Invalid authentication response: {str(e)}") from e
 
     def verify_discoverable_authentication(
         self, credential: dict, passkey: Passkey
@@ -314,7 +313,7 @@ class WebAuthnService:
             )
         except Exception as e:
             logger.warning(f"Failed to parse discoverable authentication response: {e}")
-            raise ValueError("Invalid authentication response")
+            raise ValueError("Invalid authentication response") from e
 
         expected_challenge = self._pop_challenge_by_value(client_data.challenge)
 
@@ -338,13 +337,13 @@ class WebAuthnService:
 
         except Exception as e:
             logger.error(f"Discoverable authentication verification failed: {e}")
-            raise ValueError(f"Invalid authentication response: {str(e)}")
+            raise ValueError(f"Invalid authentication response: {str(e)}") from e
 
     # ============ 辅助方法 ============
 
     def _parse_transports(
-        self, transports_json: Optional[str]
-    ) -> List[AuthenticatorTransport]:
+        self, transports_json: str | None
+    ) -> list[AuthenticatorTransport]:
         """解析存储的 transports JSON"""
         if not transports_json:
             return []
@@ -371,7 +370,7 @@ class WebAuthnService:
 # (see api/passkey.py) a hostile client could otherwise grow this dict
 # without bound, so it is capped as an LRU cache.
 _WEBAUTHN_SERVICES_MAX = 8
-_webauthn_services: "OrderedDict[str, WebAuthnService]" = OrderedDict()
+_webauthn_services: OrderedDict[str, WebAuthnService] = OrderedDict()
 
 
 def get_webauthn_service(rp_id: str, rp_name: str, origin: str) -> WebAuthnService:

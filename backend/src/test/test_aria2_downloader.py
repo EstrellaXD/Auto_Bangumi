@@ -1374,8 +1374,8 @@ class TestTorrentsDelete:
             if method == "getFiles":
                 return []
             if method == "forceRemove":
-                seen_gids.append(params[0])
-                return params[0]
+                seen_gids.append(params[0])  # ty: ignore[not-subscriptable]
+                return params[0]  # ty: ignore[not-subscriptable]
             return None
 
         with patch.object(aria2, "_call", AsyncMock(side_effect=fake_call)):

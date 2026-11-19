@@ -53,7 +53,9 @@ class PluginTasks:
 
             def read_interval() -> float:
                 src = interval_src
-                return float(src() if callable(src) else src)
+                if isinstance(src, (int, float)) or not callable(src):
+                    return float(src)
+                return float(src())
 
             # 间隔由插件代码给出，只在受保护的 run() 里读取；调度器拿到的是
             # 已校验的值，插件出错不会打断调度循环

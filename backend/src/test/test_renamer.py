@@ -1,6 +1,6 @@
 """Tests for Renamer: gen_path, single-file / collection rename, rename flow."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -604,7 +604,7 @@ class TestRenameSingleFile:
             )
             assert row is not None
             row_id = row.id
-            row.updated_at = datetime.now(timezone.utc) - timedelta(days=31)
+            row.updated_at = datetime.now(UTC) - timedelta(days=31)
             db.session.add(row)
             await db.session.commit()
 
@@ -1594,7 +1594,7 @@ class TestRevisionConflictFlow:
         assert paths["new-v2"] == self.TARGET
         assert ".ab-replaced-v1-old-v1" in paths["old-v1"]
 
-        from datetime import datetime, timedelta, timezone
+        from datetime import datetime, timedelta
 
         from module.database import Database
 
@@ -1609,7 +1609,7 @@ class TestRevisionConflictFlow:
             await db.rename_operation.set_state(
                 operation.id,
                 "new_promoted",
-                retry_at=datetime.now(timezone.utc) - timedelta(seconds=1),
+                retry_at=datetime.now(UTC) - timedelta(seconds=1),
             )
 
         async def delete(torrent_hash, delete_files=True):

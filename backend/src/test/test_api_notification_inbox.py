@@ -47,19 +47,19 @@ def unauthed_client(app):
 
 
 def _message(**overrides) -> InboxMessage:
-    fields: dict[str, Any] = dict(
-        id=1,
-        kind="rss_failure",
-        severity="error",
-        title="RSS 订阅连接异常",
-        body="feed down",
-        payload='{"rss_name": "Feed", "error": "boom"}',
-        dedup_key="rss_failure:u",
-        read=False,
-        count=3,
-        created_at="2026-07-05T10:00:00+00:00",
-        updated_at="2026-07-05T12:00:00+00:00",
-    )
+    fields: dict[str, Any] = {
+        "id": 1,
+        "kind": "rss_failure",
+        "severity": "error",
+        "title": "RSS 订阅连接异常",
+        "body": "feed down",
+        "payload": '{"rss_name": "Feed", "error": "boom"}',
+        "dedup_key": "rss_failure:u",
+        "read": False,
+        "count": 3,
+        "created_at": "2026-07-05T10:00:00+00:00",
+        "updated_at": "2026-07-05T12:00:00+00:00",
+    }
     fields.update(overrides)
     return InboxMessage(**fields)
 

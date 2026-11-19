@@ -43,7 +43,7 @@ router = APIRouter(
 # 不透明 handle -> 待完成授权的服务端明细。``blob`` 是适配器 begin_auth
 # 返回的 state（device_code / PKCE verifier 等敏感态），只留服务端，绝不
 # 下发前端——前端只拿到 handle 用于轮询 status / 回传 redirect code。
-_PENDING: dict[str, "PendingAuth"] = {}
+_PENDING: dict[str, PendingAuth] = {}
 _PENDING_TTL = 900.0
 # 保留 device-flow 轮询任务的强引用，防止被 GC。
 _POLL_TASKS: set = set()
@@ -251,13 +251,13 @@ async def auth_begin(provider_id: str):
     try:
         adapter = _make_adapter(provider_id)
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e)) from e
     try:
         challenge = await adapter.begin_auth()
     except NotImplementedError:
         raise HTTPException(
             status_code=400, detail="Provider does not support interactive auth"
-        )
+        ) from None
     finally:
         await adapter.aclose()
 
@@ -292,12 +292,12 @@ async def auth_complete(provider_id: str, req: AuthCompleteRequest):
     try:
         adapter = _make_adapter(provider_id)
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e)) from e
     try:
         tokens = await adapter.complete_auth(pending.blob, req.code)
     except Exception as e:
         logger.warning("LLM auth complete failed for %s: %s", provider_id, e)
-        raise HTTPException(status_code=400, detail="Authorization failed")
+        raise HTTPException(status_code=400, detail="Authorization failed") from e
     finally:
         await adapter.aclose()
     await CredentialStore(provider_id).save(tokens)

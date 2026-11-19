@@ -649,7 +649,7 @@ class TestLLMParserResetCache:
     def test_reset_cache_clears_singleton(self):
         # A cheap non-None sentinel; the test only cares that reset_cache()
         # clears it, not that it's a real LLMParser.
-        title_parser_module._llm_parser = object()  # type: ignore[assignment]
+        title_parser_module._llm_parser = object()  # ty: ignore[invalid-assignment]
         title_parser_module._llm_parser_kwargs = {"api_key": "old"}
         title_parser_module._llm_cache = {("old",): (1, None)}
         title_parser_module._llm_failure_count = 2

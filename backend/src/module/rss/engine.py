@@ -2,8 +2,8 @@ import asyncio
 import logging
 import re
 from collections import defaultdict
-from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Optional
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 from urllib.parse import urlparse
 
 from ab_sdk import points
@@ -167,7 +167,7 @@ class RSSEngine:
 
     async def _pull_rss_with_status(
         self, rss_item: RSSItem
-    ) -> tuple[list[Torrent], Optional[str]]:
+    ) -> tuple[list[Torrent], str | None]:
         """拉取订阅的全部条目（不去重），聚合分析与下载匹配共用这一份结果。"""
         try:
             torrents = await self._get_torrents(rss_item)
@@ -195,7 +195,7 @@ class RSSEngine:
 
     def match_torrent(
         self, torrent: Torrent, bangumi_list: list[Bangumi]
-    ) -> Optional[Bangumi]:
+    ) -> Bangumi | None:
         matched = match_bangumi_in_list(torrent.name, bangumi_list)
         if matched:
             # 只有通过排除过滤的种子才关联 bangumi_id：被过滤掉的种子
@@ -241,11 +241,11 @@ class RSSEngine:
         return verdict.accept
 
     async def _apply_plugin_filters(
-        self, torrents: list[Torrent], matches: list[Optional[Bangumi]]
-    ) -> list[Optional[Bangumi]]:
+        self, torrents: list[Torrent], matches: list[Bangumi | None]
+    ) -> list[Bangumi | None]:
         if plugin_host.hook_runner(points.TORRENT_FILTER) is None:
             return matches
-        result: list[Optional[Bangumi]] = []
+        result: list[Bangumi | None] = []
         for torrent, matched in zip(torrents, matches):
             if matched is not None and not await self.plugin_accepts(torrent, matched):
                 # 与排除过滤一致：被拒的种子不关联番剧（见 match_torrent）
@@ -341,8 +341,8 @@ class RSSEngine:
     async def refresh_rss(
         self,
         downloaders: DownloaderPool,
-        rss_id: Optional[int] = None,
-        analyser: "RSSAnalyser | None" = None,
+        rss_id: int | None = None,
+        analyser: RSSAnalyser | None = None,
     ) -> list[SystemEvent]:
         """Refresh feeds with one parser engine for the complete workflow.
 
@@ -354,8 +354,8 @@ class RSSEngine:
 
     async def _analyse_aggregate(
         self,
-        analyser: "RSSAnalyser",
-        item_results: list[tuple[RSSItem, tuple[list[Torrent], Optional[str]]]],
+        analyser: RSSAnalyser,
+        item_results: list[tuple[RSSItem, tuple[list[Torrent], str | None]]],
         bangumi_list: list[Bangumi],
     ) -> list[Bangumi]:
         """为聚合订阅生成新规则，返回之后用于匹配的番剧列表。"""
@@ -386,8 +386,8 @@ class RSSEngine:
     async def _refresh_rss(
         self,
         downloaders: DownloaderPool,
-        rss_id: Optional[int] = None,
-        analyser: "RSSAnalyser | None" = None,
+        rss_id: int | None = None,
+        analyser: RSSAnalyser | None = None,
     ) -> list[SystemEvent]:
         # Get All RSS Items
         if not rss_id:
@@ -421,7 +421,7 @@ class RSSEngine:
             for items, results in zip(group_lists, grouped_results)
             for item, result in zip(items, results)
         ]
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         # Load the active bangumi list once per refresh cycle and match every
         # torrent against it in memory (this is the job the old module-level
         # TTL cache existed to do).
@@ -445,7 +445,7 @@ class RSSEngine:
         # so preference dedup can see the whole batch before anything is
         # added to the download client.
         item_matches: list[
-            tuple[RSSItem, list[Torrent], Optional[str], list[Optional[Bangumi]]]
+            tuple[RSSItem, list[Torrent], str | None, list[Bangumi | None]]
         ] = []
         for rss_item, (torrents, error) in item_results:
             try:

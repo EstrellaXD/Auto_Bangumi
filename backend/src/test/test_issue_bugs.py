@@ -182,7 +182,7 @@ class TestIssue976NoneInMatchList:
         """Demonstrate that sorted() with None keys crashes (the original bug)."""
         title_index = {"valid_title": "data", None: "bad_data"}
         with pytest.raises(TypeError, match="'NoneType'"):
-            sorted(title_index.keys(), key=len, reverse=True)  # type: ignore[arg-type]
+            sorted(title_index.keys(), key=len, reverse=True)  # ty: ignore[no-matching-overload]
 
     def test_empty_title_index_produces_empty_pattern(self):
         """When all titles are None/empty, the regex pattern should be empty."""
@@ -390,7 +390,7 @@ class TestIssue990NumberPrefixTitle:
             official_title="29岁单身冒险家的日常",
             season=1,
         )
-        bangumi.title_raw = None  # type: ignore[assignment]  # simulating corrupted data
+        bangumi.title_raw = None  # simulating corrupted data  # ty: ignore[invalid-assignment]
         db_session.add(bangumi)
         await db_session.commit()
 
@@ -433,7 +433,7 @@ class TestIssue990NumberPrefixTitle:
 
         # Insert corrupted bangumi (title_raw=None, aliases=[null])
         bangumi = Bangumi(official_title="29岁单身冒险家的日常", season=1)
-        bangumi.title_raw = None  # type: ignore[assignment]  # simulating corrupted data
+        bangumi.title_raw = None  # simulating corrupted data  # ty: ignore[invalid-assignment]
         bangumi.title_aliases = "[null]"
         db_session.add(bangumi)
 

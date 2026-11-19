@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
@@ -85,7 +85,7 @@ class UserDatabase:
             user.password = get_password_hash(data.password)
         if data.enabled is not None:
             user.enabled = data.enabled
-        user.updated_at = datetime.now(timezone.utc)
+        user.updated_at = datetime.now(UTC)
         self.session.add(user)
         try:
             if commit:

@@ -9,7 +9,7 @@ import logging
 from dataclasses import asdict, dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select
+from sqlmodel import col, select
 
 from module.models.aria2 import Aria2Gid
 
@@ -33,7 +33,7 @@ class Aria2RenameIntent:
         )
 
     @classmethod
-    def from_json(cls, raw: str | None) -> "Aria2RenameIntent | None":
+    def from_json(cls, raw: str | None) -> Aria2RenameIntent | None:
         if not raw:
             return None
         try:
@@ -104,8 +104,8 @@ class Aria2GidDatabase:
             return {}
         result = await self.session.execute(
             select(Aria2Gid).where(
-                Aria2Gid.downloader_id == self.downloader_id,  # type: ignore[arg-type]
-                Aria2Gid.gid.in_(gids),  # type: ignore[attr-defined]
+                Aria2Gid.downloader_id == self.downloader_id,
+                col(Aria2Gid.gid).in_(gids),
             )
         )
         return {row.gid: row for row in result.scalars().all()}
@@ -114,8 +114,8 @@ class Aria2GidDatabase:
         """返回携带该 dedup_key 的已有 gid（没有则 None），用于新增前判重。"""
         result = await self.session.execute(
             select(Aria2Gid.gid).where(
-                Aria2Gid.downloader_id == self.downloader_id,  # type: ignore[arg-type]
-                Aria2Gid.dedup_key == dedup_key,  # type: ignore[arg-type]
+                Aria2Gid.downloader_id == self.downloader_id,
+                Aria2Gid.dedup_key == dedup_key,
             )
         )
         return result.scalars().first()

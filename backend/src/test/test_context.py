@@ -18,7 +18,7 @@ def ctx():
     ctx = AppContext.build(real_settings)
     ctx.notifier = MagicMock()
     # 通过局部变量操作 mock：嵌套函数里 ctx.scheduler 的声明类型是 Scheduler，
-    # 其 running 是只读 property，mypy 会拒绝直接赋值。
+    # 其 running 是只读 property，类型检查器会拒绝直接赋值。
     scheduler = MagicMock()
     scheduler.stop_all = AsyncMock()
     scheduler.start_all = MagicMock()
@@ -219,7 +219,7 @@ class TestWaitForDownloader:
             await ctx._wait_for_downloader()
 
         ctx.notifier.send_event.assert_awaited_once()
-        event = ctx.notifier.send_event.await_args.args[0]
+        event = ctx.notifier.send_event.await_args.args[0]  # ty: ignore[missing-union-attribute]
         assert isinstance(event, DownloaderUnavailableEvent)
         assert event.reason == "unreachable"
 
@@ -240,7 +240,7 @@ class TestWaitForDownloader:
 
         assert mock_check.await_count == 1
         mock_sleep.assert_not_awaited()
-        event = ctx.notifier.send_event.await_args.args[0]
+        event = ctx.notifier.send_event.await_args.args[0]  # ty: ignore[missing-union-attribute]
         assert isinstance(event, DownloaderUnavailableEvent)
         assert event.reason == "credentials"
 

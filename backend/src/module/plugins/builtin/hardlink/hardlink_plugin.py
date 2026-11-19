@@ -80,7 +80,7 @@ class Options(BaseModel):
         return os.path.normpath(value)
 
     @model_validator(mode="after")
-    def _library_outside_source(self) -> "Options":
+    def _library_outside_source(self) -> Options:
         # 媒体库在下载目录内时，补链会把媒体库自己再链接一遍
         if Path(self.library_root).is_relative_to(self.source_root):
             raise ValueError("媒体库目录不能位于下载根目录内")

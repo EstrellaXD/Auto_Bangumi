@@ -153,7 +153,7 @@ class TestConfigSerialization:
         with open(json_path, "w") as f:
             json.dump(config_dict, f)
 
-        with open(json_path, "r") as f:
+        with open(json_path) as f:
             loaded = json.load(f)
 
         loaded_config = Config.model_validate(loaded)

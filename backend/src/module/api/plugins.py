@@ -112,7 +112,7 @@ def _overview(ctx: AppContext) -> PluginsOverview:
     conf = settings.plugins
     plugins = []
     for status in ctx.plugins.statuses():
-        info = vars(status) | {
+        info: dict[str, Any] = vars(status) | {
             "options": mask_options(
                 conf.options.get(status.id, {}), status.config_schema
             ),
