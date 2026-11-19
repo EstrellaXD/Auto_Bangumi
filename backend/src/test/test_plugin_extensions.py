@@ -321,6 +321,7 @@ class TestSearchSite:
 class TestPluginTasks:
     async def test_same_local_id_reload_and_unload_are_isolated(self, registry):
         scheduler, bridge, _ = self.make(registry)
+        scheduler.start_all()
         spec = ScheduledTask(AsyncMock(), 3600)
         for owner in ("first", "second"):
             registry.add_provider(
@@ -332,16 +333,27 @@ class TestPluginTasks:
             "plugin:first/sync",
             "plugin:second/sync",
         ]
+        assert first.running and second.running
 
+        # 重载 first：换成新任务，second 不受影响
         registry.remove_plugin("first")
         registry.add_provider(
             points.SCHEDULED_TASK, ProviderEntry("first", "sync", lambda: spec)
         )
         await bridge.sync()
-        assert second in scheduler.tasks and first not in scheduler.tasks
+        assert [t.name for t in scheduler.tasks] == [
+            "plugin:second/sync",
+            "plugin:first/sync",
+        ]
+        reloaded = scheduler.tasks[1]
+        assert reloaded is not first and not first.running
+        assert reloaded.running and scheduler.tasks[0] is second and second.running
+
+        # 卸载 first：只剩 second，且仍在运行
         registry.remove_plugin("first")
         await bridge.sync()
-        assert scheduler.tasks == [second]
+        assert scheduler.tasks == [second] and second.running
+        await scheduler.stop_all()
 
     def make(self, registry, threshold=5):
         scheduler = Scheduler([])

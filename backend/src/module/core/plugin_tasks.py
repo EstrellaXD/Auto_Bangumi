@@ -61,7 +61,7 @@ class PluginTasks:
             # 已校验的值，插件出错不会打断调度循环
             interval = read_interval()
         except Exception as e:
-            reason = f"{points.SCHEDULED_TASK} {task_id}: {type(e).__name__}: {e}"
+            reason = f"{points.SCHEDULED_TASK} {entry.id}: {type(e).__name__}: {e}"
             logger.warning("[Plugin:%s] 定时任务创建失败：%s", plugin_id, reason)
             self._breaker.record_failure(plugin_id, reason)
             return None
@@ -76,7 +76,7 @@ class PluginTasks:
                     await spec_run()
                 interval = read_interval()
             except Exception as e:
-                reason = f"定时任务 {task_id}: {type(e).__name__}: {e}"
+                reason = f"定时任务 {entry.id}: {type(e).__name__}: {e}"
                 logger.warning("[Plugin:%s] %s", plugin_id, reason)
                 self._breaker.record_failure(plugin_id, reason)
                 return
