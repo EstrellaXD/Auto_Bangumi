@@ -10,7 +10,7 @@
     "medium-zoom": "^1.1.0",
     "typescript": "~5.6.0",
     "vitepress": "1.6.4",
-    "vue": "^3.5.0"
+    "vue": "^3.5.45"
   },
   "type": "module",
   "engines": {
