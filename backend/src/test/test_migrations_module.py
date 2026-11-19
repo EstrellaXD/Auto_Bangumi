@@ -1,6 +1,7 @@
 """Tests for the table-driven migration system (module.database.migrations)."""
 
 from dataclasses import replace
+from typing import ClassVar
 
 import pytest
 from sqlalchemy import inspect, text
@@ -304,7 +305,7 @@ class TestMigrationTable:
         assert versions == list(range(1, len(MIGRATIONS) + 1))
 
     def test_current_schema_version_is_derived_from_list(self):
-        assert CURRENT_SCHEMA_VERSION == MIGRATIONS[-1].version
+        assert MIGRATIONS[-1].version == CURRENT_SCHEMA_VERSION
 
 
 class TestRunMigrations:
@@ -458,12 +459,11 @@ class TestRunMigrations:
         )
         with engine.begin() as conn:
             conn.execute(insert, {"state": "conflict", "task": "v2", "source": "v2"})
-        with pytest.raises(IntegrityError):
-            with engine.begin() as conn:
-                conn.execute(
-                    insert,
-                    {"state": "planned", "task": "v3", "source": "v3"},
-                )
+        with pytest.raises(IntegrityError), engine.begin() as conn:
+            conn.execute(
+                insert,
+                {"state": "planned", "task": "v3", "source": "v3"},
+            )
         with engine.begin() as conn:
             conn.execute(
                 text(
@@ -479,18 +479,17 @@ class TestRunMigrations:
         engine = _make_v0_engine()
         run_migrations(engine)
 
-        with pytest.raises(IntegrityError):
-            with engine.begin() as conn:
-                conn.execute(
-                    text(
-                        "INSERT INTO rename_operation "
-                        "(downloader_type, kind, state, new_task_id, save_path, "
-                        " source_path, target_path, attempt_count, created_at, updated_at) "
-                        "VALUES ('qbittorrent', 'conflict', 'unknown', 'v2', '/show', "
-                        " 'v2.mkv', 'Show S01E01.mkv', 0, CURRENT_TIMESTAMP, "
-                        " CURRENT_TIMESTAMP)"
-                    )
+        with pytest.raises(IntegrityError), engine.begin() as conn:
+            conn.execute(
+                text(
+                    "INSERT INTO rename_operation "
+                    "(downloader_type, kind, state, new_task_id, save_path, "
+                    " source_path, target_path, attempt_count, created_at, updated_at) "
+                    "VALUES ('qbittorrent', 'conflict', 'unknown', 'v2', '/show', "
+                    " 'v2.mkv', 'Show S01E01.mkv', 0, CURRENT_TIMESTAMP, "
+                    " CURRENT_TIMESTAMP)"
                 )
+            )
 
     def test_v23_guard_accepts_metadata_created_table(self, monkeypatch):
         engine = _make_v0_engine()
@@ -619,17 +618,16 @@ class TestRunMigrations:
                 ),
                 {"token_hash": "a" * 64},
             )
-        with pytest.raises(IntegrityError):
-            with engine.begin() as conn:
-                conn.execute(
-                    text(
-                        "INSERT INTO api_token "
-                        "(id, user_id, name, scope, token_hash, prefix, created_at) "
-                        "VALUES (14, 7, 'duplicate pair', 'api', :token_hash, "
-                        "'legacy_aaaaaaaa', '2026-04-02 00:00:00')"
-                    ),
-                    {"token_hash": "a" * 64},
-                )
+        with pytest.raises(IntegrityError), engine.begin() as conn:
+            conn.execute(
+                text(
+                    "INSERT INTO api_token "
+                    "(id, user_id, name, scope, token_hash, prefix, created_at) "
+                    "VALUES (14, 7, 'duplicate pair', 'api', :token_hash, "
+                    "'legacy_aaaaaaaa', '2026-04-02 00:00:00')"
+                ),
+                {"token_hash": "a" * 64},
+            )
 
     def test_v20_rebuild_rolls_back_if_a_late_statement_fails(self, monkeypatch):
         engine = _make_v19_auth_engine()
@@ -898,7 +896,7 @@ class TestRunMigrations:
 
 class TestSearchKeywordEpisodeMigration:
     NYAA = "https://nyaa.si/?page=rss&q=%s&c=0_0&f=0"
-    PROVIDERS = {
+    PROVIDERS: ClassVar[dict[str, dict[str, str]]] = {
         "nyaa": {"url": NYAA, "parser": "tmdb"},
         "dmhy": {
             "url": "http://dmhy.org/topics/rss/rss.xml?keyword=%s",

@@ -39,7 +39,7 @@ async def _ensure_bangumi_id(db: Database, data: Bangumi) -> bool:
             await db.bangumi.restore_one(existing.id)
         data.id = existing.id
     elif data.id is not None and await db.bangumi.search_id(data.id) is None:
-        data.id = None  # type: ignore[assignment]
+        data.id = None  # ty: ignore[invalid-assignment]
     return False
 
 
@@ -100,7 +100,7 @@ class SeasonCollector:
                 if inserted and bangumi.id is not None:
                     # 收集失败时回滚刚插入的行，不留下幽灵订阅规则
                     await db.bangumi.delete_one(bangumi.id)
-                    bangumi.id = None  # type: ignore[assignment]
+                    bangumi.id = None  # ty: ignore[invalid-assignment]
                 logger.warning(
                     f"Already collected {bangumi.official_title} Season {bangumi.season}."
                 )

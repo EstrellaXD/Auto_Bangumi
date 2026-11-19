@@ -299,7 +299,7 @@ class TestSearchSite:
 
     @pytest.mark.parametrize(
         "bad_factory",
-        [broken_factory, object, lambda: SearchSite(None)],  # type: ignore[arg-type]
+        [broken_factory, object, lambda: SearchSite(None)],  # ty: ignore[invalid-argument-type]
     )
     def test_available_sites_broken_factory_skipped(self, registry, bad_factory):
         from module.searcher import available_sites
@@ -319,6 +319,42 @@ class TestSearchSite:
 
 
 class TestPluginTasks:
+    async def test_same_local_id_reload_and_unload_are_isolated(self, registry):
+        scheduler, bridge, _ = self.make(registry)
+        scheduler.start_all()
+        spec = ScheduledTask(AsyncMock(), 3600)
+        for owner in ("first", "second"):
+            registry.add_provider(
+                points.SCHEDULED_TASK, ProviderEntry(owner, "sync", lambda: spec)
+            )
+        await bridge.sync()
+        first, second = scheduler.tasks
+        assert [t.name for t in scheduler.tasks] == [
+            "plugin:first/sync",
+            "plugin:second/sync",
+        ]
+        assert first.running and second.running
+
+        # 重载 first：换成新任务，second 不受影响
+        registry.remove_plugin("first")
+        registry.add_provider(
+            points.SCHEDULED_TASK, ProviderEntry("first", "sync", lambda: spec)
+        )
+        await bridge.sync()
+        assert [t.name for t in scheduler.tasks] == [
+            "plugin:second/sync",
+            "plugin:first/sync",
+        ]
+        reloaded = scheduler.tasks[1]
+        assert reloaded is not first and not first.running
+        assert reloaded.running and scheduler.tasks[0] is second and second.running
+
+        # 卸载 first：只剩 second，且仍在运行
+        registry.remove_plugin("first")
+        await bridge.sync()
+        assert scheduler.tasks == [second] and second.running
+        await scheduler.stop_all()
+
     def make(self, registry, threshold=5):
         scheduler = Scheduler([])
         tripped: list[str] = []
@@ -337,7 +373,7 @@ class TestPluginTasks:
         scheduler.start_all()
         await bridge.sync()
         [task] = scheduler.tasks
-        assert task.name == "plugin:ext:sync" and task.running
+        assert task.name == "plugin:ext/sync" and task.running
         await asyncio.wait_for(ran.wait(), 1)
 
         registry.remove_plugin("ext")
@@ -397,9 +433,9 @@ class TestPluginTasks:
         [
             None,
             object(),
-            ScheduledTask(AsyncMock(), "abc"),  # type: ignore[arg-type]
+            ScheduledTask(AsyncMock(), "abc"),  # ty: ignore[invalid-argument-type]
             ScheduledTask(AsyncMock(), lambda: 1 / 0),
-            ScheduledTask(AsyncMock(), 60, initial_delay=None),  # type: ignore[arg-type]
+            ScheduledTask(AsyncMock(), 60, initial_delay=None),  # ty: ignore[invalid-argument-type]
         ],
     )
     async def test_sync_malformed_spec_skipped_and_recorded(self, registry, bad_spec):
@@ -412,7 +448,7 @@ class TestPluginTasks:
             ProviderEntry("ext", "b", lambda: ScheduledTask(AsyncMock(), 60)),
         )
         await bridge.sync()
-        assert [t.name for t in scheduler.tasks] == ["plugin:ext:b"]
+        assert [t.name for t in scheduler.tasks] == ["plugin:ext/b"]
         assert tripped == ["bad"]
 
     async def test_enabled_flip_skips_run(self, registry):
@@ -734,7 +770,7 @@ class TestPluginChangeRebuildsState:
         ctx = AppContext.build(settings)
         ctx.notifier = MagicMock()
         with patch("module.core.context.reset_llm_parser") as reset_llm:
-            await ctx.plugins.on_change()  # type: ignore[misc]
+            await ctx.plugins.on_change()  # ty: ignore[not-callable]
         ctx.notifier.rebuild.assert_called_once()
         reset_llm.assert_called_once()
 

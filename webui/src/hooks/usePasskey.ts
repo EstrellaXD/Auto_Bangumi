@@ -101,7 +101,7 @@ export const usePasskey = createSharedComposable(() => {
         hasKnownPasskey.value = false;
       }
       return true;
-    } catch (error) {
+    } catch {
       message.error(t('passkey.delete_failed'));
       return false;
     }

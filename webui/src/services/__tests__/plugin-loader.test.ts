@@ -77,7 +77,7 @@ function defineFrom(pluginId: string, name: string, guarded = false) {
       customElements.define(name, class extends HTMLElement {});
     }
     //# sourceURL=http://ab.local/api/v1/plugins/${pluginId}/web/index.js`;
-  // eslint-disable-next-line no-new-func
+  // oxlint-disable-next-line no-new-func -- 模拟插件脚本在全局作用域执行
   new Function('name', body)(name);
 }
 
@@ -97,8 +97,11 @@ describe('element ownership', () => {
 
   it('should accept an element that the plugin defined itself', async () => {
     const slot = makeSlot();
-    await loadPluginElement(slot, async () =>
-      defineFrom(slot.plugin_id, slot.element));
+    await expect(
+      loadPluginElement(slot, async () =>
+        defineFrom(slot.plugin_id, slot.element)
+      )
+    ).resolves.toBeUndefined();
   });
 });
 

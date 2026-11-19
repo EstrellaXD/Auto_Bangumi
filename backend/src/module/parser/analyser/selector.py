@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass
@@ -33,7 +33,7 @@ class ConfiguredParseOutcome:
 
 
 @contextmanager
-def parser_engine_snapshot() -> Iterator[ParserEngine]:
+def parser_engine_snapshot() -> Generator[ParserEngine]:
     """Keep one configured engine for all parses in the current task scope.
 
     ``ContextVar`` state survives ``await`` boundaries, is copied into child

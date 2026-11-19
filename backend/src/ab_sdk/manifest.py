@@ -144,7 +144,7 @@ class PluginManifest(BaseModel):
         return value
 
     @model_validator(mode="after")
-    def _check_ui_elements(self) -> "PluginManifest":
+    def _check_ui_elements(self) -> PluginManifest:
         # custom element 名是全局的：限定在 ab-plugin-<id> 命名空间内，
         # 一个插件才不会占用别的插件的元素名
         for ui in self.ui:
@@ -219,9 +219,11 @@ def check(plugin_dir: Path) -> tuple[PluginManifest | None, list[str]]:
         for candidate in (module.with_suffix(".py"), module / "__init__.py")
     ):
         problems.append(f"入口模块 {manifest.entry_module} 不存在")
-    for ui in manifest.ui:
-        if not (plugin_dir / ui.entry).is_file():
-            problems.append(f"前端入口 {ui.entry} 不存在")
+    problems.extend(
+        f"前端入口 {ui.entry} 不存在"
+        for ui in manifest.ui
+        if not (plugin_dir / ui.entry).is_file()
+    )
     problems += [
         f"含原生扩展 {p}，只允许纯 Python 代码" for p in native_files(plugin_dir)
     ]

@@ -5,6 +5,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from typing import ClassVar
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -80,9 +81,8 @@ class TestLifespan:
         ctx.startup = AsyncMock(side_effect=RuntimeError("startup boom"))
         with patch("main.AppContext.build", return_value=ctx):
             app = main.create_app()
-            with pytest.raises(RuntimeError, match="startup boom"):
-                with TestClient(app):
-                    pass
+            with pytest.raises(RuntimeError, match="startup boom"), TestClient(app):
+                pass
         # 迁移失败时插件不应启动（插件 KV 表由迁移创建）
         ctx.plugins.start.assert_not_called()
 
@@ -90,7 +90,7 @@ class TestLifespan:
 class TestMcpEndpoint:
     """MCP 走 Streamable HTTP，端点就是 /mcp；会话管理器由应用 lifespan 启动。"""
 
-    HEADERS = {
+    HEADERS: ClassVar[dict[str, str]] = {
         "Authorization": "Bearer mcp-token",
         "Accept": "application/json, text/event-stream",
     }

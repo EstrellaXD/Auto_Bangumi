@@ -213,7 +213,9 @@ function tokenStatus(token: ApiTokenPublic): ApiTokenStatus {
             <strong>{{ user.username }}</strong>
             <ab-tag
               :type="user.enabled ? 'success' : 'neutral'"
-              :title="user.enabled ? $t('access.enabled') : $t('access.disabled')"
+              :title="
+                user.enabled ? $t('access.enabled') : $t('access.disabled')
+              "
             />
           </div>
           <div class="row-actions">

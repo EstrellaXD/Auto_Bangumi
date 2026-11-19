@@ -105,8 +105,8 @@ class TestClientCache:
         self, two_instances
     ):
         b = _mock("b")
-        b.auth = AsyncMock(return_value=False)  # type: ignore[method-assign]
-        b.last_auth_error = "credentials"  # type: ignore[attr-defined]
+        b.auth = AsyncMock(return_value=False)
+        b.last_auth_error = "credentials"  # ty: ignore[missing-attribute]
         with pytest.raises(ConnectionError):
             async with DownloadClient("b"):
                 pass
@@ -222,7 +222,7 @@ class TestRssRouting:
         await engine.db.bangumi.add(
             make_bangumi(title_raw="Mushoku Tensei", filter="", downloader_id="b")
         )
-        _mock("b").auth = AsyncMock(return_value=False)  # type: ignore[method-assign]
+        _mock("b").auth = AsyncMock(return_value=False)
         torrent = Torrent(
             name="[Sub] Mushoku Tensei - 12 [1080p].mkv",
             url="magnet:?xt=urn:btih:12",
@@ -275,7 +275,7 @@ class TestRenameAll:
         _mock("a")._torrents["ha"] = _completed(
             "[Sub] Show - 01 [1080p]", "ha", "/a/Bangumi/Show/Season 1"
         )
-        _mock("b").auth = AsyncMock(return_value=False)  # type: ignore[method-assign]
+        _mock("b").auth = AsyncMock(return_value=False)
 
         first_renamed, first_events = await rename_all()
         _, second_events = await rename_all()
@@ -294,7 +294,7 @@ class TestRenameAll:
         counts = []
         for reachable in (False, True, False):
             # 登录失败后缓存的客户端被丢弃，每轮给新取到的客户端打桩
-            _mock("b").auth = AsyncMock(return_value=reachable)  # type: ignore[method-assign]
+            _mock("b").auth = AsyncMock(return_value=reachable)
             counts.append(len((await rename_all())[1]))
         assert counts == [1, 0, 1]
 
@@ -361,7 +361,7 @@ async def test_rename_single_instance_replacement_after_host_change_recovered(
 
 async def test_list_torrents_one_instance_down_lists_the_other(two_instances):
     _mock("a")._torrents["ha"] = _completed("A", "ha", "/a/Bangumi/A/Season 1")
-    _mock("b").auth = AsyncMock(return_value=False)  # type: ignore[method-assign]
+    _mock("b").auth = AsyncMock(return_value=False)
     listed = await list_torrents()
     assert [(t["hash"], t["downloader_id"]) for t in listed or []] == [("ha", "a")]
 
@@ -476,7 +476,7 @@ class TestRuleOnAnotherInstance:
         bangumi_id = await self._rule_with_torrent_on_a()
         hb = _completed("B", "hb", "/b/Bangumi/Test Anime (2024)/Season 1")
         _mock("b")._torrents["hb"] = hb
-        _mock("b").auth = AsyncMock(return_value=False)  # type: ignore[method-assign]
+        _mock("b").auth = AsyncMock(return_value=False)
         async with Database() as db:
             await db.torrent.add(
                 Torrent(name="B", url="u-b", refer_id=1, downloader_id="b")
@@ -515,7 +515,7 @@ class TestRuleOnAnotherInstance:
             "New", "new", "/b/Bangumi/Test Anime (2024)/Season 1"
         )
         auth = _mock("a").auth
-        _mock("a").auth = AsyncMock(return_value=False)  # type: ignore[method-assign]
+        _mock("a").auth = AsyncMock(return_value=False)
         async with Database() as db:
             await db.torrent.add(
                 Torrent(name="New", url="u-new", refer_id=1, downloader_id="b")
@@ -527,7 +527,7 @@ class TestRuleOnAnotherInstance:
             rows = await db.torrent.search_by_bangumi_id(bangumi_id)
             assert "a" in {r.downloader_id for r in rows}
 
-            _mock("a").auth = auth  # type: ignore[method-assign]
+            _mock("a").auth = auth
             retry = await TorrentManager(db).delete_rule(bangumi_id, file=True)
             assert retry.status is True
             assert _mock("a")._torrents == {}
@@ -541,7 +541,7 @@ async def test_eps_complete_unavailable_instance_other_rules_collected(two_insta
     async with Database() as db:
         await db.bangumi.add(make_bangumi(official_title="On B", downloader_id="b"))
         await db.bangumi.add(make_bangumi(official_title="On A", title_raw="A raw"))
-    _mock("b").auth = AsyncMock(return_value=False)  # type: ignore[method-assign]
+    _mock("b").auth = AsyncMock(return_value=False)
 
     with patch.object(
         collector.SeasonCollector, "collect_season", AsyncMock()
@@ -585,7 +585,7 @@ class TestDownloaderApi:
 
     def test_auto_tag_unavailable_instance_skipped(self, two_instances, authed_client):
         _mock("a")._torrents["ha"] = _completed("A", "ha", "/a/Bangumi/A/Season 1")
-        _mock("b").auth = AsyncMock(return_value=False)  # type: ignore[method-assign]
+        _mock("b").auth = AsyncMock(return_value=False)
         resp = authed_client.post("/api/v1/downloader/torrents/tag/auto")
         assert resp.status_code == 200
         assert [t["hash"] for t in resp.json()["unmatched"]] == ["ha"]

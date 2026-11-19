@@ -78,7 +78,8 @@ const menuItems = computed<AbMenuItem[]>(() =>
   cursor: pointer;
   user-select: none;
   color: var(--color-text-secondary);
-  transition: color var(--transition-fast),
+  transition:
+    color var(--transition-fast),
     background-color var(--transition-fast);
   display: flex;
   align-items: center;

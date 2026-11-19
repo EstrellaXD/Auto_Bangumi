@@ -32,7 +32,7 @@ import logging
 from collections.abc import Awaitable, Callable, Coroutine
 from dataclasses import replace
 from pathlib import Path, PurePosixPath
-from typing import Any, ClassVar, TypeVar
+from typing import Any, ClassVar
 from urllib.parse import urlparse
 
 from pydantic import BaseModel
@@ -47,8 +47,6 @@ from .notify import NotificationMessage, Notifier
 from .plugin import Plugin
 from .rename import RenameInput, RenameSkipped, RenameStrategy
 from .search import SearchSite
-
-P = TypeVar("P", bound=Plugin[Any])
 
 
 class MemoryKV:
@@ -105,7 +103,7 @@ class FakeContext:
         self.data_dir = data_dir
 
 
-def create_plugin(
+def create_plugin[P: Plugin[Any]](
     plugin_cls: type[P],
     options: dict[str, Any] | None = None,
     *,
@@ -122,10 +120,8 @@ def create_plugin(
 
 # ----------------------------------------------------------------- 契约套件
 
-T = TypeVar("T")
 
-
-def _run(coro: Coroutine[Any, Any, T]) -> T:
+def _run[T](coro: Coroutine[Any, Any, T]) -> T:
     return asyncio.run(coro)
 
 

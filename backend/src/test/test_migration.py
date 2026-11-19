@@ -1,7 +1,7 @@
 """Tests for database schema migrations (schema_version + guarded DDL)."""
 
 from sqlalchemy import inspect, text
-from sqlmodel import Session, create_engine, select
+from sqlmodel import Session, col, create_engine, select
 
 from module.database.combine import CURRENT_SCHEMA_VERSION
 from module.database.migrations import (
@@ -164,9 +164,7 @@ class TestDatabaseMigration:
 
         # Check data is preserved
         with Session(engine) as s:
-            # SQLModel 类属性在 mypy 看来是普通字段类型而非 InstrumentedAttribute
-            # （无官方 mypy 插件支持）。
-            statement = select(Bangumi).order_by(Bangumi.id)  # type: ignore[arg-type]
+            statement = select(Bangumi).order_by(col(Bangumi.id))
             bangumis = list(s.exec(statement).all())
         assert len(bangumis) == 2
         assert bangumis[0].official_title == "无职转生"

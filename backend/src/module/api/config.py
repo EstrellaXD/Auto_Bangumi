@@ -263,7 +263,7 @@ async def list_llm_models(req: LLMModelsRequest):
             timeout=10.0,
         )
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     try:
         models = await parser.list_models()
     except Exception as e:
@@ -272,7 +272,7 @@ async def list_llm_models(req: LLMModelsRequest):
         raise HTTPException(
             status_code=502,
             detail="Failed to fetch the model list from the provider",
-        )
+        ) from e
     finally:
         await parser.aclose()
     return LLMModelsResponse(models=models)

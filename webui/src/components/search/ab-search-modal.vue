@@ -95,7 +95,12 @@ onKeyStroke('Escape', (e) => {
   if (!showModal.value) return;
   // 确认弹窗是 ab-modal（NModal / NDrawer），它自己处理 Esc。焦点在弹窗里时
   // 这里不再处理，否则两个监听器的先后顺序会让一次 Esc 关掉整个搜索窗。
-  if ((e.target as Element | null)?.closest?.('.n-modal-container, .n-drawer-container')) return;
+  if (
+    (e.target as Element | null)?.closest?.(
+      '.n-modal-container, .n-drawer-container'
+    )
+  )
+    return;
   if (selectedResult.value) {
     clearSelectedResult();
   } else {
@@ -354,7 +359,7 @@ const filterOptions = computed(() => {
       const aMatch = a.match(/^S(\d+)$/);
       const bMatch = b.match(/^S(\d+)$/);
       if (aMatch && bMatch) {
-        return parseInt(aMatch[1]) - parseInt(bMatch[1]);
+        return Number.parseInt(aMatch[1]) - Number.parseInt(bMatch[1]);
       }
       if (aMatch) return -1;
       if (bMatch) return 1;
@@ -662,7 +667,7 @@ function handleFilterClick(
                 class="search-input"
                 aria-label="Search anime"
                 @keyup.enter="onSearch"
-              >
+              />
 
               <div class="provider-select">
                 <button
@@ -712,7 +717,7 @@ function handleFilterClick(
                 <button
                   v-for="option in getVisibleOptions(
                     'group',
-                    filterOptions.group,
+                    filterOptions.group
                   )"
                   :key="option"
                   class="filter-chip chip-group"
@@ -751,7 +756,7 @@ function handleFilterClick(
                 <button
                   v-for="option in getVisibleOptions(
                     'resolution',
-                    filterOptions.resolution,
+                    filterOptions.resolution
                   )"
                   :key="option"
                   class="filter-chip chip-resolution"
@@ -790,7 +795,7 @@ function handleFilterClick(
                 <button
                   v-for="option in getVisibleOptions(
                     'subtitle',
-                    filterOptions.subtitle,
+                    filterOptions.subtitle
                   )"
                   :key="option"
                   class="filter-chip chip-subtitle"
@@ -826,7 +831,7 @@ function handleFilterClick(
                 <button
                   v-for="option in getVisibleOptions(
                     'season',
-                    filterOptions.season,
+                    filterOptions.season
                   )"
                   :key="option"
                   class="filter-chip chip-season"
@@ -856,7 +861,9 @@ function handleFilterClick(
             <!-- Selected Filters Summary -->
             <div class="filter-summary">
               <div v-if="hasActiveFilters" class="selected-filters">
-                <span class="selected-label">{{ $t('search.filter.active') }}:</span>
+                <span class="selected-label"
+                  >{{ $t('search.filter.active') }}:</span
+                >
                 <div class="selected-chips">
                   <button
                     v-for="tag in selectedFilterTags"
@@ -926,11 +933,14 @@ function handleFilterClick(
                   <!-- Left: Poster -->
                   <div class="bangumi-poster">
                     <img
-                      v-if="group.poster_link && !brokenPosters.has(group.poster_link)"
+                      v-if="
+                        group.poster_link &&
+                        !brokenPosters.has(group.poster_link)
+                      "
                       :src="getPosterUrl(group.poster_link)"
                       :alt="group.official_title"
                       @error="brokenPosters.add(group.poster_link)"
-                    >
+                    />
                     <div v-else class="bangumi-poster-placeholder">
                       <span class="placeholder-title">{{
                         group.official_title
@@ -1105,7 +1115,8 @@ function handleFilterClick(
   background: var(--color-surface-hover);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  transition: border-color var(--transition-fast),
+  transition:
+    border-color var(--transition-fast),
     background-color var(--transition-normal);
 
   @include forTablet {
@@ -1220,7 +1231,8 @@ function handleFilterClick(
   border: none;
   cursor: pointer;
   text-align: left;
-  transition: background-color var(--transition-fast),
+  transition:
+    background-color var(--transition-fast),
     color var(--transition-fast);
 
   &:hover {
@@ -1240,7 +1252,8 @@ function handleFilterClick(
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface-hover);
   flex-shrink: 0;
-  transition: background-color var(--transition-normal),
+  transition:
+    background-color var(--transition-normal),
     border-color var(--transition-normal);
 }
 
@@ -1305,7 +1318,8 @@ function handleFilterClick(
   border-radius: var(--radius-sm);
   cursor: pointer;
   user-select: none;
-  transition: border-color var(--transition-fast),
+  transition:
+    border-color var(--transition-fast),
     background-color var(--transition-fast);
 
   &::before {
@@ -1455,7 +1469,9 @@ function handleFilterClick(
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: border-color var(--transition-fast), color var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    color var(--transition-fast);
 
   &:hover {
     border-color: var(--color-danger);
@@ -1495,12 +1511,15 @@ function handleFilterClick(
 
 // Modal transition
 .modal-enter-active {
-  transition: opacity var(--transition-normal),
+  transition:
+    opacity var(--transition-normal),
     transform var(--transition-normal);
 }
 
 .modal-leave-active {
-  transition: opacity 150ms ease-in, transform 150ms ease-in;
+  transition:
+    opacity 150ms ease-in,
+    transform 150ms ease-in;
 }
 
 .modal-enter-from {
@@ -1600,7 +1619,8 @@ function handleFilterClick(
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: border-color var(--transition-fast),
+  transition:
+    border-color var(--transition-fast),
     background-color var(--transition-fast);
 
   @include forTouch {

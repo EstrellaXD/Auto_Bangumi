@@ -298,7 +298,7 @@ def _verify_bundle(bundle: Path, sig: Path, pubkey_path: Path) -> bool:
         signature = base64.b64decode(sig.read_text().strip(), validate=True)
         public_key.verify(signature, bundle.read_bytes())
         return True
-    except Exception as exc:  # noqa: BLE001 - 验签失败必须拒绝
+    except Exception as exc:
         logger.error("Bundle signature verification failed: %s", exc)
         return False
 
@@ -311,7 +311,7 @@ def _read_zip_manifest(bundle: Path) -> dict | None:
         with zipfile.ZipFile(bundle) as zf:
             data = json.loads(zf.read("manifest.json"))
             return data if isinstance(data, dict) else None
-    except Exception:  # noqa: BLE001
+    except Exception:
         return None
 
 

@@ -119,7 +119,7 @@ def test_trace_exposes_title_rejections_and_is_frozen() -> None:
 
     assert trace.rejected_as_title == ("title-number",)
     with pytest.raises(FrozenInstanceError):
-        trace.raw = "changed"  # type: ignore[misc]
+        trace.raw = "changed"  # ty: ignore[invalid-assignment]
 
 
 def test_trace_missing_candidate_decision_raises_key_error() -> None:

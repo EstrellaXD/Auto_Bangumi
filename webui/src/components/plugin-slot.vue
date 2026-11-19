@@ -102,9 +102,7 @@ watch(
       <span v-if="reason" class="plugin-slot__reason">{{ reason }}</span>
       <template #action>
         <ab-button size="sm" @click="reload">
-          {{
-            $t('plugin.reload')
-          }}
+          {{ $t('plugin.reload') }}
         </ab-button>
       </template>
     </ab-alert>

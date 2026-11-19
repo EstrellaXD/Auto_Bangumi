@@ -244,9 +244,11 @@ class TestCheckLoginIp:
         mock_security = type("S", (), {"login_whitelist": ["192.168.0.0/16"]})()
         mock_settings = type("Settings", (), {"security": mock_security})()
 
-        with patch("module.security.api.settings", mock_settings):
-            with pytest.raises(HTTPException) as exc_info:
-                check_login_ip(request=self._make_request("8.8.8.8"))
+        with (
+            patch("module.security.api.settings", mock_settings),
+            pytest.raises(HTTPException) as exc_info,
+        ):
+            check_login_ip(request=self._make_request("8.8.8.8"))
         assert exc_info.value.status_code == 403
 
     def test_no_client_raises_403_when_whitelist_set(self):
@@ -258,7 +260,9 @@ class TestCheckLoginIp:
         mock_security = type("S", (), {"login_whitelist": ["192.168.0.0/16"]})()
         mock_settings = type("Settings", (), {"security": mock_security})()
 
-        with patch("module.security.api.settings", mock_settings):
-            with pytest.raises(HTTPException) as exc_info:
-                check_login_ip(request=self._make_request(None))
+        with (
+            patch("module.security.api.settings", mock_settings),
+            pytest.raises(HTTPException) as exc_info,
+        ):
+            check_login_ip(request=self._make_request(None))
         assert exc_info.value.status_code == 403

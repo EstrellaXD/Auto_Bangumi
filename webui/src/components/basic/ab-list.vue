@@ -46,9 +46,7 @@ function toggle(key: unknown) {
 }
 
 function toggleAll() {
-  selected.value = allSelected.value
-    ? []
-    : items.map((item) => item[keyField]);
+  selected.value = allSelected.value ? [] : items.map((item) => item[keyField]);
 }
 </script>
 
@@ -62,10 +60,12 @@ function toggleAll() {
           :checked="allSelected"
           :indeterminate="someSelected"
           @change="toggleAll"
-        >
+        />
         <span>{{ $t('common.selectAll') }}</span>
       </label>
-      <span class="ab-list-count">{{ items.length }} {{ $t('common.items') }}</span>
+      <span class="ab-list-count"
+        >{{ items.length }} {{ $t('common.items') }}</span
+      >
     </div>
 
     <!-- 加载骨架 -->
@@ -92,7 +92,7 @@ function toggleAll() {
             :checked="selectedSet.has(item[keyField])"
             :aria-label="$t('common.select')"
             @change="toggle(item[keyField])"
-          >
+          />
         </label>
 
         <div class="ab-list-row-content">

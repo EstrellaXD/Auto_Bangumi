@@ -21,7 +21,7 @@ from test.e2e.support import (
 @pytest.fixture
 def backend_factory(
     tmp_path: Path,
-) -> Generator[Callable[..., BackendSandbox], None, None]:
+) -> Generator[Callable[..., BackendSandbox]]:
     sandboxes: list[BackendSandbox] = []
 
     def create() -> BackendSandbox:
@@ -37,7 +37,7 @@ def backend_factory(
 
 
 @pytest.fixture
-def mock_upstream() -> Generator[HttpService, None, None]:
+def mock_upstream() -> Generator[HttpService]:
     namespace = load_script(REPO_ROOT / "e2e" / "mock-upstream" / "server.py")
     server = namespace["create_server"]("127.0.0.1", 0, E2E_FIXTURES)
     service = HttpService(server).start()
@@ -50,7 +50,7 @@ def mock_upstream() -> Generator[HttpService, None, None]:
 @pytest.fixture
 def twelve_episode_upstream(
     tmp_path: Path,
-) -> Generator[HttpService, None, None]:
+) -> Generator[HttpService]:
     """Mock TMDB whose single season has twelve already-aired episodes."""
 
     fixture_root = tmp_path / "twelve-episode-fixtures"
@@ -76,7 +76,7 @@ def twelve_episode_upstream(
 
 
 @pytest.fixture
-def fake_qb() -> Generator[HttpService, None, None]:
+def fake_qb() -> Generator[HttpService]:
     namespace = load_script(REPO_ROOT / "e2e" / "fake-qb" / "server.py")
     server = namespace["create_server"]("127.0.0.1", 0)
     service = HttpService(server, ready_path="/__admin/state").start()

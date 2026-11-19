@@ -6,6 +6,7 @@
 """
 
 import asyncio
+import contextlib
 import inspect
 import logging
 from collections.abc import Awaitable, Callable
@@ -95,10 +96,8 @@ class _Subscriber:
     async def close(self) -> None:
         if self._worker is not None:
             self._worker.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._worker
-            except asyncio.CancelledError:
-                pass
             self._worker = None
 
 
@@ -114,6 +113,8 @@ class EventBus:
         self._timeout = handler_timeout
         self._queue_size = queue_size
         self._subscribers: list[_Subscriber] = []
+        # 退订时异步关闭订阅者的任务；事件循环只弱引用任务，这里持有强引用防止被 GC
+        self._closing: set[asyncio.Future] = set()
         # 订阅者失败 / 成功回调，宿主用它驱动插件熔断（成功时清零连续失败计数）
         self.on_error = on_error
         self.on_success = on_success
@@ -140,7 +141,9 @@ class EventBus:
         def unsubscribe() -> None:
             if sub in self._subscribers:
                 self._subscribers.remove(sub)
-                asyncio.ensure_future(sub.close())
+                task = asyncio.ensure_future(sub.close())
+                self._closing.add(task)
+                task.add_done_callback(self._closing.discard)
 
         return unsubscribe
 

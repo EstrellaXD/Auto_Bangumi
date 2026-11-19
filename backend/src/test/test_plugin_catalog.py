@@ -357,7 +357,7 @@ class TestPluginsApi:
         from module.api.deps import get_context
 
         context = SimpleNamespace(
-            plugins=SimpleNamespace(statuses=lambda: [], reload=AsyncMock()),
+            plugins=SimpleNamespace(statuses=list, reload=AsyncMock()),
             settings=SimpleNamespace(plugins=Plugins(), save=MagicMock()),
         )
         monkeypatch.setattr(plugins_api, "settings", context.settings)

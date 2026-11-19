@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class WecomProvider(NotificationProvider):
     """WeChat Work (企业微信) notification provider using news message format."""
 
-    def __init__(self, config: "ProviderConfig"):
+    def __init__(self, config: ProviderConfig):
         super().__init__(config)
         self.notification_url = config.webhook_url
         self.token = config.token

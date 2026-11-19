@@ -1,6 +1,10 @@
 <script lang="ts" setup>
 // 细进度条（下载页）：轨道用半透明 muted 色（任何行底色上都可见），进行中为主色，错误为 danger。
-const { value = 0, label = '', state = 'active' } = defineProps<{
+const {
+  value = 0,
+  label = '',
+  state = 'active',
+} = defineProps<{
   /** 0–100 */
   value: number;
   label?: string;

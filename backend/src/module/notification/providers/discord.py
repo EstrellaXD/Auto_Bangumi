@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class DiscordProvider(NotificationProvider):
     """Discord webhook notification provider."""
 
-    def __init__(self, config: "ProviderConfig"):
+    def __init__(self, config: ProviderConfig):
         super().__init__(config)
         self.webhook_url = config.webhook_url
 

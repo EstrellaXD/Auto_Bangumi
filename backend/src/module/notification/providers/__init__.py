@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from module.notification.base import NotificationProvider
 
 # Registry mapping provider type names to their classes
-PROVIDER_REGISTRY: dict[str, type["NotificationProvider"]] = {
+PROVIDER_REGISTRY: dict[str, type[NotificationProvider]] = {
     "telegram": TelegramProvider,
     "discord": DiscordProvider,
     "bark": BarkProvider,
@@ -29,12 +29,12 @@ PROVIDER_REGISTRY: dict[str, type["NotificationProvider"]] = {
 
 __all__ = [
     "PROVIDER_REGISTRY",
-    "TelegramProvider",
-    "DiscordProvider",
     "BarkProvider",
-    "ServerChanProvider",
-    "WecomProvider",
+    "DiscordProvider",
     "GotifyProvider",
     "PushoverProvider",
+    "ServerChanProvider",
+    "TelegramProvider",
     "WebhookProvider",
+    "WecomProvider",
 ]

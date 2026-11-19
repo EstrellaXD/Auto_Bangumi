@@ -4,14 +4,13 @@
 经 ``GET /config/get`` 泄漏；前端只能通过 auth/status 看到连接状态。
 """
 
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from sqlmodel import Field, SQLModel
 
 
 def utcnow_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 class LLMCredential(SQLModel, table=True):
@@ -19,7 +18,7 @@ class LLMCredential(SQLModel, table=True):
     provider_id: str = Field(default="", index=True, unique=True)
     access_token: str = Field(default="")
     refresh_token: str = Field(default="")
-    expires_at: Optional[float] = Field(default=None)  # epoch 秒
+    expires_at: float | None = Field(default=None)  # epoch 秒
     account_label: str = Field(default="")
-    extra: Optional[str] = Field(default=None)  # JSON 字符串（provider 自定义）
+    extra: str | None = Field(default=None)  # JSON 字符串（provider 自定义）
     updated_at: str = Field(default_factory=utcnow_iso)

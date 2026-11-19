@@ -39,7 +39,7 @@ const posterSrc = computed(() =>
           :alt="group.primary.official_title"
           class="calendar-card-img"
           loading="lazy"
-        >
+        />
         <div v-else class="calendar-card-placeholder">
           <ImageOff :size="20" />
           <span class="calendar-card-placeholder-title">
@@ -105,7 +105,8 @@ const posterSrc = computed(() =>
   cursor: pointer;
   user-select: none;
   border-radius: var(--radius-sm);
-  transition: transform var(--transition-fast),
+  transition:
+    transform var(--transition-fast),
     box-shadow var(--transition-fast);
 
   @media (hover: hover) {
@@ -245,7 +246,8 @@ const posterSrc = computed(() =>
   opacity: 0;
   // 不可见时不可点：触屏没有 hover，点卡片左上角不能静默取消置顶
   pointer-events: none;
-  transition: opacity var(--transition-fast),
+  transition:
+    opacity var(--transition-fast),
     background-color var(--transition-fast);
 
   // 只认键盘焦点：触摸点开卡片后焦点留在卡片上，不应让按钮常显

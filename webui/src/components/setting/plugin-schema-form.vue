@@ -44,13 +44,15 @@ function errorOf(field: SchemaField): string {
 // 字段离开焦点后才显示错误，避免一展开就满屏红框；保存时由父组件调用
 // showErrors() 显示全部
 const touched = ref(new Set<string>());
-const showAll = ref(false);
+const showAllErrors = ref(false);
 function shownError(field: SchemaField): string {
-  return showAll.value || props.showAll || touched.value.has(field.key) ? errorOf(field) : '';
+  return showAllErrors.value || props.showAll || touched.value.has(field.key)
+    ? errorOf(field)
+    : '';
 }
 defineExpose({
   showErrors() {
-    showAll.value = true;
+    showAllErrors.value = true;
   },
 });
 
@@ -148,7 +150,7 @@ function setNumber(field: SchemaField, value: string | number) {
           <PluginSchemaForm
             :model-value="row"
             :fields="field.itemFields"
-            :show-all="showAll || props.showAll"
+            :show-all="showAllErrors || props.showAll"
           />
           <AbButton
             size="sm"

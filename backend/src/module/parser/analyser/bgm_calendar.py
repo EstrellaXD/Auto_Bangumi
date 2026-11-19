@@ -30,14 +30,14 @@ async def fetch_bgm_calendar() -> list[dict]:
             continue
         weekday = bgm_weekday - 1  # 1-7 → 0-6
 
-        for item in day_group.get("items", []):
-            items.append(
-                {
-                    "name": item.get("name", ""),  # Japanese title
-                    "name_cn": item.get("name_cn", ""),  # Chinese title
-                    "air_weekday": weekday,
-                }
-            )
+        items.extend(
+            {
+                "name": item.get("name", ""),  # Japanese title
+                "name_cn": item.get("name_cn", ""),  # Chinese title
+                "air_weekday": weekday,
+            }
+            for item in day_group.get("items", [])
+        )
 
     logger.info(f"Fetched {len(items)} airing anime from Bangumi.tv.")
     return items
@@ -69,7 +69,7 @@ def match_weekday(
             return item["air_weekday"]
 
         # Exact match on Japanese/original title
-        if name and (name == title_raw_clean or name == official_title_clean):
+        if name and (name in (title_raw_clean, official_title_clean)):
             return item["air_weekday"]
 
     # Second pass: substring matching
@@ -81,13 +81,21 @@ def match_weekday(
             continue
 
         # Chinese title substring (at least 4 chars to avoid false positives)
-        if name_cn and len(name_cn) >= 4:
-            if name_cn in official_title_clean or official_title_clean in name_cn:
-                return item["air_weekday"]
+        if (
+            name_cn
+            and len(name_cn) >= 4
+            and official_title_clean
+            and (name_cn in official_title_clean or official_title_clean in name_cn)
+        ):
+            return item["air_weekday"]
 
         # Japanese title substring
-        if name and len(name) >= 4:
-            if name in title_raw_clean or title_raw_clean in name:
-                return item["air_weekday"]
+        if (
+            name
+            and len(name) >= 4
+            and title_raw_clean
+            and (name in title_raw_clean or title_raw_clean in name)
+        ):
+            return item["air_weekday"]
 
     return None

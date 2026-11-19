@@ -106,7 +106,7 @@ class TestMockDownloaderAddTorrents:
             tags="ab:42",
         )
         state = mock_dl.get_state()
-        torrent = list(state["torrents"].values())[0]
+        torrent = next(iter(state["torrents"].values()))
         assert torrent["tags"] == "ab:42"
 
     async def test_add_torrent_with_file_bytes(self, mock_dl):

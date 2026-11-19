@@ -147,9 +147,7 @@ class TestTorrentMatching:
             )
             mock_download_client.return_value.__aexit__ = AsyncMock(return_value=False)
 
-            match_torrents_list = getattr(
-                TorrentManager, "_TorrentManager__match_torrents_list"
-            )
+            match_torrents_list = TorrentManager._TorrentManager__match_torrents_list  # ty: ignore[missing-attribute]
             hashes = await match_torrents_list(bangumi)
 
         assert hashes == ["matched"]

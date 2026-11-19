@@ -263,20 +263,22 @@ class TestTestDownloader:
 
 class TestTestRSS:
     def test_invalid_url(self, client, mock_first_run):
-        with patch("module.api.setup._validate_url"):
-            with patch("module.api.setup.RequestContent") as mock_rc:
-                mock_instance = AsyncMock()
-                mock_instance.get_xml = AsyncMock(return_value=None)
-                mock_rc.return_value.__aenter__ = AsyncMock(return_value=mock_instance)
-                mock_rc.return_value.__aexit__ = AsyncMock(return_value=False)
+        with (
+            patch("module.api.setup._validate_url"),
+            patch("module.api.setup.RequestContent") as mock_rc,
+        ):
+            mock_instance = AsyncMock()
+            mock_instance.get_xml = AsyncMock(return_value=None)
+            mock_rc.return_value.__aenter__ = AsyncMock(return_value=mock_instance)
+            mock_rc.return_value.__aexit__ = AsyncMock(return_value=False)
 
-                response = client.post(
-                    "/api/v1/setup/test-rss",
-                    json={"url": "https://invalid.example.com/rss"},
-                )
-                assert response.status_code == 200
-                data = response.json()
-                assert data["success"] is False
+            response = client.post(
+                "/api/v1/setup/test-rss",
+                json={"url": "https://invalid.example.com/rss"},
+            )
+            assert response.status_code == 200
+            data = response.json()
+            assert data["success"] is False
 
 
 class TestRequestValidation:

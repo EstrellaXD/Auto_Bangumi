@@ -12,6 +12,8 @@ class ScheduledTask:
     ``enabled`` 可以是可调用对象，每轮都会重新读取，以便跟随插件配置变化。
     ``initial_delay`` 大于 0 时首次执行前先等待。任务只在程序运行时执行
     （与 RSS 刷新等内置任务一同启停），失败会计入插件熔断。
+    Provider id 只需在插件内唯一：重载或卸载一个插件不会替换或停止其它插件
+    的同名任务。
     """
 
     run: Callable[[], Awaitable[None]]

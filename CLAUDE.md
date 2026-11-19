@@ -24,9 +24,10 @@ cd backend/src && uv run python main.py
 cd backend && uv run pytest
 cd backend && uv run pytest src/test/test_xxx.py -v  # run specific test
 
-# Linting and formatting
+# Linting, formatting and type checking
 cd backend && uv run ruff check src
 cd backend && uv run ruff format src
+cd backend && uv run ty check src
 
 # Add a dependency
 cd backend && uv add <package>
@@ -52,9 +53,11 @@ pnpm build
 # Type checking
 pnpm test:build
 
-# Linting and formatting
+# Linting (oxlint) and formatting (oxfmt)
 pnpm lint
 pnpm lint:fix
+pnpm format
+pnpm format:check
 ```
 
 ### Docker
@@ -125,8 +128,10 @@ webui/src/
 
 ## Code Style
 
-- Python: ruff format (88 char lines), Ruff linter (E, F, I rules), target Python 3.14
-- TypeScript: ESLint (@antfu/eslint-config)
+- Python: ruff format (88 char lines), Ruff linter (E, F, I, UP, B, C4, PIE, SIM, ASYNC, PERF, RUF rules; see `ignore` in pyproject for the deliberate exceptions), ty type checker, target Python 3.14
+  - Type-check suppressions use `# ty: ignore[<rule>]` (always name the rule; unused ones fail CI)
+  - SQLModel column expressions go through `col()` (`col(Model.field).in_(...)`, `col(Model.field) == x` inside `where()`), so they type-check
+- TypeScript: oxlint (`.oxlintrc.json`) + oxfmt (`.oxfmtrc.json`); no ESLint/Prettier
 - Run formatters before committing
 
 ## Git Branching

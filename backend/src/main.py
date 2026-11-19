@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import os
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -76,7 +76,7 @@ class _LazyMcpApp:
         self._lock = asyncio.Lock()
 
     @asynccontextmanager
-    async def running(self) -> AsyncIterator[None]:
+    async def running(self) -> AsyncGenerator[None]:
         async with anyio.create_task_group() as tasks:
             self._tasks = tasks
             yield
@@ -191,10 +191,7 @@ else:
 
 
 if __name__ == "__main__":
-    if os.getenv("IPV6"):
-        host = "::"
-    else:
-        host = os.getenv("HOST", "0.0.0.0")
+    host = "::" if os.getenv("IPV6") else os.getenv("HOST", "0.0.0.0")
     uvicorn.run(
         app,
         host=host,

@@ -1,5 +1,6 @@
 """Tests for module.mcp.security - McpAccessMiddleware, _is_allowed(), and clear_network_cache()."""
 
+from typing import ClassVar
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -21,7 +22,7 @@ class TestIsAllowed:
     def setup_method(self):
         clear_network_cache()
 
-    LOCAL_WHITELIST = [
+    LOCAL_WHITELIST: ClassVar[list[str]] = [
         "127.0.0.0/8",
         "10.0.0.0/8",
         "172.16.0.0/12",

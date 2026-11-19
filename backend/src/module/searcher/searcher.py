@@ -40,7 +40,7 @@ def strip_season_episode(season_raw: str) -> str:
 # and grew unbounded for the life of the process. Values are keyed by parser
 # language because the title is localized while the poster URL usually is not.
 _POSTER_CACHE_MAX = 512
-_poster_cache: "OrderedDict[str, dict[str, tuple[str | None, str | None]]]" = (
+_poster_cache: OrderedDict[str, dict[str, tuple[str | None, str | None]]] = (
     OrderedDict()
 )
 

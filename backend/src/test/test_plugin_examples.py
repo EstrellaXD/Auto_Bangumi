@@ -70,7 +70,7 @@ async def test_manual_pick_routes_store_pick_and_publish_event(manager):
     assert [(pid, ui.slot) for pid, ui in manager.ui_slots()] == [
         ("manual-pick", "bangumi.detail.tab")
     ]
-    assert (manager.web_dir("manual-pick") / "index.js").is_file()  # type: ignore[operator]
+    assert (manager.web_dir("manual-pick") / "index.js").is_file()
 
     routes = PluginRoutes(manager.registry, manager.breaker)
     routes.sync()
@@ -107,7 +107,7 @@ async def test_all_examples_load_in_host_with_expected_providers(tmp_path):
         registry.declare(point)
     mgr = PluginManager(
         SimpleNamespace(
-            plugins=Plugins(allow_unsigned=True, enabled={i: True for i in ids})
+            plugins=Plugins(allow_unsigned=True, enabled=dict.fromkeys(ids, True))
         ),
         registry=registry,
         discover_fn=lambda: (_discover(EXAMPLES, tmp_path / "none"), []),

@@ -343,8 +343,15 @@ function getFieldsForType(type: string) {
         >
           <div class="provider-info">
             <div class="provider-name">
-              <div v-if="brandIcons[provider.type]" :class="brandIcons[provider.type]" />
-              <component :is="lucideIcons[provider.type] ?? Bell" v-else :size="16" />
+              <div
+                v-if="brandIcons[provider.type]"
+                :class="brandIcons[provider.type]"
+              />
+              <component
+                :is="lucideIcons[provider.type] ?? Bell"
+                v-else
+                :size="16"
+              />
               {{ getProviderLabel(provider.type) }}
               <ab-tag
                 v-if="!provider.enabled"
@@ -360,7 +367,11 @@ function getFieldsForType(type: string) {
               :label="$t('config.notification_set.test')"
               @click="testProvider(index)"
             >
-              <LoaderCircle v-if="testingIndex === index" :size="16" class="animate-spin" />
+              <LoaderCircle
+                v-if="testingIndex === index"
+                :size="16"
+                class="animate-spin"
+              />
               <Play v-else :size="16" />
             </ab-icon-button>
             <ab-icon-button
@@ -476,7 +487,11 @@ function getFieldsForType(type: string) {
           :disabled="testingIndex === -999"
           @click="testNewProvider"
         >
-          <LoaderCircle v-if="testingIndex === -999" :size="16" class="animate-spin" />
+          <LoaderCircle
+            v-if="testingIndex === -999"
+            :size="16"
+            class="animate-spin"
+          />
           <Play v-else :size="16" />
           {{ $t('config.notification_set.test') }}
         </ab-button>
@@ -552,7 +567,11 @@ function getFieldsForType(type: string) {
           :disabled="testingIndex === -999"
           @click="testNewProvider"
         >
-          <LoaderCircle v-if="testingIndex === -999" :size="16" class="animate-spin" />
+          <LoaderCircle
+            v-if="testingIndex === -999"
+            :size="16"
+            class="animate-spin"
+          />
           <Play v-else :size="16" />
           {{ $t('config.notification_set.test') }}
         </ab-button>
@@ -641,8 +660,10 @@ function getFieldsForType(type: string) {
   resize: none;
   font-family: var(--font-mono);
   font-size: 13px;
-  transition: border-color var(--transition-fast),
-    background-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    background-color var(--transition-fast),
+    box-shadow var(--transition-fast);
 
   &:focus {
     background: var(--color-surface);

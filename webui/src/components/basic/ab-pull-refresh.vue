@@ -1,7 +1,11 @@
 <script lang="ts" setup>
 import { computed, ref, useTemplateRef } from 'vue';
 
-const { loading = false, threshold = 60, disabled = false } = defineProps<{
+const {
+  loading = false,
+  threshold = 60,
+  disabled = false,
+} = defineProps<{
   loading?: boolean;
   threshold?: number;
   disabled?: boolean;

@@ -20,7 +20,11 @@ vi.mock('@/utils/axios', () => ({ axios: createAxiosMock() }));
 describe('Bangumi API Logic', () => {
   describe('getAll transformation (string to array)', () => {
     // This transformation happens when receiving data from API
-    const transformApiResponse = <T extends { filter: string; rss_link: string }>(item: T) => ({
+    const transformApiResponse = <
+      T extends { filter: string; rss_link: string },
+    >(
+      item: T
+    ) => ({
       ...item,
       filter: item.filter.split(','),
       rss_link: item.rss_link.split(','),
@@ -71,7 +75,11 @@ describe('Bangumi API Logic', () => {
 
   describe('updateRule transformation (array to string)', () => {
     // This transformation happens when sending data to API
-    const transformForUpdate = (rule: { id: number; filter: string[]; rss_link: string[] }) => {
+    const transformForUpdate = (rule: {
+      id: number;
+      filter: string[];
+      rss_link: string[];
+    }) => {
       const { id, ...rest } = rule;
       return {
         ...rest,
@@ -193,7 +201,9 @@ describe('Bangumi API Logic', () => {
     it('should GET api/v1/bangumi/refresh/poster/all when refreshing posters', async () => {
       (axios.get as any).mockResolvedValue({ data: mockApiSuccess });
       await apiBangumi.refreshPoster();
-      expect(axios.get).toHaveBeenCalledWith('api/v1/bangumi/refresh/poster/all');
+      expect(axios.get).toHaveBeenCalledWith(
+        'api/v1/bangumi/refresh/poster/all'
+      );
     });
 
     it('should GET api/v1/bangumi/refresh/calendar when refreshing the calendar', async () => {
@@ -238,13 +248,18 @@ describe('Bangumi API Logic', () => {
         data: { has_mismatch: false, suggestion: null, tmdb_info: null },
       });
       await apiBangumi.detectOffset(request);
-      expect(axios.post).toHaveBeenCalledWith('api/v1/bangumi/detect-offset', request);
+      expect(axios.post).toHaveBeenCalledWith(
+        'api/v1/bangumi/detect-offset',
+        request
+      );
     });
 
     it('should POST api/v1/bangumi/dismiss-review/:id when dismissing a review flag', async () => {
       (axios.post as any).mockResolvedValue({ data: mockApiSuccess });
       await apiBangumi.dismissReview(1);
-      expect(axios.post).toHaveBeenCalledWith('api/v1/bangumi/dismiss-review/1');
+      expect(axios.post).toHaveBeenCalledWith(
+        'api/v1/bangumi/dismiss-review/1'
+      );
     });
 
     it('should PATCH api/v1/bangumi/:id/weekday with the weekday when setting the weekday', async () => {

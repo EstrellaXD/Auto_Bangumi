@@ -92,7 +92,7 @@ class _CoreNotifier:
         self._provider: NotificationProvider = _registered(
             points.NOTIFIER, config.type
         )(config)
-        response = SimpleNamespace(status_code=status_code, json=lambda: {})
+        response = SimpleNamespace(status_code=status_code, json=dict)
         for name in ("post_data", "post_files", "_post_json"):
             setattr(self._provider, name, AsyncMock(return_value=response))
 

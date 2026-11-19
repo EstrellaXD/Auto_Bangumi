@@ -101,10 +101,10 @@ function onSelect(key: string | number) {
     :placement="align === 'right' ? 'bottom-end' : 'bottom-start'"
     :menu-props="
       () => ({
-        'id': listId,
-        'class': 'ab-menu-list',
-        'role': 'menu',
-        'tabindex': -1,
+        id: listId,
+        class: 'ab-menu-list',
+        role: 'menu',
+        tabindex: -1,
         'aria-activedescendant': activeId,
       })
     "

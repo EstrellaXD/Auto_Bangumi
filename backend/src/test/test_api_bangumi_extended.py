@@ -169,16 +169,18 @@ class TestOffsetDetection:
         mock_tmdb_info.series_status = "Ended"
         mock_tmdb_info.virtual_season_starts = None
 
-        with patch("module.api.bangumi.tmdb_parser", return_value=mock_tmdb_info):
-            with patch("module.api.bangumi.detect_offset_mismatch", return_value=None):
-                response = authed_client.post(
-                    "/api/v1/bangumi/detect-offset",
-                    json={
-                        "title": "Test Anime",
-                        "parsed_season": 1,
-                        "parsed_episode": 5,
-                    },
-                )
+        with (
+            patch("module.api.bangumi.tmdb_parser", return_value=mock_tmdb_info),
+            patch("module.api.bangumi.detect_offset_mismatch", return_value=None),
+        ):
+            response = authed_client.post(
+                "/api/v1/bangumi/detect-offset",
+                json={
+                    "title": "Test Anime",
+                    "parsed_season": 1,
+                    "parsed_episode": 5,
+                },
+            )
 
         assert response.status_code == 200
         data = response.json()
@@ -200,19 +202,21 @@ class TestOffsetDetection:
         mock_suggestion.reason = "Detected multi-season broadcast"
         mock_suggestion.confidence = "high"
 
-        with patch("module.api.bangumi.tmdb_parser", return_value=mock_tmdb_info):
-            with patch(
+        with (
+            patch("module.api.bangumi.tmdb_parser", return_value=mock_tmdb_info),
+            patch(
                 "module.api.bangumi.detect_offset_mismatch",
                 return_value=mock_suggestion,
-            ):
-                response = authed_client.post(
-                    "/api/v1/bangumi/detect-offset",
-                    json={
-                        "title": "Test Anime",
-                        "parsed_season": 1,
-                        "parsed_episode": 25,
-                    },
-                )
+            ),
+        ):
+            response = authed_client.post(
+                "/api/v1/bangumi/detect-offset",
+                json={
+                    "title": "Test Anime",
+                    "parsed_season": 1,
+                    "parsed_episode": 25,
+                },
+            )
 
         assert response.status_code == 200
         data = response.json()
@@ -298,9 +302,11 @@ class TestApplyOffset:
         mock_db = MagicMock()
         mock_db.bangumi.apply_offset = AsyncMock(return_value=True)
         mock_rename_all = AsyncMock(return_value=([], []))
-        with patch("module.api.bangumi.Database", _async_db_mock(mock_db)):
-            with patch("module.api.bangumi.rename_all", mock_rename_all):
-                response = authed_client.post("/api/v1/bangumi/apply-offset/1")
+        with (
+            patch("module.api.bangumi.Database", _async_db_mock(mock_db)),
+            patch("module.api.bangumi.rename_all", mock_rename_all),
+        ):
+            response = authed_client.post("/api/v1/bangumi/apply-offset/1")
 
         assert response.status_code == 200
         data = response.json()
@@ -312,9 +318,11 @@ class TestApplyOffset:
         """POST /bangumi/apply-offset/{id} with a non-existent bangumi does not rename."""
         mock_db = MagicMock()
         mock_db.bangumi.apply_offset = AsyncMock(return_value=False)
-        with patch("module.api.bangumi.Database", _async_db_mock(mock_db)):
-            with patch("module.api.bangumi.rename_all") as mock_rename_all:
-                response = authed_client.post("/api/v1/bangumi/apply-offset/999")
+        with (
+            patch("module.api.bangumi.Database", _async_db_mock(mock_db)),
+            patch("module.api.bangumi.rename_all") as mock_rename_all,
+        ):
+            response = authed_client.post("/api/v1/bangumi/apply-offset/999")
 
         assert response.status_code == 404
         mock_rename_all.assert_not_called()
@@ -324,11 +332,13 @@ class TestApplyOffset:
         mock_db = MagicMock()
         mock_db.bangumi.apply_offset = AsyncMock(side_effect=[True, True])
         mock_rename_all = AsyncMock(return_value=([], []))
-        with patch("module.api.bangumi.Database", _async_db_mock(mock_db)):
-            with patch("module.api.bangumi.rename_all", mock_rename_all):
-                response = authed_client.post(
-                    "/api/v1/bangumi/apply-offset/many", json=[1, 2]
-                )
+        with (
+            patch("module.api.bangumi.Database", _async_db_mock(mock_db)),
+            patch("module.api.bangumi.rename_all", mock_rename_all),
+        ):
+            response = authed_client.post(
+                "/api/v1/bangumi/apply-offset/many", json=[1, 2]
+            )
 
         assert response.status_code == 200
         assert mock_db.bangumi.apply_offset.await_count == 2
@@ -339,11 +349,13 @@ class TestApplyOffset:
         mock_db = MagicMock()
         mock_db.bangumi.apply_offset = AsyncMock(side_effect=[True, False])
         mock_rename_all = AsyncMock(return_value=([], []))
-        with patch("module.api.bangumi.Database", _async_db_mock(mock_db)):
-            with patch("module.api.bangumi.rename_all", mock_rename_all):
-                response = authed_client.post(
-                    "/api/v1/bangumi/apply-offset/many", json=[1, 2]
-                )
+        with (
+            patch("module.api.bangumi.Database", _async_db_mock(mock_db)),
+            patch("module.api.bangumi.rename_all", mock_rename_all),
+        ):
+            response = authed_client.post(
+                "/api/v1/bangumi/apply-offset/many", json=[1, 2]
+            )
 
         assert response.status_code == 500
         mock_rename_all.assert_awaited_once()

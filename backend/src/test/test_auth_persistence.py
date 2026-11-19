@@ -2,7 +2,7 @@
 
 import asyncio
 import hashlib
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from unittest.mock import patch
 
 import pytest
@@ -22,7 +22,7 @@ from module.update.auth import migrate_legacy_auth_tokens
 
 @pytest.mark.asyncio
 async def test_sessions_persist_and_are_isolated_between_users(db_engine):
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     async with Database(db_engine) as db:
         alice = await db.user.create_user("alice_user", "alice-password")
         bob = await db.user.create_user("bob_user", "bob-password")
@@ -42,7 +42,7 @@ async def test_sessions_persist_and_are_isolated_between_users(db_engine):
 
 @pytest.mark.asyncio
 async def test_session_tokens_are_hashed_and_expire(db_engine):
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     async with Database(db_engine) as db:
         user = await db.user.create_user("session_user", "session-password")
         raw_token = await db.auth.create_session(
@@ -85,7 +85,7 @@ async def test_last_enabled_user_invariants_and_session_revocation(db_engine):
 
 @pytest.mark.asyncio
 async def test_api_tokens_are_hashed_scoped_and_revocable(db_engine):
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     async with Database(db_engine) as db:
         user = await db.user.create_user("token_user", "token-password")
         stored, raw_token = await db.auth.create_api_token(
@@ -164,7 +164,7 @@ async def test_legacy_config_tokens_preserve_scopes_without_leaking_prefix(db_en
         assert mcp_match and mcp_match[0].username == "import_user"
         assert shared_api_match[1] != mcp_match[1]
 
-        touched_at = datetime.now(timezone.utc)
+        touched_at = datetime.now(UTC)
         await db.auth.touch_api_token(shared_api_match[1], now=touched_at)
         result = await db.session.execute(
             select(ApiToken).where(
@@ -362,7 +362,7 @@ async def test_login_prevents_wal_read_to_write_snapshot_upgrade(tmp_path):
             try:
                 await asyncio.wait_for(asyncio.shield(writer_task), timeout=0.2)
                 writer_finished_before_login = True
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pass
             finally:
                 release_login.set()

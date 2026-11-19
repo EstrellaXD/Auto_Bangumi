@@ -305,15 +305,17 @@ class TestAuthSuccessFailure:
         mock_resp.text = "Internal Server Error"
         mock_client.post = AsyncMock(return_value=mock_resp)
 
-        with patch(
-            "module.downloader.client.qb_downloader.httpx2.AsyncClient",
-            return_value=mock_client,
-        ):
-            with patch(
+        with (
+            patch(
+                "module.downloader.client.qb_downloader.httpx2.AsyncClient",
+                return_value=mock_client,
+            ),
+            patch(
                 "module.downloader.client.qb_downloader.asyncio.sleep",
                 new_callable=AsyncMock,
-            ):
-                result = await qb.auth(retry=2)
+            ),
+        ):
+            result = await qb.auth(retry=2)
 
         assert result is False
         assert mock_client.post.call_count == 2
@@ -339,18 +341,20 @@ class TestAuthConnectErrorLogging:
             side_effect=httpx2.ConnectError("Connection refused")
         )
 
-        with patch(
-            "module.downloader.client.qb_downloader.httpx2.AsyncClient",
-            return_value=mock_client,
-        ):
-            with patch(
+        with (
+            patch(
+                "module.downloader.client.qb_downloader.httpx2.AsyncClient",
+                return_value=mock_client,
+            ),
+            patch(
                 "module.downloader.client.qb_downloader.asyncio.sleep",
                 new_callable=AsyncMock,
-            ):
-                with caplog.at_level(
-                    logging.ERROR, logger="module.downloader.client.qb_downloader"
-                ):
-                    result = await qb.auth(retry=1)
+            ),
+            caplog.at_level(
+                logging.ERROR, logger="module.downloader.client.qb_downloader"
+            ),
+        ):
+            result = await qb.auth(retry=1)
 
         assert result is False
         error_messages = [
@@ -372,18 +376,20 @@ class TestAuthConnectErrorLogging:
         mock_client = AsyncMock()
         mock_client.post = AsyncMock(side_effect=httpx2.ConnectError("refused"))
 
-        with patch(
-            "module.downloader.client.qb_downloader.httpx2.AsyncClient",
-            return_value=mock_client,
-        ):
-            with patch(
+        with (
+            patch(
+                "module.downloader.client.qb_downloader.httpx2.AsyncClient",
+                return_value=mock_client,
+            ),
+            patch(
                 "module.downloader.client.qb_downloader.asyncio.sleep",
                 new_callable=AsyncMock,
-            ):
-                with caplog.at_level(
-                    logging.ERROR, logger="module.downloader.client.qb_downloader"
-                ):
-                    await qb.auth(retry=1)
+            ),
+            caplog.at_level(
+                logging.ERROR, logger="module.downloader.client.qb_downloader"
+            ),
+        ):
+            await qb.auth(retry=1)
 
         error_messages = [
             r.message for r in caplog.records if r.levelno == logging.ERROR
@@ -401,18 +407,20 @@ class TestAuthConnectErrorLogging:
             side_effect=httpx2.ConnectError("Connection refused")
         )
 
-        with patch(
-            "module.downloader.client.qb_downloader.httpx2.AsyncClient",
-            return_value=mock_client,
-        ):
-            with patch(
+        with (
+            patch(
+                "module.downloader.client.qb_downloader.httpx2.AsyncClient",
+                return_value=mock_client,
+            ),
+            patch(
                 "module.downloader.client.qb_downloader.asyncio.sleep",
                 new_callable=AsyncMock,
-            ):
-                with caplog.at_level(
-                    logging.ERROR, logger="module.downloader.client.qb_downloader"
-                ):
-                    result = await qb.auth(retry=1)
+            ),
+            caplog.at_level(
+                logging.ERROR, logger="module.downloader.client.qb_downloader"
+            ),
+        ):
+            result = await qb.auth(retry=1)
 
         assert result is False
         error_messages = [
@@ -434,18 +442,20 @@ class TestAuthConnectErrorLogging:
         mock_client = AsyncMock()
         mock_client.post = AsyncMock(side_effect=httpx2.ConnectError("refused"))
 
-        with patch(
-            "module.downloader.client.qb_downloader.httpx2.AsyncClient",
-            return_value=mock_client,
-        ):
-            with patch(
+        with (
+            patch(
+                "module.downloader.client.qb_downloader.httpx2.AsyncClient",
+                return_value=mock_client,
+            ),
+            patch(
                 "module.downloader.client.qb_downloader.asyncio.sleep",
                 new_callable=AsyncMock,
-            ):
-                with caplog.at_level(
-                    logging.ERROR, logger="module.downloader.client.qb_downloader"
-                ):
-                    await qb.auth(retry=1)
+            ),
+            caplog.at_level(
+                logging.ERROR, logger="module.downloader.client.qb_downloader"
+            ),
+        ):
+            await qb.auth(retry=1)
 
         all_messages = " ".join(r.message for r in caplog.records)
         assert "disable SSL" not in all_messages
@@ -460,18 +470,20 @@ class TestAuthConnectErrorLogging:
         mock_client = AsyncMock()
         mock_client.post = AsyncMock(side_effect=httpx2.ConnectError("refused"))
 
-        with patch(
-            "module.downloader.client.qb_downloader.httpx2.AsyncClient",
-            return_value=mock_client,
-        ):
-            with patch(
+        with (
+            patch(
+                "module.downloader.client.qb_downloader.httpx2.AsyncClient",
+                return_value=mock_client,
+            ),
+            patch(
                 "module.downloader.client.qb_downloader.asyncio.sleep",
                 new_callable=AsyncMock,
-            ):
-                with caplog.at_level(
-                    logging.INFO, logger="module.downloader.client.qb_downloader"
-                ):
-                    await qb.auth(retry=1)
+            ),
+            caplog.at_level(
+                logging.INFO, logger="module.downloader.client.qb_downloader"
+            ),
+        ):
+            await qb.auth(retry=1)
 
         info_messages = [r.message for r in caplog.records if r.levelno == logging.INFO]
         assert any("IP" in msg or "port" in msg for msg in info_messages)
@@ -487,18 +499,20 @@ class TestAuthConnectErrorLogging:
         mock_client = AsyncMock()
         mock_client.post = AsyncMock(side_effect=httpx2.ConnectError("refused"))
 
-        with patch(
-            "module.downloader.client.qb_downloader.httpx2.AsyncClient",
-            return_value=mock_client,
-        ):
-            with patch(
+        with (
+            patch(
+                "module.downloader.client.qb_downloader.httpx2.AsyncClient",
+                return_value=mock_client,
+            ),
+            patch(
                 "module.downloader.client.qb_downloader.asyncio.sleep",
                 new_callable=AsyncMock,
-            ):
-                with caplog.at_level(
-                    logging.ERROR, logger="module.downloader.client.qb_downloader"
-                ):
-                    await qb.auth(retry=1)
+            ),
+            caplog.at_level(
+                logging.ERROR, logger="module.downloader.client.qb_downloader"
+            ),
+        ):
+            await qb.auth(retry=1)
 
         error_messages = [
             r.message for r in caplog.records if r.levelno == logging.ERROR

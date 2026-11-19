@@ -16,6 +16,7 @@
 """
 
 import asyncio
+import contextlib
 import hashlib
 import json
 import logging
@@ -25,10 +26,11 @@ import sqlite3
 import subprocess
 import time
 import zipfile
+from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Callable, Optional
 
+import anyio
 import httpx2
 import semver
 from pydantic import BaseModel
@@ -66,19 +68,19 @@ class UpdateCheckResult(BaseModel):
     """``GET /update/check`` 的返回体：远端最新版本 + 本地覆盖层状态。"""
 
     current: str
-    latest: Optional[str] = None
+    latest: str | None = None
     has_update: bool = False
     channel: str = "stable"
     notes: str = ""
-    published_at: Optional[str] = None
+    published_at: str | None = None
     is_prerelease: bool = False
-    bundle_url: Optional[str] = None
-    sha256_url: Optional[str] = None
-    signature_url: Optional[str] = None
+    bundle_url: str | None = None
+    sha256_url: str | None = None
+    signature_url: str | None = None
     # 本地覆盖层状态
-    applied_version: Optional[str] = None
+    applied_version: str | None = None
     can_rollback: bool = False
-    error: Optional[str] = None
+    error: str | None = None
 
 
 class ApplyResult(BaseModel):
@@ -86,7 +88,7 @@ class ApplyResult(BaseModel):
 
     success: bool
     message: str = ""
-    version: Optional[str] = None
+    version: str | None = None
     restart_required: bool = False
 
 
@@ -97,15 +99,15 @@ class Progress:
     phase: str = "idle"  # idle|checking|downloading|verifying|unpacking|promoting|restarting|error|done
     percent: int = 0
     message: str = ""
-    version: Optional[str] = None
+    version: str | None = None
     restart_required: bool = False
-    error: Optional[str] = None
+    error: str | None = None
 
 
 # --------------------------------------------------------------------------- 纯函数辅助
 
 
-def _parse_semver(value: str) -> Optional[semver.VersionInfo]:
+def _parse_semver(value: str) -> semver.VersionInfo | None:
     try:
         return semver.VersionInfo.parse(value.lstrip("v"))
     except ValueError, TypeError:
@@ -150,7 +152,7 @@ def _safe_extract(zip_path: Path, dest: Path) -> None:
 
 def _read_manifest(unpacked: Path) -> dict:
     manifest_path = unpacked / "manifest.json"
-    with open(manifest_path, "r", encoding="utf-8") as f:
+    with open(manifest_path, encoding="utf-8") as f:
         data = json.load(f)
     if not isinstance(data, dict):
         raise ValueError("manifest.json is not an object")
@@ -166,16 +168,16 @@ class Updater:
     def __init__(
         self,
         *,
-        root: Optional[Path] = None,
-        current_version: Optional[str] = None,
-        image_version: Optional[str] = None,
-        data_db: Optional[Path] = None,
-        app_root: Optional[Path] = None,
-        dependency_syncer: Optional[Callable[[Path], None]] = None,
-        client: Optional[httpx2.AsyncClient] = None,
+        root: Path | None = None,
+        current_version: str | None = None,
+        image_version: str | None = None,
+        data_db: Path | None = None,
+        app_root: Path | None = None,
+        dependency_syncer: Callable[[Path], None] | None = None,
+        client: httpx2.AsyncClient | None = None,
         owner: str = GITHUB_OWNER,
         repo: str = GITHUB_REPO,
-        pubkey_path: Optional[Path] = None,
+        pubkey_path: Path | None = None,
     ) -> None:
         self.root = root if root is not None else DEFAULT_UPDATES_ROOT
         self.data_db = data_db if data_db is not None else Path("data") / "data.db"
@@ -194,7 +196,7 @@ class Updater:
         self.owner = owner
         self.repo = repo
         self._lock = asyncio.Lock()
-        self._cache: Optional[tuple[float, str, UpdateCheckResult]] = None
+        self._cache: tuple[float, str, UpdateCheckResult] | None = None
         self.progress = Progress()
 
     # -------------------------------------------------------------- 进度
@@ -234,9 +236,10 @@ class Updater:
             resp.raise_for_status()
             total = int(resp.headers.get("content-length", 0) or 0)
             done = 0
-            with open(dest, "wb") as f:
+            # 写盘放到线程里，避免大文件下载时阻塞事件循环
+            async with await anyio.open_file(dest, "wb") as f:
                 async for chunk in resp.aiter_bytes(1 << 16):
-                    f.write(chunk)
+                    await f.write(chunk)
                     done += len(chunk)
                     if total:
                         self._set_progress(
@@ -249,10 +252,10 @@ class Updater:
 
     def _find_bundle(
         self, assets: list[dict]
-    ) -> tuple[Optional[str], Optional[str], Optional[str]]:
-        bundle_url: Optional[str] = None
-        sha_url: Optional[str] = None
-        sig_url: Optional[str] = None
+    ) -> tuple[str | None, str | None, str | None]:
+        bundle_url: str | None = None
+        sha_url: str | None = None
+        sig_url: str | None = None
         for asset in assets:
             name = asset.get("name", "")
             url = asset.get("browser_download_url")
@@ -266,7 +269,7 @@ class Updater:
                 bundle_url = url
         return bundle_url, sha_url, sig_url
 
-    def _pick_release(self, releases: list[dict], channel: str) -> Optional[dict]:
+    def _pick_release(self, releases: list[dict], channel: str) -> dict | None:
         candidates: list[tuple[semver.VersionInfo, dict]] = []
         for rel in releases:
             if rel.get("draft"):
@@ -282,7 +285,7 @@ class Updater:
         candidates.sort(key=lambda item: item[0])
         return candidates[-1][1]
 
-    def _applied_version(self) -> Optional[str]:
+    def _applied_version(self) -> str | None:
         applied = self.root / "applied.json"
         try:
             data = json.loads(applied.read_text(encoding="utf-8"))
@@ -367,10 +370,10 @@ class Updater:
         version: str,
         sha256: str,
         manifest: dict,
-        db_snapshot: Optional[dict],
-        schema_version_before: Optional[int],
-        bundle_zip: Optional[Path] = None,
-        signature_b64: Optional[str] = None,
+        db_snapshot: dict | None,
+        schema_version_before: int | None,
+        bundle_zip: Path | None = None,
+        signature_b64: str | None = None,
     ) -> None:
         """把解包好的 staging 提升为 current，旧 current 移到 backup。"""
         current = self.root / "current"
@@ -412,7 +415,7 @@ class Updater:
             json.dumps(applied, indent=2), encoding="utf-8"
         )
 
-    def _snapshot_database(self) -> tuple[Optional[dict], Optional[int]]:
+    def _snapshot_database(self) -> tuple[dict | None, int | None]:
         """Back up the runtime SQLite DB before applying an overlay update."""
         schema_version = _read_db_schema_version(self.data_db)
         if not self.data_db.exists():
@@ -469,7 +472,7 @@ class Updater:
             check=True,
         )
 
-    def _restore_database_snapshot(self, applied: dict) -> Optional[int]:
+    def _restore_database_snapshot(self, applied: dict) -> int | None:
         # 只认 applied.json 里显式记录的快照；不回退到磁盘上残留的
         # db-backup/ 目录，否则第二次回滚会误还原上一轮更新的陈旧快照。
         snapshot = applied.get("db_backup") or {}
@@ -487,10 +490,8 @@ class Updater:
         # 快照是 backup API 生成的独立文件；活库残留的 -wal/-shm 必须清掉。
         for suffix in ("-wal", "-shm"):
             sidecar = self.data_db.with_name(self.data_db.name + suffix)
-            try:
+            with contextlib.suppress(FileNotFoundError):
                 sidecar.unlink()
-            except FileNotFoundError:
-                pass
         shutil.rmtree(backup_db.parent, ignore_errors=True)
         return _read_db_schema_version(self.data_db)
 
@@ -594,7 +595,7 @@ class Updater:
                     restart_required=True,
                     message="update applied; restarting to take effect",
                 )
-            except Exception as exc:  # noqa: BLE001 - 任何失败都要优雅返回
+            except Exception as exc:
                 logger.exception("apply failed")
                 return self._fail(f"apply failed: {exc}")
 
@@ -607,10 +608,8 @@ class Updater:
                 backup = self.root / "backup"
                 applied = self.root / "applied.json"
                 applied_data: dict = {}
-                try:
+                with contextlib.suppress(OSError, ValueError):
                     applied_data = json.loads(applied.read_text(encoding="utf-8"))
-                except OSError, ValueError:
-                    pass
 
                 live_schema = _read_db_schema_version(self.data_db)
                 if live_schema is not None and live_schema > CURRENT_SCHEMA_VERSION:
@@ -732,7 +731,7 @@ class Updater:
                     restart_required=True,
                     message=message,
                 )
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 logger.exception("rollback failed")
                 return self._fail(f"rollback failed: {exc}")
 
@@ -746,7 +745,7 @@ def get_update_progress() -> dict:
     return updater.progress_dict()
 
 
-def _read_db_schema_version(db_path: Path) -> Optional[int]:
+def _read_db_schema_version(db_path: Path) -> int | None:
     if not db_path.exists():
         return None
     try:

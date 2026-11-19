@@ -296,7 +296,7 @@ class TestPathToBangumi:
         """Recognizes S01 style season naming."""
         with patch("module.downloader.path.settings") as mock_settings:
             mock_settings.downloader.path = "/downloads/Bangumi"
-            name, season = path_to_bangumi("/downloads/Bangumi/Anime/S03")
+            _name, season = path_to_bangumi("/downloads/Bangumi/Anime/S03")
 
         assert season == 3
 

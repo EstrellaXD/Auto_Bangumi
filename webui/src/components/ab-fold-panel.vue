@@ -80,7 +80,8 @@ const id = useId();
   border: none;
   border-bottom: 1px solid transparent;
   cursor: pointer;
-  transition: color var(--transition-normal),
+  transition:
+    color var(--transition-normal),
     border-color var(--transition-normal);
 
   @include forTouch {
@@ -126,7 +127,9 @@ const id = useId();
 // naive-ui 的选择器带三层祖先类，这里写全才能压过
 .fold-panel
   :deep(
-    .n-collapse-item .n-collapse-item__content-wrapper .n-collapse-item__content-inner
+    .n-collapse-item
+      .n-collapse-item__content-wrapper
+      .n-collapse-item__content-inner
   ) {
   padding-top: 0;
 }
@@ -137,7 +140,8 @@ const id = useId();
   font-size: 14px;
   color: var(--color-text);
   overflow-x: hidden;
-  transition: background-color var(--transition-normal),
+  transition:
+    background-color var(--transition-normal),
     color var(--transition-normal);
 }
 

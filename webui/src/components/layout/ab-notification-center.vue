@@ -79,7 +79,8 @@ function onClearClick() {
             v-if="unreadCount > 0"
             class="notification-head-unread"
             :title="$t('notifications.unread', { n: unreadCount })"
-          >{{ unreadCount }}</span>
+            >{{ unreadCount }}</span
+          >
         </span>
         <div class="notification-head-actions">
           <ab-button
@@ -124,7 +125,9 @@ function onClearClick() {
           <div class="notification-content">
             <div class="notification-title">
               {{ store.titleOf(msg) }}
-              <span v-if="msg.count > 1" class="notification-count">×{{ msg.count }}</span>
+              <span v-if="msg.count > 1" class="notification-count"
+                >×{{ msg.count }}</span
+              >
             </div>
             <div class="notification-body">
               {{ store.bodyOf(msg) }}
@@ -201,7 +204,8 @@ function onClearClick() {
   cursor: pointer;
   user-select: none;
   color: var(--color-text-secondary);
-  transition: color var(--transition-fast),
+  transition:
+    color var(--transition-fast),
     background-color var(--transition-fast);
   display: flex;
   align-items: center;
@@ -419,7 +423,9 @@ function onClearClick() {
   padding: 4px;
   border-radius: var(--radius-sm);
   opacity: 0;
-  transition: opacity var(--transition-fast), color var(--transition-fast);
+  transition:
+    opacity var(--transition-fast),
+    color var(--transition-fast);
 
   &:hover {
     color: var(--color-danger, #ef4444);

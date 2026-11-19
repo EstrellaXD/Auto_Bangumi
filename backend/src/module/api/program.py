@@ -35,7 +35,7 @@ async def restart(ctx: AppContext = Depends(get_context)):
                 "msg_en": "Failed to restart program.",
                 "msg_zh": "重启程序失败。",
             },
-        )
+        ) from e
 
 
 @router.post("/start", response_model=APIResponse)
@@ -52,7 +52,7 @@ async def start(ctx: AppContext = Depends(get_context)):
                 "msg_en": "Failed to start program.",
                 "msg_zh": "启动程序失败。",
             },
-        )
+        ) from e
 
 
 @router.post("/stop", response_model=APIResponse)

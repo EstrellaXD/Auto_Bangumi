@@ -76,7 +76,7 @@ function clear() {
       :aria-describedby="field?.describedBy.value"
       :aria-invalid="invalid || undefined"
       @input="onInput"
-    >
+    />
 
     <button
       v-if="clearable && String(model).length > 0 && !disabled"
@@ -159,8 +159,10 @@ function clear() {
   background: var(--color-surface-2);
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
-  transition: border-color var(--transition-fast),
-    background-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    background-color var(--transition-fast),
+    box-shadow var(--transition-fast);
 
   @include forTablet {
     width: 200px;

@@ -5,6 +5,7 @@ RSS 订阅的 ``parser`` 字段选择元数据源：内置的 ``mikan``（解析
 未登记的取值（如 ``none``）不做任何补全。
 """
 
+import contextlib
 import logging
 from dataclasses import replace
 
@@ -154,8 +155,6 @@ async def enrich_movie(movie: Movie, rss: RSSItem, torrent: Torrent) -> None:
         return
     movie.official_title = result.official_title
     if result.year:
-        try:
+        with contextlib.suppress(ValueError, TypeError):
             movie.year = int(result.year)
-        except ValueError, TypeError:
-            pass
     movie.poster_link = result.poster_link

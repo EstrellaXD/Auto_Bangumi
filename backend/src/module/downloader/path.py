@@ -15,12 +15,12 @@ logger = logging.getLogger(__name__)
 
 if PLATFORM == "Windows":
     # PLATFORM is a runtime config value, not the actual OS (`sys.platform`),
-    # so mypy can't special-case this branch: it type-checks both arms and
+    # so the type checker can't special-case this branch: it checks both arms and
     # sees two incompatible bindings for the same name `Path`. Both classes
     # share the PurePath interface (.suffix/.parts/joining) used below.
-    from pathlib import PureWindowsPath as Path  # type: ignore[assignment]
+    from pathlib import PureWindowsPath as Path
 else:
-    from pathlib import Path  # type: ignore[assignment]
+    from pathlib import Path
 
 
 _MEDIA_SUFFIXES = frozenset({".mp4", ".mkv"})
