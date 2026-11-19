@@ -319,6 +319,30 @@ class TestSearchSite:
 
 
 class TestPluginTasks:
+    async def test_same_local_id_reload_and_unload_are_isolated(self, registry):
+        scheduler, bridge, _ = self.make(registry)
+        spec = ScheduledTask(AsyncMock(), 3600)
+        for owner in ("first", "second"):
+            registry.add_provider(
+                points.SCHEDULED_TASK, ProviderEntry(owner, "sync", lambda: spec)
+            )
+        await bridge.sync()
+        first, second = scheduler.tasks
+        assert [t.name for t in scheduler.tasks] == [
+            "plugin:first/sync",
+            "plugin:second/sync",
+        ]
+
+        registry.remove_plugin("first")
+        registry.add_provider(
+            points.SCHEDULED_TASK, ProviderEntry("first", "sync", lambda: spec)
+        )
+        await bridge.sync()
+        assert second in scheduler.tasks and first not in scheduler.tasks
+        registry.remove_plugin("first")
+        await bridge.sync()
+        assert scheduler.tasks == [second]
+
     def make(self, registry, threshold=5):
         scheduler = Scheduler([])
         tripped: list[str] = []
@@ -337,7 +361,7 @@ class TestPluginTasks:
         scheduler.start_all()
         await bridge.sync()
         [task] = scheduler.tasks
-        assert task.name == "plugin:ext:sync" and task.running
+        assert task.name == "plugin:ext/sync" and task.running
         await asyncio.wait_for(ran.wait(), 1)
 
         registry.remove_plugin("ext")
@@ -412,7 +436,7 @@ class TestPluginTasks:
             ProviderEntry("ext", "b", lambda: ScheduledTask(AsyncMock(), 60)),
         )
         await bridge.sync()
-        assert [t.name for t in scheduler.tasks] == ["plugin:ext:b"]
+        assert [t.name for t in scheduler.tasks] == ["plugin:ext/b"]
         assert tripped == ["bad"]
 
     async def test_enabled_flip_skips_run(self, registry):
