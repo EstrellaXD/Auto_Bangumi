@@ -84,7 +84,7 @@ class PluginTasks:
                 self._breaker.record_success(plugin_id)
 
         return PeriodicTask(
-            name=f"plugin:{plugin_id}:{task_id}",
+            name=f"plugin:{task_id}",
             run=run,
             interval=lambda: interval,
             initial_delay=initial_delay,

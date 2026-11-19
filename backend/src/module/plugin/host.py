@@ -34,7 +34,7 @@ POINTS = (
     ),
     ExtensionPoint(points.LLM_PROVIDER, "provider", "LLM 解析提供商（llm.provider）"),
     ExtensionPoint(points.SEARCH_SITE, "provider", "搜索站点"),
-    ExtensionPoint(points.SCHEDULED_TASK, "provider", "定时任务"),
+    ExtensionPoint(points.SCHEDULED_TASK, "provider", "定时任务", scoped=True),
     # --- P3 ingest ---
     ExtensionPoint(
         points.METADATA_PROVIDER, "provider", "元数据源（RSS 订阅的 parser）"
