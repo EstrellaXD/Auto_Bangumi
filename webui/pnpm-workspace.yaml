@@ -5,10 +5,11 @@ shellEmulator: true
 packages:
   - packages/*
 
+patchedDependencies:
+  vueuc@0.4.66: patches/vueuc@0.4.66.patch
+
 allowBuilds:
   # sass 的可选依赖，平台预编译包已覆盖，无需跑源码构建
   '@parcel/watcher': false
   esbuild: true
   vue-demi: true
-patchedDependencies:
-  vueuc@0.4.66: patches/vueuc@0.4.66.patch
