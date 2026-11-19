@@ -7,12 +7,41 @@
 from dataclasses import dataclass
 from typing import ClassVar
 
+from .bangumi import BangumiSnapshot
+from .library import LibraryFile
 from .rename import FileKind
 
 
 @dataclass(frozen=True, slots=True)
 class Event:
     kind: ClassVar[str] = "event"
+
+
+@dataclass(frozen=True, slots=True)
+class LibraryFilesCommitted(Event):
+    kind: ClassVar[str] = "library.files_committed"
+    operation_id: str
+    download_id: str
+    bangumi_id: int
+    files: tuple[LibraryFile, ...]
+    media_identity: str
+    mapping_revision: str
+
+
+@dataclass(frozen=True, slots=True)
+class BangumiMappingChanged(Event):
+    kind: ClassVar[str] = "bangumi.mapping_changed"
+    old: BangumiSnapshot
+    new: BangumiSnapshot
+
+
+@dataclass(frozen=True, slots=True)
+class HistoryCleared(Event):
+    kind: ClassVar[str] = "history.cleared"
+    operation_id: str
+    bangumi_id: int
+    release_ids: tuple[int, ...]
+    revision: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -72,6 +101,21 @@ class SystemEvent(Event):
     def i18n(self) -> tuple[str, dict]:
         """(i18n key, 插值参数)。默认 key 为 ``notifications.kind.<kind>``。"""
         return f"notifications.kind.{self.kind}", self.payload()
+
+
+@dataclass(frozen=True, slots=True)
+class PluginUpdateAvailable(SystemEvent):
+    kind: ClassVar[str] = "plugin_update_available"
+    once: ClassVar[bool] = True
+    plugin_id: str
+    version: str
+    release_url: str
+
+    def dedup_key(self) -> str:
+        return f"plugin-update:{self.plugin_id}:{self.version}"
+
+    def describe(self) -> tuple[str, str]:
+        return "插件有新版本", f"{self.plugin_id} {self.version}\n{self.release_url}"
 
 
 @dataclass(frozen=True, slots=True)

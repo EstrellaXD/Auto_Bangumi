@@ -224,6 +224,50 @@ class PluginManager:
 
     # ------------------------------------------------------------ status
 
+    async def replace_local(self, plugin_id, install, rollback):
+        """更新器在维护屏障内调用；watcher 与启停共享锁，加载失败恢复旧包。"""
+        async with self._lock:
+            candidate = self._candidates.get(plugin_id)
+            if candidate is None or candidate.source != "local":
+                raise ValueError("Only local plugins can use local-source updates")
+            await self._deactivate(plugin_id)
+            try:
+                await install()
+                self._failed.pop(plugin_id, None)
+                self._rediscover()
+                self._probe_schemas()
+                candidate = self._candidates[plugin_id]
+                if self._blocked_reason(candidate) is None:
+                    await self._activate(candidate)
+                    if plugin_id not in self._active:
+                        raise RuntimeError("Updated plugin failed to load")
+            except BaseException:
+                await self._deactivate(plugin_id)
+                await rollback()
+                self._failed.pop(plugin_id, None)
+                self._rediscover()
+                self._probe_schemas()
+                candidate = self._candidates.get(plugin_id)
+                if candidate is not None and self._blocked_reason(candidate) is None:
+                    await self._activate(candidate)
+                raise
+        await self._notify_change()
+
+    async def restore_local(self, plugin_id, restore):
+        """恢复中断的本地更新；先卸载再替换，即使当前目录已丢失。"""
+        async with self._lock:
+            await self._deactivate(plugin_id)
+            await restore()
+            self._failed.pop(plugin_id, None)
+            self._rediscover()
+            self._probe_schemas()
+            candidate = self._candidates.get(plugin_id)
+            if candidate is not None and self._blocked_reason(candidate) is None:
+                await self._activate(candidate)
+                if plugin_id not in self._active:
+                    raise RuntimeError("Restored plugin failed to load")
+        await self._notify_change()
+
     def statuses(self) -> list[PluginStatus]:
         result = []
         for plugin_id in sorted(self._candidates):

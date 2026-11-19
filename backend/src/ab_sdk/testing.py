@@ -37,16 +37,22 @@ from urllib.parse import urlparse
 
 from pydantic import BaseModel
 
+from .bangumi import BangumiService
 from .downloader import (
     AddResult,
     CoreDownloaderClient,
     DownloaderCapabilities,
 )
+from .downloads import DownloadService
 from .events import Event
+from .library import LibraryService
+from .maintenance import MaintenanceService
+from .metadata import MetadataService
 from .notify import NotificationMessage, Notifier
 from .plugin import Plugin
 from .rename import RenameInput, RenameSkipped, RenameStrategy
 from .search import SearchSite
+from .updates import PluginUpdates
 
 P = TypeVar("P", bound=Plugin[Any])
 
@@ -96,6 +102,12 @@ class FakeContext:
         plugin_id: str,
         config: BaseModel | None,
         data_dir: Path,
+        downloads: DownloadService | None = None,
+        bangumi: BangumiService | None = None,
+        library: LibraryService | None = None,
+        maintenance: MaintenanceService | None = None,
+        updates: PluginUpdates | None = None,
+        metadata: MetadataService | None = None,
     ) -> None:
         self.plugin_id = plugin_id
         self.config = config
@@ -103,6 +115,42 @@ class FakeContext:
         self.bus = RecordingBus()
         self.kv = MemoryKV()
         self.data_dir = data_dir
+        self._downloads = downloads
+        self._bangumi = bangumi
+        self.library = library or NativeLibraryService()
+        self._maintenance = maintenance
+        self._updates = updates
+        self._metadata = metadata
+
+    @property
+    def metadata(self) -> MetadataService:
+        if self._metadata is None:
+            raise RuntimeError("Pass a metadata service to create_plugin()")
+        return self._metadata
+
+    @property
+    def updates(self) -> PluginUpdates:
+        if self._updates is None:
+            raise RuntimeError("Pass an updates service to create_plugin()")
+        return self._updates
+
+    @property
+    def maintenance(self) -> MaintenanceService:
+        if self._maintenance is None:
+            raise RuntimeError("Pass a maintenance service to create_plugin()")
+        return self._maintenance
+
+    @property
+    def downloads(self) -> DownloadService:
+        if self._downloads is None:
+            raise RuntimeError("Pass a downloads service to create_plugin()")
+        return self._downloads
+
+    @property
+    def bangumi(self) -> BangumiService:
+        if self._bangumi is None:
+            raise RuntimeError("Pass a bangumi service to create_plugin()")
+        return self._bangumi
 
 
 def create_plugin(
@@ -111,16 +159,43 @@ def create_plugin(
     *,
     plugin_id: str = "test-plugin",
     data_dir: Path | None = None,
+    downloads: DownloadService | None = None,
+    bangumi: BangumiService | None = None,
+    library: LibraryService | None = None,
+    maintenance: MaintenanceService | None = None,
+    updates: PluginUpdates | None = None,
+    metadata: MetadataService | None = None,
 ) -> tuple[P, FakeContext]:
     """按宿主的规则校验配置并构造插件（不调用 setup）。"""
     config = None
     if plugin_cls.config_model is not None:
         config = plugin_cls.config_model.model_validate(options or {})
-    ctx = FakeContext(plugin_id, config, data_dir or Path("plugin-data") / plugin_id)
+    ctx = FakeContext(
+        plugin_id,
+        config,
+        data_dir or Path("plugin-data") / plugin_id,
+        downloads,
+        bangumi,
+        library,
+        maintenance,
+        updates,
+        metadata,
+    )
     return plugin_cls(ctx), ctx
 
 
 # ----------------------------------------------------------------- 契约套件
+
+
+class NativeLibraryService:
+    """旧插件测试默认仍处于原生整理模式；需要历史时注入自己的替身。"""
+
+    async def selected(self) -> str:
+        return "native"
+
+    async def commits(self, *, bangumi_id=None, cursor=None, limit=100):
+        return (), None
+
 
 T = TypeVar("T")
 
@@ -348,3 +423,65 @@ class SearchSiteContract:
 
     def test_parser_is_known_metadata_source(self) -> None:
         assert self.create().parser in ("mikan", "tmdb")
+
+
+class DownloadPreflightContract:
+    """准入 Provider：同步输入不可变，必须给出明确的 allow/hold/reject。"""
+
+    def create(self):
+        raise NotImplementedError
+
+    def samples(self):
+        """覆盖并返回至少一个 AdmissionRequest；建议包含尚未选择的版本。"""
+        raise NotImplementedError
+
+    def test_preflight_returns_explicit_decision(self):
+        from .admission import Admission
+
+        async def run():
+            requests = self.samples()
+            assert requests, "Supply at least one admission request"
+            impl = self.create()
+            for request in requests:
+                result = await impl.preflight(request)
+                assert isinstance(result, Admission)
+                assert result.decision in {"allow", "hold", "reject"}
+                assert isinstance(result.reason, str)
+
+        asyncio.run(run())
+
+
+class OrganizerContract:
+    """整理器的返回值只引用请求中的已完成、已选文件；允许 None 表示无变化。"""
+
+    def create(self):
+        raise NotImplementedError
+
+    def samples(self):
+        raise NotImplementedError
+
+    def test_organizer_returns_only_completed_files(self):
+        from .library import OrganizeResult
+
+        async def run():
+            requests = self.samples()
+            assert requests, "Supply at least one organizer request"
+            impl = self.create()
+            for request in requests:
+                result = await impl.organize(request)
+                if result is None:
+                    continue
+                assert isinstance(result, OrganizeResult)
+                assert result.operation_id and result.files
+                allowed = {
+                    f.file_id
+                    for f in request.files.files
+                    if f.selected and f.progress >= 1
+                }
+                assert len({f.file_id for f in result.files}) == len(result.files)
+                for target in result.files:
+                    assert target.file_id in allowed
+                    assert Path(target.path).is_absolute()
+                    assert target.kind in {"media", "subtitle", "music", "archive"}
+
+        asyncio.run(run())

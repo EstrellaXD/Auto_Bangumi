@@ -48,10 +48,17 @@ def ctx():
 
 
 class TestBuild:
-    def test_build_registers_five_named_tasks(self):
+    def test_build_registers_named_tasks(self):
         built = AppContext.build(real_settings)
         names = [t.name for t in built.scheduler.tasks]
-        assert names == ["rss", "rename", "offset_scan", "calendar", "update_check"]
+        assert names == [
+            "rss",
+            "rename",
+            "offset_scan",
+            "calendar",
+            "update_check",
+            "plugin_update_check",
+        ]
 
     def test_build_does_no_io(self):
         """build() is pure wiring: not running, startup not done."""

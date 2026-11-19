@@ -330,8 +330,8 @@ def download_client(mock_qb_client):
     return client
 
 
-async def add_magnet(client, bangumi):
-    torrent = make_torrent(url="magnet:?xt=urn:btih:abc")
+async def add_magnet(client, bangumi, url="magnet:?xt=urn:btih:abc"):
+    torrent = make_torrent(url=url)
     with patch("module.downloader.download_client.RequestContent") as MockReq:
         MockReq.return_value.__aenter__ = AsyncMock(return_value=AsyncMock())
         MockReq.return_value.__aexit__ = AsyncMock(return_value=False)
@@ -400,8 +400,13 @@ class TestTorrentAdding:
             lambda request: replace(request, **changes),
         )
         bangumi = make_bangumi(id=3)
-        for _ in range(3):
-            assert await add_magnet(download_client, bangumi) is AddResult.ADDED
+        for i in range(3):
+            assert (
+                await add_magnet(
+                    download_client, bangumi, f"magnet:?xt=urn:btih:abc{i}"
+                )
+                is AddResult.ADDED
+            )
         kwargs = mock_qb_client.add_torrents.call_args.kwargs
         assert (kwargs["category"], kwargs["tags"]) == ("Bangumi", "ab:3")
         assert kwargs["save_path"] == bangumi.save_path

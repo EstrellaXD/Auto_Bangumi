@@ -92,6 +92,10 @@ class MediaServerRefresh(Plugin[Options]):
     async def on_linked(self, event: Event) -> None:
         self._schedule(event.kind)
 
+    @subscribe("library.files_committed")
+    async def on_library_committed(self, event: Event) -> None:
+        self._schedule(event.kind)
+
     def _schedule(self, kind: str) -> None:
         if not self.configured:
             return

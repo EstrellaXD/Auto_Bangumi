@@ -34,24 +34,28 @@ async def _fetch_torrent_files(
     req: RequestContent, torrents: list[Torrent]
 ) -> list[bytes]:
     """抓取种子文件内容：同主机串行加延时，不同主机并行，失败项丢弃（#1052）。"""
-    by_host: dict[str, list[Torrent]] = defaultdict(list)
-    for t in torrents:
-        by_host[urlparse(t.url).netloc].append(t)
+    by_host: dict[str, list[tuple[int, Torrent]]] = defaultdict(list)
+    for position, t in enumerate(torrents):
+        by_host[urlparse(t.url).netloc].append((position, t))
 
-    async def _fetch_host_group(items: list[Torrent]) -> list[bytes]:
-        files: list[bytes] = []
-        for i, t in enumerate(items):
+    async def _fetch_host_group(
+        items: list[tuple[int, Torrent]],
+    ) -> list[tuple[int, bytes]]:
+        files: list[tuple[int, bytes]] = []
+        for i, (position, t) in enumerate(items):
             if i and TORRENT_FETCH_PER_HOST_DELAY:
                 await asyncio.sleep(TORRENT_FETCH_PER_HOST_DELAY)
             content = await req.get_content(t.url)
             if content is not None:
-                files.append(content)
+                files.append((position, content))
         return files
 
     groups = await asyncio.gather(
         *[_fetch_host_group(items) for items in by_host.values()]
     )
-    return [f for group in groups for f in group]
+    return [
+        content for _, content in sorted(item for group in groups for item in group)
+    ]
 
 
 def _valid_add_request(request: AddRequest) -> bool:
@@ -401,6 +405,11 @@ class DownloadClient:
     async def rename_torrent_file(
         self, _hash, old_path, new_path, verify: bool = True
     ) -> RenameResult:
+        if settings.plugins.slots.organizer != "native":
+            return RenameResult(
+                RenameOutcome.RETRYABLE_FAILURE,
+                detail="Selected organizer owns source file operations",
+            )
         if not self._supports("can_rename", "rename_torrent_file"):
             return RenameResult(
                 RenameOutcome.RETRYABLE_FAILURE,
@@ -455,6 +464,13 @@ class DownloadClient:
         await self.client.torrents_resume(hashes)
 
     async def add_torrent(self, torrent: Torrent | list, bangumi: Bangumi) -> AddResult:
+        from module.plugin.admission import HostAdmissionService
+
+        return await HostAdmissionService().submit_with_client(self, torrent, bangumi)
+
+    async def _add_torrent_direct(
+        self, torrent: Torrent | list, bangumi: Bangumi
+    ) -> AddResult:
         """Download a torrent (or list of torrents) for the given bangumi entry.
 
         Handles both magnet links and .torrent file URLs, fetching file bytes
@@ -479,6 +495,16 @@ class DownloadClient:
                     torrent_file = None
                 else:
                     torrent_file = await _fetch_torrent_files(req, torrent)
+                    from module.plugin.admission import submission_options
+
+                    if len(torrent_file) != len(torrent) and (
+                        submission_options.get() is not None
+                        or settings.plugins.slots.download_preflight
+                        or settings.plugins.slots.organizer != "native"
+                    ):
+                        return (
+                            AddResult.FAILED
+                        )  # 不把部分抓取的资源错误关联到其他种子。
                     if not torrent_file:
                         logger.warning(
                             f"Failed to fetch torrent files for: {bangumi.official_title}"
@@ -504,6 +530,11 @@ class DownloadClient:
             save_path, category, tags = await _apply_adding_hooks(
                 torrent, bangumi, save_path, category, tags
             )
+        from module.plugin.admission import before_send
+
+        starting = before_send.get()
+        if starting is not None:
+            await starting(torrent_url, torrent_file)
         try:
             result = await self.client.add_torrents(
                 torrent_urls=torrent_url,

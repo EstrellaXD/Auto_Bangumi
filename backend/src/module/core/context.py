@@ -107,6 +107,9 @@ class AppContext:
         # lifespan then skips auto-starting background tasks, matching the old
         # Program.startup() early-return.
         self.first_run_boot = False
+        from module.plugin.maintenance import configure
+
+        configure(self)
 
     async def _on_plugins_changed(self) -> None:
         """插件加载/重载/停用后，重建依赖插件 Provider 的派生状态。"""
@@ -127,6 +130,8 @@ class AppContext:
         ``NotificationManager.rebuild()`` mutates in place, so a config reload is
         reflected without re-wiring the tasks; ``interval`` reads settings live.
         """
+        from module.plugin.local_updates import check_local_updates
+
         analyser = RSSAnalyser()
         # 渠道可能由插件提供，插件启动后（plugins.on_change）才首次加载，
         # 避免启动时对插件渠道误报「未知类型」
@@ -163,6 +168,13 @@ class AppContext:
                     interval=lambda: UPDATE_CHECK_INTERVAL,
                     initial_delay=UPDATE_CHECK_INITIAL_DELAY,
                     enabled=lambda: settings_obj.update.auto_check,
+                ),
+                PeriodicTask(
+                    name="plugin_update_check",
+                    run=check_local_updates,
+                    interval=lambda: UPDATE_CHECK_INTERVAL,
+                    initial_delay=UPDATE_CHECK_INITIAL_DELAY,
+                    enabled=lambda: bool(settings_obj.plugins.local_update_sources),
                 ),
             ]
         )
@@ -287,7 +299,13 @@ class AppContext:
         """Body of the background start task: wait for the downloader, then start loops."""
         await self._wait_for_downloader()
         async with self._lifecycle_lock:
-            if not Checker.check_first_run() and not self.scheduler.running:
+            from module.plugin.maintenance import blocked
+
+            if (
+                not Checker.check_first_run()
+                and not self.scheduler.running
+                and not await blocked()
+            ):
                 self.scheduler.start_all()
         logger.info("Program running.")
 
@@ -316,6 +334,15 @@ class AppContext:
             return await self._start_tasks_unlocked()
 
     async def _start_tasks_unlocked(self) -> ResponseModel:
+        from module.plugin.maintenance import blocked
+
+        if await blocked():
+            return ResponseModel(
+                status=False,
+                status_code=409,
+                msg_en="Maintenance recovery required.",
+                msg_zh="存在未完成的维护任务，请先恢复。",
+            )
         await self._reload_settings_unlocked()
         if not self.scheduler.running and (
             self._start_task is None or self._start_task.done()
@@ -436,4 +463,7 @@ class AppContext:
         await self.plugins.apply_settings()
         if self.scheduler.running:
             await self.scheduler.stop_all()
-            self.scheduler.start_all()
+            from module.plugin.maintenance import blocked
+
+            if not await blocked():
+                self.scheduler.start_all()

@@ -198,6 +198,24 @@
       "category_id_invalid": "分类 ID 必须是数字（多个用逗号分隔）"
     },
     "plugins_set": {
+      "recovery": "维护任务需要恢复",
+      "restore_code": "恢复旧插件",
+      "acknowledge": "确认已完成修复",
+      "recovery_hint": "AB 任务保持暂停。中断的插件更新可恢复旧代码；其他维护请完成修复后再确认。随后通过开始按钮恢复 AB。",
+      "refresh_status": "刷新状态",
+
+      "organizer": "媒体库整理器",
+      "preflight": "下载准入",
+      "native": "AutoBangumi 原生",
+      "none": "未启用",
+      "pipeline_hint": "所选提供商独占该流程；不可用时暂停。切换前会停止任务并备份。",
+      "update_source": "更新来源（GitHub owner/repo）",
+      "update_hint": "信任此仓库为该本地插件发布的版本。AB 运行时每天检查，点击后安装。备份保留在 config/plugin-backups。",
+      "check_update": "检查更新",
+      "apply_update": "更新至 {version}",
+      "up_to_date": "已是最新版",
+      "save_source": "保存来源",
+
       "title": "插件",
       "empty": "未发现插件。可以在插件市场中安装；或把插件目录放进 config/plugins/local/（目录名与插件 id 相同）、用 pip 安装，然后重启。",
       "allow_unsigned": "允许未签名插件",
@@ -829,6 +847,10 @@
       },
       "downloader_unavailable": {
         "title": "下载器连接异常"
+      },
+      "plugin_update_available": {
+        "title": "插件有新版本",
+        "body": "{plugin_id} {version}\n{release_url}"
       },
       "update_available": {
         "title": "发现新版本",

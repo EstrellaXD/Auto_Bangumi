@@ -7,6 +7,9 @@ import AbSkeleton from '../basic/ab-skeleton.vue';
 import AbSwitch from '../basic/ab-switch.vue';
 import AbTag from '../basic/ab-tag.vue';
 import PluginSchemaForm from './plugin-schema-form.vue';
+import PluginPipelines from './plugin-pipelines.vue';
+import PluginLocalUpdate from './plugin-local-update.vue';
+import PluginMaintenance from './plugin-maintenance.vue';
 import type { PluginInfo, PluginsOverview } from '#/plugins';
 import { apiPlugins } from '@/api/plugins';
 import { useConfirm } from '@/hooks/useConfirm';
@@ -28,6 +31,7 @@ const router = useRouter();
 const { confirm } = useConfirm();
 const configStore = useConfigStore();
 
+const maintenancePanel = ref<InstanceType<typeof PluginMaintenance> | null>(null);
 const overview = ref<PluginsOverview | null>(null);
 const drafts = ref<Record<string, Record<string, unknown>>>({});
 // 并发操作各自占用一个 key，互不覆盖对方的加载态
@@ -61,6 +65,7 @@ async function load() {
   loadError.value = false;
   try {
     apply(await apiPlugins.list());
+    await maintenancePanel.value?.load();
   } catch {
     loadError.value = true;
     message.error(t('config.plugins_set.load_failed'));
@@ -218,6 +223,9 @@ onActivated(async () => {
         />
       </AbField>
 
+      <PluginMaintenance ref="maintenancePanel" />
+      <PluginPipelines @updated="load" />
+
       <p v-if="!overview.plugins.length" class="plugins__empty">
         {{ $t('config.plugins_set.empty') }}
       </p>
@@ -279,6 +287,8 @@ onActivated(async () => {
             })
           }}
         </p>
+
+        <PluginLocalUpdate v-if="plugin.source === 'local'" :plugin="plugin" :allow-unsigned="overview.allow_unsigned" @updated="load" />
 
         <details class="plugin__options">
           <summary>

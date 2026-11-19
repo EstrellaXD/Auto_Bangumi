@@ -42,6 +42,8 @@ extension_points = ["notifier"]  # 可选：只用于签名目录的展示
 | `log` | 带 `plugin.<id>` 前缀的 logger |
 | `kv` | 插件私有的持久化键值存储（`get` / `set` / `delete`），值须可 JSON 序列化 |
 | `data_dir` | `config/plugin-data/<id>/`，首次访问时创建 |
+| `downloads` / `bangumi` / `library` / `metadata` | [下载与媒体库服务](/dev/plugins/services) |
+| `maintenance` / `updates` | 维护、恢复与用户指定来源的本地更新 |
 | `bus` | 事件总线：`publish(event)`、`subscribe(kind, handler)` |
 
 插件只应 import `ab_sdk`，不要 import `module.*`：后者是宿主内部实现，随时可能重构。

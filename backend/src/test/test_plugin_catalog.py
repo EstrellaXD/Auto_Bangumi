@@ -192,7 +192,7 @@ class TestInstall:
     ):
         def sdk_too_new(plugin_dir: Path) -> None:
             manifest = plugin_dir / "plugin.toml"
-            manifest.write_text(manifest.read_text().replace(">=0.6", ">=9"))
+            manifest.write_text(manifest.read_text().replace(">=0.7", ">=9"))
 
         def with_native(plugin_dir: Path) -> None:
             (plugin_dir / "fast.so").write_bytes(b"\x7fELF")

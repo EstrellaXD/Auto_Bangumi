@@ -81,3 +81,14 @@ MediaServerRefresh
 _.on_organized  # hardlink 与 media-server-refresh 共用
 _.on_linked  # media-server-refresh 订阅 hardlink.linked
 _.api  # 插件 HTTP 路由，宿主挂载到 /api/v1/plugins/<id>/
+
+# --- SDK 0.7 public host services; called by third-party plugins ---
+local_source  # API response field
+_.maintenance
+_.updates
+_.associate
+_.commits
+_.preview_history
+_.clear_history
+_.legacy_outputs
+_.on_library_committed  # @subscribe event handler

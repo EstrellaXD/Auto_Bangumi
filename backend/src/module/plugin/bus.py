@@ -40,16 +40,20 @@ class _Subscriber:
         self._timeout = timeout
         self._on_error = on_error
         self._on_success = on_success
-        self._queue: asyncio.Queue[Event] = asyncio.Queue(maxsize=queue_size)
+        self._queue: asyncio.Queue[tuple[Event, asyncio.Future[bool] | None]] = (
+            asyncio.Queue(maxsize=queue_size)
+        )
         self._worker: asyncio.Task | None = None
 
     def matches(self, event: Event) -> bool:
         return self.kind == ALL_EVENTS or self.kind == event.kind
 
-    def offer(self, event: Event) -> None:
+    def offer(self, event: Event, receipt: asyncio.Future[bool] | None = None) -> None:
         try:
-            self._queue.put_nowait(event)
+            self._queue.put_nowait((event, receipt))
         except asyncio.QueueFull:
+            if receipt is not None:
+                receipt.set_result(False)
             logger.warning(
                 "[EventBus] Subscriber queue full (owner=%s, kind=%s); dropped %s",
                 self.owner,
@@ -64,7 +68,8 @@ class _Subscriber:
 
     async def _run(self) -> None:
         while True:
-            event = await self._queue.get()
+            event, receipt = await self._queue.get()
+            succeeded = False
             try:
                 result = self.handler(event)
                 if inspect.isawaitable(result):
@@ -84,9 +89,12 @@ class _Subscriber:
                 if self._on_error is not None and self.owner is not None:
                     self._on_error(self.owner, reason)
             else:
+                succeeded = True
                 if self._on_success is not None and self.owner is not None:
                     self._on_success(self.owner)
             finally:
+                if receipt is not None and not receipt.done():
+                    receipt.set_result(succeeded)
                 self._queue.task_done()
 
     async def join(self) -> None:
@@ -100,6 +108,11 @@ class _Subscriber:
             except asyncio.CancelledError:
                 pass
             self._worker = None
+        while not self._queue.empty():
+            _, receipt = self._queue.get_nowait()
+            if receipt is not None and not receipt.done():
+                receipt.set_result(False)
+            self._queue.task_done()
 
 
 class EventBus:
@@ -148,6 +161,19 @@ class EventBus:
         for sub in list(self._subscribers):
             if sub.matches(event):
                 sub.offer(event)
+
+    async def publish_confirmed(self, event: Event) -> bool:
+        """持久 outbox 使用：按各订阅者原队列顺序投递，全部处理成功才确认。
+
+        失败或队列满返回 False，调用方保留记录重试。普通 publish 的行为不变。
+        """
+        receipts = []
+        for sub in list(self._subscribers):
+            if sub.matches(event):
+                receipt = asyncio.get_running_loop().create_future()
+                sub.offer(event, receipt)
+                receipts.append(receipt)
+        return all(await asyncio.gather(*receipts))
 
     async def drain(self) -> None:
         """等待当前已入队的事件全部处理完（测试使用）。"""
