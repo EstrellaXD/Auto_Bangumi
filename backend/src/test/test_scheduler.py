@@ -27,6 +27,29 @@ class TestPeriodicTask:
         assert task.running is False
         assert counter["n"] >= 2
 
+    async def test_interval_error_does_not_kill_loop(self, monkeypatch):
+        """读取间隔抛异常时循环不能永久退出（例如配置重载后 interval 读到坏值）。"""
+        waits: list[float] = []
+
+        async def fake_wait(timeout: float) -> bool:
+            waits.append(timeout)
+            return len(waits) >= 2  # 第二次等待时请求停止
+
+        async def body():
+            pass
+
+        def bad_interval() -> float:
+            raise TypeError("float() argument must be ... not 'NoneType'")
+
+        task = PeriodicTask("t", run=body, interval=bad_interval)
+        monkeypatch.setattr(task, "_wait", fake_wait)
+        task.start()
+        await asyncio.sleep(0.05)
+        await task.stop()
+
+        # 第一次读取失败后退回 60 秒并继续下一轮，而不是让任务以异常结束
+        assert waits == [60.0, 60.0]
+
     async def test_nonpositive_interval_does_not_spin(self):
         """#1117: rss_time/rename_time 配成 0 时循环空转、日志暴涨；应退回 1 秒间隔。"""
         counter = {"n": 0}

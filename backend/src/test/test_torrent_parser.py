@@ -1,6 +1,7 @@
 import sys
 
 import pytest
+from pydantic import ValidationError
 
 from module.models.torrent import SubtitleFile
 from module.parser.analyser import torrent_parser
@@ -132,7 +133,7 @@ def test_torrent_parser():
 
     # Subtitle with no language code → SubtitleFile.language requires str; raises ValidationError
     file_name = "Dungeon Meshi S01E01.srt"
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         torrent_parser(file_name, file_type="subtitle")
 
     # Full absolute multi-level path — get_path_basename strips all directories

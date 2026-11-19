@@ -23,10 +23,9 @@ logger = logging.getLogger(__name__)
 
 async def rss_tick(analyser: RSSAnalyser, notifier: NotificationManager) -> None:
     """Analyse aggregate RSS feeds and refresh the RSS engine once."""
-    async with DownloaderPool() as downloaders:
-        async with Database() as db:
-            # 每个订阅本轮只拉取一次，聚合分析与下载匹配共用结果（#1026）
-            events = await RSSEngine(db).refresh_rss(downloaders, analyser=analyser)
+    async with DownloaderPool() as downloaders, Database() as db:
+        # 每个订阅本轮只拉取一次，聚合分析与下载匹配共用结果（#1026）
+        events = await RSSEngine(db).refresh_rss(downloaders, analyser=analyser)
     if events:
         # 站内通知中心要求事件总是送达 notifier（send_event 内部先落库，
         # 再按 settings.notification.enable 决定是否外发）。

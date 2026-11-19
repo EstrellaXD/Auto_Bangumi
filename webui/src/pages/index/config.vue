@@ -248,7 +248,8 @@ const searchQuery = ref('');
 
 function sectionMatches(section: ConfigSection): boolean {
   return configSectionMatches(section, searchQuery.value, (key) =>
-    key === section.titleKey ? sectionTitle(section) : t(key));
+    key === section.titleKey ? sectionTitle(section) : t(key)
+  );
 }
 
 const visibleSections = computed(() => sections.value.filter(sectionMatches));
@@ -298,7 +299,9 @@ function onScroll() {
   const containerTop = container.getBoundingClientRect().top;
   const tops = visibleSections.value.flatMap(({ id }) => {
     const el = sectionEls.get(id);
-    return el ? [{ id, top: el.getBoundingClientRect().top - containerTop }] : [];
+    return el
+      ? [{ id, top: el.getBoundingClientRect().top - containerTop }]
+      : [];
   });
   activeSection.value =
     pickActiveSection(tops, isAtBottom(container)) ??
@@ -507,7 +510,8 @@ onBeforeRouteLeave(() => {
   font-size: 13px;
   text-align: left;
   cursor: pointer;
-  transition: background-color var(--transition-fast),
+  transition:
+    background-color var(--transition-fast),
     color var(--transition-fast);
 
   &:hover {

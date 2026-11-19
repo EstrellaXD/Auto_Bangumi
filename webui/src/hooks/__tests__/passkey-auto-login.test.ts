@@ -76,9 +76,7 @@ describe('passkey auto login memory', () => {
 
   it('should remember passkey availability after a successful passkey login', async () => {
     passkeyLogin.mockResolvedValue(undefined);
-    const { loginWithPasskey, hasKnownPasskey } = withSetup(() =>
-      usePasskey()
-    );
+    const { loginWithPasskey, hasKnownPasskey } = withSetup(() => usePasskey());
 
     expect(hasKnownPasskey.value).toBe(false);
     await loginWithPasskey('admin');
@@ -88,9 +86,7 @@ describe('passkey auto login memory', () => {
 
   it('should not remember passkey when login fails', async () => {
     passkeyLogin.mockRejectedValue({ status: 401 });
-    const { loginWithPasskey, hasKnownPasskey } = withSetup(() =>
-      usePasskey()
-    );
+    const { loginWithPasskey, hasKnownPasskey } = withSetup(() => usePasskey());
 
     await loginWithPasskey('admin');
 
@@ -99,9 +95,7 @@ describe('passkey auto login memory', () => {
 
   it('should disarm the auto prompt when a silent ceremony is cancelled', async () => {
     passkeyLogin.mockRejectedValue(ceremonyAbort());
-    const { loginWithPasskey, hasKnownPasskey } = withSetup(() =>
-      usePasskey()
-    );
+    const { loginWithPasskey, hasKnownPasskey } = withSetup(() => usePasskey());
     hasKnownPasskey.value = true;
 
     const ok = await loginWithPasskey(undefined, { silent: true });
@@ -114,9 +108,7 @@ describe('passkey auto login memory', () => {
   it('should keep the flag when a silent attempt fails with an API error', async () => {
     // 服务器抖动不代表凭证失效；axios 拦截器已负责提示
     passkeyLogin.mockRejectedValue({ status: 500 });
-    const { loginWithPasskey, hasKnownPasskey } = withSetup(() =>
-      usePasskey()
-    );
+    const { loginWithPasskey, hasKnownPasskey } = withSetup(() => usePasskey());
     hasKnownPasskey.value = true;
 
     const ok = await loginWithPasskey(undefined, { silent: true });

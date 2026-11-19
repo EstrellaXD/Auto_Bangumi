@@ -251,7 +251,7 @@ class TestUpdateCheckTick:
     def _result(self, **overrides):
         result = MagicMock()
         result.has_update = overrides.get("has_update", True)
-        result.error = overrides.get("error", None)
+        result.error = overrides.get("error")
         result.current = overrides.get("current", "3.3.0")
         result.latest = overrides.get("latest", "3.3.1")
         result.channel = overrides.get("channel", "beta")

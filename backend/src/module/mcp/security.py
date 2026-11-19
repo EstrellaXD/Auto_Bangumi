@@ -8,7 +8,7 @@ from starlette.responses import JSONResponse
 
 from module.composition import auth_service
 from module.conf import settings
-from module.security.ip_allowlist import (  # noqa: F401  (re-exported for existing importers)
+from module.security.ip_allowlist import (
     _is_allowed,
     _parse_network,
     clear_network_cache,

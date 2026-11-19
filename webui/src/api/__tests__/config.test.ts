@@ -27,6 +27,9 @@ describe('Config API contract (path + HTTP method)', () => {
   it('should PATCH api/v1/config/update with the config payload when updating', async () => {
     (axios.patch as any).mockResolvedValue({ data: mockApiSuccess });
     await apiConfig.updateConfig(mockConfig as unknown as Config);
-    expect(axios.patch).toHaveBeenCalledWith('api/v1/config/update', mockConfig);
+    expect(axios.patch).toHaveBeenCalledWith(
+      'api/v1/config/update',
+      mockConfig
+    );
   });
 });

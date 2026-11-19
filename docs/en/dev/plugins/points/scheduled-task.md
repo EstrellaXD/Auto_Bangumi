@@ -20,6 +20,7 @@ def sync(self):
 | `initial_delay` | The seconds to wait before the first run. Default 0 |
 | `enabled` | An optional function. If it returns `False`, AB skips that round |
 
+- The `id` only needs to be unique within the plugin. Reloading or disabling one plugin does not replace or stop another plugin's task with the same id.
 - The task runs only while the program runs. It starts and stops together with built-in tasks such as the RSS refresh.
 - An exception from `run` counts toward the plugin breaker.
 - The interval starts when the previous run ends. It is not a fixed beat.

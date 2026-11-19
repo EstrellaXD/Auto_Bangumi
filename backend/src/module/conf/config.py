@@ -88,7 +88,7 @@ class Settings(Config):
 
     def load(self):
         """Load and validate configuration from ``CONFIG_PATH``, applying migrations."""
-        with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+        with open(CONFIG_PATH, encoding="utf-8") as f:
             config = json.load(f)
         config = self._migrate_old_config(config)
         config_obj = Config.model_validate(config)

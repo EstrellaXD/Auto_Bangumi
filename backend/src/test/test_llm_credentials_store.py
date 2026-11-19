@@ -65,7 +65,7 @@ class TestEventContracts:
             "account_label": "u@x.com",
             "message": "expired",
         }
-        title, body = event.describe()
+        title, _body = event.describe()
         assert "LLM" in title
 
     def test_llm_plugin_install_failed_event(self):

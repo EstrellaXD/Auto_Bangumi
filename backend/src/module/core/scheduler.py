@@ -5,8 +5,9 @@
 """
 
 import asyncio
+import contextlib
 import logging
-from typing import Awaitable, Callable
+from collections.abc import Awaitable, Callable
 
 logger = logging.getLogger(__name__)
 
@@ -60,9 +61,8 @@ class PeriodicTask:
 
     async def _loop(self) -> None:
         try:
-            if self._initial_delay > 0:
-                if await self._wait(self._initial_delay):
-                    return
+            if self._initial_delay > 0 and await self._wait(self._initial_delay):
+                return
             while not self._stop_event.is_set():
                 try:
                     await self._run()
@@ -70,19 +70,27 @@ class PeriodicTask:
                     raise
                 except Exception as e:
                     logger.error("%s tick failed: %s", self._name, e)
-                # 间隔 <= 0（配置为 0）会让循环空转、日志暴涨（#1117），退回 1 秒
-                interval = self._interval()
-                if await self._wait(interval if interval > 0 else 1):
+                if await self._wait(self._next_interval()):
                     return
         except asyncio.CancelledError:
             pass
+
+    def _next_interval(self) -> float:
+        """读取下一轮间隔。读取失败时退回 60 秒，避免循环因此永久停止。"""
+        try:
+            interval = self._interval()
+        except Exception as e:
+            logger.error("%s interval read failed, retrying in 60s: %s", self._name, e)
+            return 60.0
+        # 间隔 <= 0（配置为 0）会让循环空转、日志暴涨（#1117），退回 1 秒
+        return interval if interval > 0 else 1
 
     async def _wait(self, timeout: float) -> bool:
         """Sleep up to ``timeout`` seconds. Return True if a stop was requested."""
         try:
             await asyncio.wait_for(self._stop_event.wait(), timeout=timeout)
             return True
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return False
 
     async def stop(self) -> None:
@@ -91,10 +99,8 @@ class PeriodicTask:
             return
         self._stop_event.set()
         self._task.cancel()
-        try:
+        with contextlib.suppress(asyncio.CancelledError):
             await self._task
-        except asyncio.CancelledError:
-            pass
         self._task = None
 
 

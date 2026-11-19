@@ -5,6 +5,7 @@ from sqlalchemy import delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import and_, col, select, true
 
+from module.database.engine import rowcount
 from module.models import Bangumi, RSSItem, Torrent
 
 logger = logging.getLogger(__name__)
@@ -60,14 +61,12 @@ class TorrentDatabase:
         if not torrents_list:
             return []
         urls = [t.url for t in torrents_list]
-        # SQLModel 类属性在 mypy 看来是普通字段类型而非 InstrumentedAttribute，
-        # 无法识别 .in_()/.is_() 等查询方法（无官方 mypy 插件支持）。
-        statement = select(Torrent.url).where(Torrent.url.in_(urls))  # type: ignore[attr-defined]
+        statement = select(Torrent.url).where(col(Torrent.url).in_(urls))
         if rss is not None:
             # instr 区分大小写，与 Python 的 ``in`` 一致（LIKE 不区分）
             statement = statement.join(
                 Bangumi,
-                Bangumi.id == Torrent.bangumi_id,  # type: ignore[arg-type]
+                col(Bangumi.id) == Torrent.bangumi_id,
             ).where(
                 Torrent.rss_id == rss.id,
                 func.instr(Bangumi.rss_link, rss.url) > 0,
@@ -81,7 +80,7 @@ class TorrentDatabase:
         if not qb_hashes:
             return []
         result = await self.session.execute(
-            select(Torrent).where(Torrent.qb_hash.in_(qb_hashes))  # type: ignore[union-attr]
+            select(Torrent).where(col(Torrent.qb_hash).in_(qb_hashes))
         )
         return list(result.scalars().all())
 
@@ -106,7 +105,7 @@ class TorrentDatabase:
         result = await self.session.execute(
             select(Torrent).where(
                 and_(
-                    Torrent.bangumi_id.in_(bangumi_ids),  # type: ignore[union-attr]
+                    col(Torrent.bangumi_id).in_(bangumi_ids),
                     Torrent.downloaded == true(),
                 )
             )
@@ -129,7 +128,7 @@ class TorrentDatabase:
             .execution_options(synchronize_session=False)
         )
         await self.session.commit()
-        count = result.rowcount  # type: ignore[attr-defined]
+        count = rowcount(result)
         if count > 0:
             logger.debug(
                 "Deleted %s torrent records for bangumi_id %s.", count, bangumi_id
@@ -139,7 +138,7 @@ class TorrentDatabase:
     async def search_orphans(self) -> list[Torrent]:
         """Find all torrent records not associated with any bangumi."""
         result = await self.session.execute(
-            select(Torrent).where(Torrent.bangumi_id.is_(None))  # type: ignore[union-attr]
+            select(Torrent).where(col(Torrent.bangumi_id).is_(None))
         )
         return list(result.scalars().all())
 
@@ -148,7 +147,7 @@ class TorrentDatabase:
         result = await self.session.execute(
             select(func.count())
             .select_from(Torrent)
-            .where(Torrent.bangumi_id.is_(None))  # type: ignore[union-attr]
+            .where(col(Torrent.bangumi_id).is_(None))
         )
         return result.scalar_one()
 
@@ -158,11 +157,10 @@ class TorrentDatabase:
         Returns the number of deleted records.
         """
         result = await self.session.execute(
-            delete(Torrent).where(Torrent.bangumi_id.is_(None))  # type: ignore[union-attr]
+            delete(Torrent).where(col(Torrent.bangumi_id).is_(None))
         )
         await self.session.commit()
-        # execute(delete()) 返回 CursorResult，mypy 只能推断出基类 Result[Any]
-        count = result.rowcount  # type: ignore[attr-defined]
+        count = rowcount(result)
         if count > 0:
             logger.debug("Deleted %s orphan torrents.", count)
         return count

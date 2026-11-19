@@ -1,6 +1,6 @@
 """RenameOperationDatabase — #1078 durable rename/replacement state."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from typing import Any
 
 import pytest
@@ -110,7 +110,7 @@ async def test_upsert_conflict_is_idempotent_and_refreshes_error(db_session):
 
 async def test_claim_is_atomic_due_only_and_increments_attempt(db_session):
     repo = RenameOperationDatabase(db_session)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     row, _ = await repo.get_or_create(
         _operation(state="retry", retry_at=now - timedelta(seconds=1))
     )
@@ -159,7 +159,7 @@ async def test_claim_is_atomic_due_only_and_increments_attempt(db_session):
 async def test_mark_notified_is_one_shot(db_session):
     repo = RenameOperationDatabase(db_session)
     row, _ = await repo.upsert_conflict(_operation())
-    notified_at = datetime.now(timezone.utc)
+    notified_at = datetime.now(UTC)
 
     assert await repo.mark_notified(row.id, notified_at) is True
     assert await repo.mark_notified(row.id, notified_at + timedelta(seconds=1)) is False
@@ -171,7 +171,7 @@ async def test_mark_notified_is_one_shot(db_session):
 
 async def test_recover_stale_running_uses_compare_and_swap(db_session):
     repo = RenameOperationDatabase(db_session)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     row, _ = await repo.get_or_create(_operation(state="running"))
     row.updated_at = now - timedelta(minutes=10)
     db_session.add(row)
@@ -188,7 +188,7 @@ async def test_recover_stale_running_uses_compare_and_swap(db_session):
 
 async def test_replacement_phase_lease_fences_workers_and_state_commit(db_session):
     repo = RenameOperationDatabase(db_session)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     row, _ = await repo.get_or_create(_operation())
 
     first = await repo.claim_replacement_lease(row.id, owner="worker-a", now=now)
@@ -214,7 +214,7 @@ async def test_replacement_phase_lease_fences_workers_and_state_commit(db_sessio
 
 async def test_expired_replacement_phase_lease_can_be_reclaimed(db_session):
     repo = RenameOperationDatabase(db_session)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     row, _ = await repo.get_or_create(_operation())
     assert await repo.claim_replacement_lease(
         row.id,
@@ -234,7 +234,7 @@ async def test_expired_replacement_phase_lease_can_be_reclaimed(db_session):
 
 async def test_conflict_query_and_done_pruning(db_session):
     repo = RenameOperationDatabase(db_session)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     await repo.get_or_create(
         _operation(state="retry", retry_at=now - timedelta(seconds=1))
     )
@@ -294,7 +294,7 @@ async def test_prune_done_unchanged_path_rows_only_when_task_gone(
     """路径未变（重命名方式 none）的 done 记录是只通知一次的依据：任务仍在、
     快照为空或属于别的实例时保留，任务已从该实例删除时清理（#1082）。"""
     repo = RenameOperationDatabase(db_session)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     row, _ = await repo.get_or_create(
         _operation(
             kind="conflict",
@@ -333,11 +333,11 @@ async def test_get_by_target_active_filter_uses_partial_unique_index(db_session)
         captured.append(statement)
         return await original(statement, *args, **kwargs)
 
-    db_session.execute = spy  # type: ignore[method-assign]
+    db_session.execute = spy
     await repo.get_by_target(
         downloader_type="qbittorrent", save_path="/d", target_path="t.mp4"
     )
-    db_session.execute = original  # type: ignore[method-assign]
+    db_session.execute = original
 
     plan = await db_session.execute(
         text(

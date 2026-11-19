@@ -1,9 +1,9 @@
 import logging
-import re
 import xml.etree.ElementTree
 
 from module.conf import settings
 from module.models import Torrent
+from module.utils.filter_pattern import compile_filter
 
 from .request_url import RequestURL
 from .site import rss_parser
@@ -23,18 +23,17 @@ class RequestContent(RequestURL):
         if soup:
             parsed_items = rss_parser(soup)
             torrents: list[Torrent] = []
-            if _filter is None:
-                _filter = "|".join(settings.rss_parser.filter)
+            # 没有有效过滤词时 pattern 为 None，表示不排除任何种子
+            pattern = compile_filter(
+                settings.rss_parser.filter if _filter is None else _filter.split("|")
+            )
             for _title, torrent_url, homepage in parsed_items:
-                # A blank filter means "exclude nothing" — re.search("", x) matches
-                # every string, which would otherwise exclude everything.
-                if not _filter or re.search(_filter, _title) is None:
+                if pattern is None or pattern.search(_title) is None:
                     torrents.append(
                         Torrent(name=_title, url=torrent_url, homepage=homepage)
                     )
-                if isinstance(limit, int):
-                    if len(torrents) >= limit:
-                        break
+                if isinstance(limit, int) and len(torrents) >= limit:
+                    break
             return torrents
         else:
             logger.warning(f"Failed to get torrents: {_url}")

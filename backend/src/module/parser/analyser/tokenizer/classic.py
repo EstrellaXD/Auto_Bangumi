@@ -225,9 +225,10 @@ def parse_release_title(raw: str) -> ParsedRelease | None:
     if not any((title_en, title_zh, title_jp)):
         return None
 
-    if state.media_type is MediaType.UNKNOWN:
-        if state.episode is not None or state.release_kind is not ReleaseKind.SINGLE:
-            state.set_media(MediaType.EPISODE, 0)
+    if state.media_type is MediaType.UNKNOWN and (
+        state.episode is not None or state.release_kind is not ReleaseKind.SINGLE
+    ):
+        state.set_media(MediaType.EPISODE, 0)
 
     return ParsedRelease(
         raw=raw,

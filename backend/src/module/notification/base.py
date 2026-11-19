@@ -22,7 +22,7 @@ class NotificationProvider(ABC):
     provider IS-A notification channel, not an HTTP client.
     """
 
-    def __init__(self, config: "ProviderConfig") -> None:
+    def __init__(self, config: ProviderConfig) -> None:
         self._http = RequestContent()
         # 单集通知模板（{{title}}/{{season}}/{{episode}}/{{poster_url}}）；
         # 未设置时 ``_format_message`` 回退到默认中文文案。
@@ -30,7 +30,7 @@ class NotificationProvider(ABC):
         # 渠道类型（如 telegram），传给 message_template 钩子按渠道定制文案
         self.channel = str(config.type).lower()
 
-    async def __aenter__(self) -> "NotificationProvider":
+    async def __aenter__(self) -> NotificationProvider:
         await self._http.__aenter__()
         return self
 
@@ -47,7 +47,6 @@ class NotificationProvider(ABC):
         Returns:
             True if the notification was sent successfully, False otherwise.
         """
-        pass
 
     @abstractmethod
     async def test(self) -> tuple[bool, str]:
@@ -57,7 +56,6 @@ class NotificationProvider(ABC):
             A tuple of (success, message) where success is True if the test
             passed and message contains details about the result.
         """
-        pass
 
     async def send_event(self, event: SystemEvent) -> bool:
         """Send a system event (RSS failure, download failure, offset review).
@@ -88,7 +86,6 @@ class NotificationProvider(ABC):
         Returns:
             True if delivered successfully, False otherwise.
         """
-        pass
 
     def _format_message(self, notify: Notification) -> str:
         """Format the per-episode notification message.

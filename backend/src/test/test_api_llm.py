@@ -219,7 +219,7 @@ def test_install_failure_returns_400_and_notifies(authed_client, app):
     with patch("module.llm_plugins.PluginInstaller", return_value=installer):
         resp = authed_client.post("/api/v1/config/llm/providers/fake-copilot/install")
     assert resp.status_code == 400
-    event = app.state.ctx.notifier.send_event.await_args.args[0]
+    event = app.state.ctx.notifier.send_event.await_args.args[0]  # ty: ignore[missing-union-attribute]
     assert isinstance(event, LLMPluginInstallFailedEvent)
     assert event.plugin_id == "fake-copilot"
 

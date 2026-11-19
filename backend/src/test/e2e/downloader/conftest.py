@@ -20,7 +20,7 @@ class DownloaderStack:
     environment: dict[str, str]
 
     @classmethod
-    def from_environment(cls) -> "DownloaderStack":
+    def from_environment(cls) -> DownloaderStack:
         if not os.environ.get("AB_E2E_BASE_URL"):
             pytest.skip("requires e2e/scripts/stack.py --profile downloader")
         if os.environ.get("AB_E2E_PROFILE") != "downloader":

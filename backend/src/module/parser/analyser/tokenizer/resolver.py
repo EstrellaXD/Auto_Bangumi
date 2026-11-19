@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass
 from itertools import combinations
-from typing import Iterable
+from typing import cast
 
 from .candidate import (
     Candidate,
@@ -287,7 +288,7 @@ def _scalar[T](
         return None
     if expected is not object and not isinstance(value, expected):
         raise TypeError(f"invalid value for {field.value}: {value!r}")
-    return value  # type: ignore[return-value]
+    return cast(T, value)
 
 
 def _number_scalar(

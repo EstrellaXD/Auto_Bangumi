@@ -8,10 +8,10 @@ import { mockBangumiRule } from '@/test/mocks/api';
 
 describe('Bangumi Store Logic', () => {
   describe('filter functions', () => {
-    const filterActive = (list: typeof mockBangumiRule[]) =>
+    const filterActive = (list: (typeof mockBangumiRule)[]) =>
       list.filter((b) => !b.deleted && !b.archived);
 
-    const filterArchived = (list: typeof mockBangumiRule[]) =>
+    const filterArchived = (list: (typeof mockBangumiRule)[]) =>
       list.filter((b) => !b.deleted && b.archived);
 
     it('filterActive should filter out deleted and archived items', () => {
@@ -75,8 +75,12 @@ describe('Bangumi Store Logic', () => {
         { ...mockBangumiRule, id: 4, deleted: true },
       ];
 
-      const enabled = bangumi.filter((e) => !e.deleted).sort((a, b) => b.id - a.id);
-      const disabled = bangumi.filter((e) => e.deleted).sort((a, b) => b.id - a.id);
+      const enabled = bangumi
+        .filter((e) => !e.deleted)
+        .sort((a, b) => b.id - a.id);
+      const disabled = bangumi
+        .filter((e) => e.deleted)
+        .sort((a, b) => b.id - a.id);
       const sorted = [...enabled, ...disabled];
 
       expect(sorted.map((b) => b.id)).toEqual([3, 1, 4, 2]);

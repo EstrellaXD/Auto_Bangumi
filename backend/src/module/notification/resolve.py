@@ -19,7 +19,7 @@ class PluginNotifier(NotificationProvider):
     模板渲染与海报地址仍由宿主负责，插件拿到的是渲染好的消息。
     """
 
-    def __init__(self, config: "ProviderConfig", notifier: Notifier) -> None:
+    def __init__(self, config: ProviderConfig, notifier: Notifier) -> None:
         super().__init__(config)
         self._notifier = notifier
 
@@ -45,7 +45,7 @@ class PluginNotifier(NotificationProvider):
         return await self._notifier.test()
 
 
-def build_provider(config: "ProviderConfig") -> NotificationProvider | None:
+def build_provider(config: ProviderConfig) -> NotificationProvider | None:
     """构造渠道实例；``type`` 未登记时返回 None。"""
     # 先按原样匹配（插件 id 可含大写），再按小写兼容内置渠道的旧配置
     entries = get_registry().providers(points.NOTIFIER)

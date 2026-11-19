@@ -61,8 +61,10 @@ function onClick(event: MouseEvent) {
   font-weight: 500;
   white-space: nowrap;
   cursor: pointer;
-  transition: background-color var(--transition-fast),
-    border-color var(--transition-fast), color var(--transition-fast);
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
 
   &:focus-visible {
     outline: 2px solid var(--color-primary);

@@ -97,7 +97,7 @@ export class NetworkGuard {
     this.page.on('requestfailed', (request) => {
       this.failedRequests.push(
         `${request.method()} ${request.url()}: ` +
-        `${request.failure()?.errorText ?? 'unknown failure'}`
+          `${request.failure()?.errorText ?? 'unknown failure'}`
       );
     });
     this.page.on('response', (response) => {

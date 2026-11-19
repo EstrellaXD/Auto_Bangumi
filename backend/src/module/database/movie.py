@@ -1,7 +1,6 @@
 import logging
 import re
 import time
-from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import and_, select
@@ -64,7 +63,7 @@ class MovieDatabase:
         _movie_cache_time = now
         return _movie_cache
 
-    async def search_id(self, _id: int) -> Optional[Movie]:
+    async def search_id(self, _id: int) -> Movie | None:
         statement = select(Movie).where(Movie.id == _id)
         result = await self.session.execute(statement)
         movie = result.scalar_one_or_none()

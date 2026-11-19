@@ -2,7 +2,6 @@
 
 import json
 import logging
-from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import func, select
@@ -17,13 +16,13 @@ class LLMCredentialDatabase:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def _row(self, provider_id: str) -> Optional[LLMCredential]:
+    async def _row(self, provider_id: str) -> LLMCredential | None:
         result = await self.session.execute(
             select(LLMCredential).where(LLMCredential.provider_id == provider_id)
         )
         return result.scalars().first()
 
-    async def get(self, provider_id: str) -> Optional[TokenSet]:
+    async def get(self, provider_id: str) -> TokenSet | None:
         row = await self._row(provider_id)
         if row is None:
             return None

@@ -160,11 +160,13 @@ class TestUpdateProviderConfig:
                 "parser": "tmdb",
             },
         }
-        with patch("module.api.search.save_provider") as mock_save:
-            with patch("module.api.search.get_provider", return_value=saved_config):
-                response = authed_client.put(
-                    "/api/v1/search/provider/config", json=new_config
-                )
+        with (
+            patch("module.api.search.save_provider") as mock_save,
+            patch("module.api.search.get_provider", return_value=saved_config),
+        ):
+            response = authed_client.put(
+                "/api/v1/search/provider/config", json=new_config
+            )
 
         assert response.status_code == 200
         mock_save.assert_called_once_with(new_config)
@@ -175,9 +177,11 @@ class TestUpdateProviderConfig:
 
     def test_update_provider_config_empty(self, authed_client):
         """PUT /search/provider/config with empty config."""
-        with patch("module.api.search.save_provider") as mock_save:
-            with patch("module.api.search.get_provider", return_value={}):
-                response = authed_client.put("/api/v1/search/provider/config", json={})
+        with (
+            patch("module.api.search.save_provider") as mock_save,
+            patch("module.api.search.get_provider", return_value={}),
+        ):
+            response = authed_client.put("/api/v1/search/provider/config", json={})
 
         assert response.status_code == 200
         mock_save.assert_called_once_with({})

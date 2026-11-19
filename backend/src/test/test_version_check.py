@@ -155,7 +155,7 @@ def test_upgrade_from_pre_33_is_refused(paths, tmp_path, previous):
 def test_legacy_data_json_is_refused(paths):
     _, legacy_path = paths
     legacy_path.write_text("{}")
-    with pytest.raises(vc.UnsupportedUpgradeError, match="2.x"):
+    with pytest.raises(vc.UnsupportedUpgradeError, match=r"2\.x"):
         vc.refuse_legacy_data()
 
 

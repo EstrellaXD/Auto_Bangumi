@@ -359,7 +359,7 @@ def rename_input(**overrides) -> RenameInput:
         "suffix": ".mkv",
         "group": "Sub",
     }
-    return RenameInput(**{**fields, **overrides})
+    return RenameInput(**{**fields, **overrides})  # ty: ignore[invalid-argument-type]
 
 
 @pytest.mark.parametrize(

@@ -15,7 +15,10 @@ export interface HostDeps {
   tokens: () => Record<string, string>;
   toast: (message: string, kind: 'info' | 'error') => void;
   /** 订阅事件总线（SSE `bus` 帧）上的 `kind`，回调收到事件负载 */
-  onBusEvent: (kind: string, callback: (payload: unknown) => void) => () => void;
+  onBusEvent: (
+    kind: string,
+    callback: (payload: unknown) => void
+  ) => () => void;
 }
 
 // 只用来借 URL 解析 ``..``、``%2e%2e``、``//host`` 等写法，不会发出请求

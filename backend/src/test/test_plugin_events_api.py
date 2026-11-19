@@ -2,6 +2,7 @@
 
 import json
 from types import SimpleNamespace
+from typing import ClassVar
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import mcp.types as mcp_types
@@ -345,7 +346,7 @@ class TestApiRouter:
         assert client.get("/api/v1/plugins/demo/hello").status_code == 200
 
     def test_bad_factory_is_skipped(self, routes_client, registry, breaker):
-        client, routes = routes_client
+        _client, routes = routes_client
         add(registry, points.API_ROUTER, "api", "not a router", plugin_id="demo")
         routes.sync()
         assert routes.plugin_ids() == []
@@ -417,7 +418,7 @@ class TestMcp:
         )
         builtin = [t.name for t in await MCPServer.list_tools(mcp)]
         names = [t.name for t in await mcp.list_tools()]
-        assert names == builtin + ["demo__search"]
+        assert names == [*builtin, "demo__search"]
 
     async def test_call_dispatches_to_plugin(self, registry):
         from module.mcp import mcp
@@ -553,8 +554,8 @@ class TestMcp:
     @pytest.mark.parametrize(
         "point, impl",
         [
-            (points.MCP_TOOL, McpTool("bad", _search, None)),  # type: ignore[arg-type]
-            (points.MCP_RESOURCE, McpResource(None, _search)),  # type: ignore[arg-type]
+            (points.MCP_TOOL, McpTool("bad", _search, None)),  # ty: ignore[invalid-argument-type]
+            (points.MCP_RESOURCE, McpResource(None, _search)),  # ty: ignore[invalid-argument-type]
         ],
     )
     async def test_list_malformed_plugin_spec_skipped_and_counted(
@@ -618,7 +619,7 @@ class FullPlugin(Plugin[Options]):
     """一个同时使用全部 P5 扩展点的插件。"""
 
     config_model = Options
-    seen: list[Event] = []
+    seen: ClassVar[list[Event]] = []
 
     @provider(points.API_ROUTER, id="api")
     def api(self):
@@ -667,7 +668,7 @@ async def test_plugin_end_to_end(registry, monkeypatch, tmp_path):
     candidate = PluginCandidate(
         manifest=parse_manifest(MANIFEST),
         source="builtin",
-        load=lambda: FullPlugin,  # type: ignore[arg-type]
+        load=lambda: FullPlugin,
     )
     settings_obj = SimpleNamespace(
         plugins=Plugins(options={"full": {"greeting": "yo"}})

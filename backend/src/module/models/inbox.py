@@ -5,14 +5,13 @@
 时间戳沿用 RSSItem 的约定：UTC ISO-8601 字符串（字典序即时间序）。
 """
 
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from sqlmodel import Field, SQLModel
 
 
 def utcnow_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 class InboxMessage(SQLModel, table=True):
@@ -21,8 +20,8 @@ class InboxMessage(SQLModel, table=True):
     severity: str = Field(default="info")  # info | warning | error
     title: str = Field(default="")
     body: str = Field(default="")
-    payload: Optional[str] = Field(default=None)  # JSON 字符串
-    dedup_key: Optional[str] = Field(default=None, index=True)
+    payload: str | None = Field(default=None)  # JSON 字符串
+    dedup_key: str | None = Field(default=None, index=True)
     read: bool = Field(default=False, index=True)
     count: int = Field(default=1)  # 合并计数（同 dedup_key 未读重复出现的次数）
     created_at: str = Field(default_factory=utcnow_iso)

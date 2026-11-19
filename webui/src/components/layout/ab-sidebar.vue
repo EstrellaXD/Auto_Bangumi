@@ -119,7 +119,7 @@ function Exit() {
     [
       h(LogOut, { size: 20 }),
       !isMobileOrTablet.value &&
-      h('div', { class: 'sidebar-item-label' }, t('sidebar.logout')),
+        h('div', { class: 'sidebar-item-label' }, t('sidebar.logout')),
     ]
   );
 }
@@ -238,7 +238,8 @@ function Exit() {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
-  transition: width var(--transition-normal),
+  transition:
+    width var(--transition-normal),
     background-color var(--transition-normal),
     border-color var(--transition-normal);
   overflow: hidden;
@@ -272,7 +273,8 @@ function Exit() {
   border: none;
   border-bottom: 1px solid var(--color-border);
   background: transparent;
-  transition: border-color var(--transition-normal),
+  transition:
+    border-color var(--transition-normal),
     background-color var(--transition-fast);
 
   &:hover {
@@ -339,7 +341,8 @@ function Exit() {
   user-select: none;
   color: var(--color-text-secondary);
   text-decoration: none;
-  transition: color var(--transition-fast),
+  transition:
+    color var(--transition-fast),
     background-color var(--transition-fast);
   white-space: nowrap;
 

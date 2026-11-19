@@ -177,7 +177,7 @@ function handleConfirm() {
     <div class="bangumi-info">
       <div class="bangumi-poster">
         <template v-if="localBangumi.poster_link">
-          <img :src="posterSrc" :alt="localBangumi.official_title">
+          <img :src="posterSrc" :alt="localBangumi.official_title" />
         </template>
         <template v-else>
           <div class="poster-placeholder">
@@ -231,10 +231,7 @@ function handleConfirm() {
         :aria-expanded="showAdvanced"
         @click="showAdvanced = !showAdvanced"
       >
-        <component
-          :is="showAdvanced ? ChevronDown : ChevronRight"
-          :size="14"
-        />
+        <component :is="showAdvanced ? ChevronDown : ChevronRight" :size="14" />
         {{ $t('search.confirm.advanced') }}
       </button>
 
@@ -242,7 +239,9 @@ function handleConfirm() {
       <NCollapseTransition :show="showAdvanced">
         <!-- 两列网格：标签一列，控件统一左对齐在第二列 -->
         <div class="advanced-content">
-          <label class="advanced-label">{{ $t('search.confirm.filter') }}</label>
+          <label class="advanced-label">{{
+            $t('search.confirm.filter')
+          }}</label>
           <div class="advanced-control filter-tags">
             <NDynamicTags v-model:value="localBangumi.filter" size="small" />
           </div>

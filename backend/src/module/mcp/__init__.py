@@ -24,7 +24,7 @@ def __getattr__(name: str) -> Any:
     if name not in ("mcp", "create_mcp_app"):
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
     # 导入即注册内置工具与资源
-    from . import resources, tools  # noqa: F401
+    from . import resources, tools
     from .server import create_mcp_starlette_app, mcp
 
     globals().update(mcp=mcp, create_mcp_app=create_mcp_starlette_app)

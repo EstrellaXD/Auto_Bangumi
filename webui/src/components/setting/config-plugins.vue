@@ -152,7 +152,8 @@ const forms: Record<string, InstanceType<typeof PluginSchemaForm> | null> = {};
 async function saveOptions(plugin: PluginInfo) {
   forms[plugin.id]?.showErrors();
   const ok = await run(plugin.id, () =>
-    apiPlugins.update(plugin.id, { options: drafts.value[plugin.id] }));
+    apiPlugins.update(plugin.id, { options: drafts.value[plugin.id] })
+  );
   if (ok) message.success(t('config.plugins_set.save_success'));
 }
 
@@ -199,9 +200,7 @@ onActivated(async () => {
       :title="$t('config.plugins_set.load_failed')"
     >
       <AbButton size="sm" @click="load">
-        {{
-          $t('config.plugins_set.retry')
-        }}
+        {{ $t('config.plugins_set.retry') }}
       </AbButton>
     </AbAlert>
     <AbSkeleton v-else-if="!overview" preset="row" />
@@ -230,7 +229,9 @@ onActivated(async () => {
         <header class="plugin__header">
           <div class="plugin__title">
             <strong>{{ pluginName(t, plugin) }}</strong>
-            <span class="plugin__meta">{{ plugin.id }} · v{{ plugin.version }}</span>
+            <span class="plugin__meta"
+              >{{ plugin.id }} · v{{ plugin.version }}</span
+            >
           </div>
           <AbSwitch
             :model-value="plugin.enabled"
@@ -273,7 +274,7 @@ onActivated(async () => {
             $t('config.plugins_set.permissions', {
               list: plugin.permissions
                 .map((id) =>
-                  idLabel(t, 'config.plugins_set.permission_labels', id),
+                  idLabel(t, 'config.plugins_set.permission_labels', id)
                 )
                 .join(', '),
             })
@@ -287,7 +288,7 @@ onActivated(async () => {
           </summary>
           <template v-if="plugin.config_schema">
             <PluginSchemaForm
-              :ref="(el) => (forms[plugin.id] = el as typeof forms[string])"
+              :ref="(el) => (forms[plugin.id] = el as (typeof forms)[string])"
               v-model="drafts[plugin.id]"
               :fields="
                 localizeFields(t, plugin, schemaFields(plugin.config_schema))
@@ -389,7 +390,8 @@ onActivated(async () => {
   &::details-content {
     height: 0;
     overflow: clip;
-    transition: height var(--transition-normal),
+    transition:
+      height var(--transition-normal),
       content-visibility var(--transition-normal) allow-discrete;
   }
 

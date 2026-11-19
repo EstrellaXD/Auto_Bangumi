@@ -10,11 +10,11 @@
 
 /** 前端挂载点。 */
 export type UiSlot =
-  | 'settings.section' |
-  'bangumi.detail.tab' |
-  'bangumi.card.action' |
-  'page' |
-  'dashboard.widget';
+  | 'settings.section'
+  | 'bangumi.detail.tab'
+  | 'bangumi.card.action'
+  | 'page'
+  | 'dashboard.widget';
 
 /** `GET /api/v1/plugins/ui` 的一项：已启用插件声明的挂载点。 */
 export interface PluginUiSlot {
@@ -43,7 +43,10 @@ export interface AbSlotContext {
  * 返回响应体（JSON 已解析），非 2xx 时 reject。
  */
 export interface AbHostApi {
-  get: <T = unknown>(path: string, params?: Record<string, unknown>) => Promise<T>;
+  get: <T = unknown>(
+    path: string,
+    params?: Record<string, unknown>
+  ) => Promise<T>;
   post: <T = unknown>(path: string, body?: unknown) => Promise<T>;
   put: <T = unknown>(path: string, body?: unknown) => Promise<T>;
   delete: <T = unknown>(path: string) => Promise<T>;
@@ -75,8 +78,9 @@ export interface AbHost {
 }
 
 /** 插件元素在插入文档前由宿主设置的属性。 */
-export interface AbPluginElement<S extends UiSlot = UiSlot>
-  extends HTMLElement {
+export interface AbPluginElement<
+  S extends UiSlot = UiSlot,
+> extends HTMLElement {
   host: AbHost;
   context: AbSlotContext[S];
 }

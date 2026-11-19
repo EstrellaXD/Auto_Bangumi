@@ -6,7 +6,7 @@ observable downloader state and continue an idempotent operation after a retry
 or process restart.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Literal
 
 from sqlalchemy import CheckConstraint, Index, text
@@ -36,7 +36,7 @@ RENAME_OPERATION_STATES: tuple[str, ...] = (
 
 
 def utc_now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class RenameOperation(SQLModel, table=True):

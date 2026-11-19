@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import col, select
 
+from module.database.engine import rowcount
 from module.models.rename_operation import (
     RENAME_OPERATION_STATES,
     RenameOperation,
@@ -64,9 +65,7 @@ class RenameOperationDatabase:
         )
         if active_only:
             statement = statement.where(col(RenameOperation.state).not_in(["done"]))
-        statement = statement.order_by(  # type: ignore[assignment]
-            col(RenameOperation.updated_at).desc()
-        )
+        statement = statement.order_by(col(RenameOperation.updated_at).desc())
         result = await self.session.execute(statement)
         return result.scalars().first()
 
@@ -215,7 +214,7 @@ class RenameOperationDatabase:
             .execution_options(synchronize_session="fetch")
         )
         await self.session.commit()
-        if not result.rowcount:  # type: ignore[attr-defined]
+        if not rowcount(result):
             return None
         row = await self.get(operation_id)
         if row is not None:
@@ -241,7 +240,7 @@ class RenameOperationDatabase:
             .execution_options(synchronize_session="fetch")
         )
         await self.session.commit()
-        return bool(result.rowcount)  # type: ignore[attr-defined]
+        return bool(rowcount(result))
 
     async def claim_replacement_lease(
         self,
@@ -279,7 +278,7 @@ class RenameOperationDatabase:
             .execution_options(synchronize_session="fetch")
         )
         await self.session.commit()
-        if not result.rowcount:  # type: ignore[attr-defined]
+        if not rowcount(result):
             return None
         return await self.get(operation_id)
 
@@ -323,7 +322,7 @@ class RenameOperationDatabase:
             .execution_options(synchronize_session="fetch")
         )
         await self.session.commit()
-        if not result.rowcount:  # type: ignore[attr-defined]
+        if not rowcount(result):
             return None
         return await self.get(operation_id)
 
@@ -345,7 +344,7 @@ class RenameOperationDatabase:
             .execution_options(synchronize_session="fetch")
         )
         await self.session.commit()
-        return bool(result.rowcount)  # type: ignore[attr-defined]
+        return bool(rowcount(result))
 
     async def list_conflicts(self, limit: int = 100) -> list[RenameOperation]:
         result = await self.session.execute(
@@ -425,4 +424,4 @@ class RenameOperationDatabase:
             .execution_options(synchronize_session=False)
         )
         await self.session.commit()
-        return int(result.rowcount or 0)  # type: ignore[attr-defined]
+        return int(rowcount(result) or 0)

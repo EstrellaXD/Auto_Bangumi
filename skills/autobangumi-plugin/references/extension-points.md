@@ -29,7 +29,7 @@ from ab_sdk.notify import NotificationMessage, NotifierFactory, NotifierSettings
 `SearchSite(url="https://x/rss?q=%s", parser="tmdb"|"mikan")`. Exactly one `%s`. User-defined site of the same name wins. Test: `SearchSiteContract`.
 
 ### scheduled_task (`points.SCHEDULED_TASK`)
-`ScheduledTask(run, interval, initial_delay=0.0, enabled=None)`. `interval` and `enabled` may be callables re-read each round. Interval counts from the end of the previous run.
+`ScheduledTask(run, interval, initial_delay=0.0, enabled=None)`. `interval` and `enabled` may be callables re-read each round. Interval counts from the end of the previous run. The id only needs to be unique within the plugin.
 
 ### metadata_provider (`points.METADATA_PROVIDER`)
 Object with `async enrich(MetadataRequest) -> Metadata | None`. `MetadataRequest(kind, torrent, language, episode_type, current)`; return `replace(request.current, ...)`. The id appears in the subscription "parser" list.

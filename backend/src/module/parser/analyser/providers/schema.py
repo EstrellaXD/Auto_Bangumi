@@ -4,7 +4,7 @@
 重导出这些名字，外部 import 路径（含测试）保持不变。
 """
 
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -12,9 +12,9 @@ from pydantic import BaseModel
 class Episode(BaseModel):
     """LLM 结构化输出的目标形状（与 models.bangumi.Episode 字段一致）。"""
 
-    title_en: Optional[str]
-    title_zh: Optional[str]
-    title_jp: Optional[str]
+    title_en: str | None
+    title_zh: str | None
+    title_jp: str | None
     season: int
     season_raw: str
     episode: int
@@ -64,7 +64,7 @@ But Do not fabricate data!
 """
 
 # Gemini 走 response_mime_type + 提示词描述 JSON 形状（避免 SDK schema
-# 类型与 mypy 冲突），因此在提示词里显式给出字段列表
+# 类型与类型检查器冲突），因此在提示词里显式给出字段列表
 GEMINI_JSON_INSTRUCTION = (
     "Output a single JSON object with exactly these keys: "
     "title_en (string or null), title_zh (string or null), "

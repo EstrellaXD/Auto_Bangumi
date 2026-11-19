@@ -15,8 +15,8 @@ interface Options<T = unknown> {
 }
 
 type ApiExecuteResult<TData> =
-  | { ok: true; data: TData } |
-  { ok: false; error: unknown };
+  | { ok: true; data: TData }
+  | { ok: false; error: unknown };
 
 type AnyAsyncFunction = (...args: any[]) => Promise<any>;
 
@@ -141,7 +141,10 @@ describe('useApi logic', () => {
     it('should call onFinally after error', async () => {
       const onFinally = vi.fn();
       const mockApi = vi.fn().mockRejectedValue(new Error('request failed'));
-      const { execute } = createUseApi(mockApi, { onFinally, onError: vi.fn() });
+      const { execute } = createUseApi(mockApi, {
+        onFinally,
+        onError: vi.fn(),
+      });
 
       await execute();
 
@@ -152,7 +155,9 @@ describe('useApi logic', () => {
   describe('error handling', () => {
     it('should set isLoading to false after error', async () => {
       const mockApi = vi.fn().mockRejectedValue(new Error('API Error'));
-      const { execute, getIsLoading } = createUseApi(mockApi, { onError: vi.fn() });
+      const { execute, getIsLoading } = createUseApi(mockApi, {
+        onError: vi.fn(),
+      });
 
       await execute();
 

@@ -117,7 +117,7 @@ async def get_registration_options(
             raise
         except Exception as e:
             logger.error(f"Failed to generate registration options: {e}")
-            raise HTTPException(status_code=500, detail=_GENERIC_ERROR)
+            raise HTTPException(status_code=500, detail=_GENERIC_ERROR) from e
 
 
 @router.post("/register/verify", response_model=APIResponse)
@@ -160,12 +160,12 @@ async def verify_registration(
 
         except ValueError as e:
             logger.warning(f"Registration verification failed for {username}: {e}")
-            raise HTTPException(status_code=400, detail=str(e))
+            raise HTTPException(status_code=400, detail=str(e)) from e
         except HTTPException:
             raise
         except Exception as e:
             logger.error(f"Failed to register passkey: {e}")
-            raise HTTPException(status_code=500, detail=_GENERIC_ERROR)
+            raise HTTPException(status_code=500, detail=_GENERIC_ERROR) from e
 
 
 # ============ 认证流程 ============
@@ -196,7 +196,7 @@ async def get_passkey_login_options(
             return options
         except Exception as e:
             logger.error(f"Failed to generate discoverable login options: {e}")
-            raise HTTPException(status_code=500, detail=_GENERIC_ERROR)
+            raise HTTPException(status_code=500, detail=_GENERIC_ERROR) from e
 
     # Username-based mode
     async with async_session_factory() as session:
@@ -231,7 +231,7 @@ async def get_passkey_login_options(
             raise
         except Exception as e:
             logger.error(f"Failed to generate login options: {e}")
-            raise HTTPException(status_code=500, detail=_GENERIC_ERROR)
+            raise HTTPException(status_code=500, detail=_GENERIC_ERROR) from e
 
 
 @router.post(
@@ -303,7 +303,7 @@ async def list_passkeys(principal: SessionPrincipal):
             raise
         except Exception as e:
             logger.error(f"Failed to list passkeys: {e}")
-            raise HTTPException(status_code=500, detail=_GENERIC_ERROR)
+            raise HTTPException(status_code=500, detail=_GENERIC_ERROR) from e
 
 
 @router.post("/delete", response_model=APIResponse)
@@ -334,4 +334,4 @@ async def delete_passkey(
             raise
         except Exception as e:
             logger.error(f"Failed to delete passkey: {e}")
-            raise HTTPException(status_code=500, detail=_GENERIC_ERROR)
+            raise HTTPException(status_code=500, detail=_GENERIC_ERROR) from e

@@ -53,13 +53,15 @@ class PluginTasks:
 
             def read_interval() -> float:
                 src = interval_src
-                return float(src() if callable(src) else src)
+                if isinstance(src, (int, float)) or not callable(src):
+                    return float(src)
+                return float(src())
 
             # 间隔由插件代码给出，只在受保护的 run() 里读取；调度器拿到的是
             # 已校验的值，插件出错不会打断调度循环
             interval = read_interval()
         except Exception as e:
-            reason = f"{points.SCHEDULED_TASK} {task_id}: {type(e).__name__}: {e}"
+            reason = f"{points.SCHEDULED_TASK} {entry.id}: {type(e).__name__}: {e}"
             logger.warning("[Plugin:%s] 定时任务创建失败：%s", plugin_id, reason)
             self._breaker.record_failure(plugin_id, reason)
             return None
@@ -74,7 +76,7 @@ class PluginTasks:
                     await spec_run()
                 interval = read_interval()
             except Exception as e:
-                reason = f"定时任务 {task_id}: {type(e).__name__}: {e}"
+                reason = f"定时任务 {entry.id}: {type(e).__name__}: {e}"
                 logger.warning("[Plugin:%s] %s", plugin_id, reason)
                 self._breaker.record_failure(plugin_id, reason)
                 return
@@ -82,7 +84,7 @@ class PluginTasks:
                 self._breaker.record_success(plugin_id)
 
         return PeriodicTask(
-            name=f"plugin:{plugin_id}:{task_id}",
+            name=f"plugin:{task_id}",
             run=run,
             interval=lambda: interval,
             initial_delay=initial_delay,

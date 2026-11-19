@@ -447,15 +447,15 @@ async def test_add_with_semantic_duplicate_creates_alias(db_session):
 
 async def test_typed_bangumi_identities_can_coexist_and_match(db_session):
     db = BangumiDatabase(db_session)
-    shared: dict[str, Any] = dict(
-        official_title="Shared Anime",
-        title_raw="Shared Anime",
-        group_name="Group",
-        dpi="1080p",
-        source="WEB-DL",
-        subtitle="CHT",
-        rss_link="rss",
-    )
+    shared: dict[str, Any] = {
+        "official_title": "Shared Anime",
+        "title_raw": "Shared Anime",
+        "group_name": "Group",
+        "dpi": "1080p",
+        "source": "WEB-DL",
+        "subtitle": "CHT",
+        "rss_link": "rss",
+    }
     episode = Bangumi(**shared, season=1, episode_type="episode")
     season_two = Bangumi(**shared, season=2, episode_type="episode")
     special = Bangumi(**shared, season=0, episode_type="special")
@@ -486,12 +486,12 @@ async def test_mixed_collection_does_not_match_episode_or_special_bangumi(
 ):
     monkeypatch.setattr(settings.rss_parser, "engine", "tokenizer")
     db = BangumiDatabase(db_session)
-    shared: dict[str, Any] = dict(
-        official_title="Shared Anime",
-        title_raw="Shared Anime",
-        group_name="Group",
-        rss_link="rss",
-    )
+    shared: dict[str, Any] = {
+        "official_title": "Shared Anime",
+        "title_raw": "Shared Anime",
+        "group_name": "Group",
+        "rss_link": "rss",
+    }
     assert await db.add(Bangumi(**shared, season=1, episode_type="episode")) is True
     assert await db.add(Bangumi(**shared, season=0, episode_type="special")) is True
 

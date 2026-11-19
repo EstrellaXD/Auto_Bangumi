@@ -13,7 +13,10 @@ logger = logging.getLogger(__name__)
 # In-memory cache for Mikan homepage lookups. Keyed by per-episode homepage
 # URL, so it is bounded (LRU-ish, oldest-evicted) rather than unlimited.
 _MIKAN_CACHE_MAX = 512
-_mikan_cache: "OrderedDict[str, tuple[str, str]]" = OrderedDict()
+_mikan_cache: OrderedDict[str, tuple[str, str]] = OrderedDict()
+
+# 海报 style 中 url() 的地址，引号可有可无
+_POSTER_URL_RE = re.compile(r"url\(\s*['\"]?([^'\")\s]+)")
 
 
 def reset_cache() -> None:
@@ -42,18 +45,17 @@ async def mikan_parser(homepage: str):
         # .find()/.select_one() can return None (missing element); accessing
         # .get()/.text unguarded is deliberate -- see comment above -- so the
         # caller's `except AttributeError` catches a parse/network failure.
-        poster_div = soup.find("div", {"class": "bangumi-poster"}).get(  # type: ignore[union-attr]
-            "style"
-        )
+        poster_div = soup.find("div", {"class": "bangumi-poster"}).get("style")  # ty: ignore[missing-union-attribute]
         official_title = soup.select_one(
             'p.bangumi-title a[href^="/Home/Bangumi/"]'
-        ).text  # type: ignore[union-attr]
+        ).text  # ty: ignore[missing-union-attribute]
         official_title = re.sub(r"第.*季", "", official_title).strip()
-        if poster_div:
-            # bs4's Tag.get() return type also covers multi-valued attrs
-            # (AttributeValueList); "style" is never multi-valued in practice.
-            poster_path = poster_div.split("url('")[1].split("')")[0]  # type: ignore[union-attr]
-            poster_path = poster_path.split("?")[0]
+        # bs4's Tag.get() return type also covers multi-valued attrs
+        # (AttributeValueList); "style" is never multi-valued in practice.
+        # url() 的引号可有可无（url('…') / url("…") / url(…)），没有就不取海报
+        poster_match = _POSTER_URL_RE.search(str(poster_div)) if poster_div else None
+        if poster_match:
+            poster_path = poster_match.group(1).split("?")[0]
             poster_url = f"https://{root_path}{poster_path}"
             img = await req.get_content(poster_url)
             suffix = poster_path.split(".")[-1]

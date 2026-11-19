@@ -117,7 +117,8 @@ onUnmounted(stopPolling);
           target="_blank"
           rel="noopener"
           class="auth-link"
-        >{{ challenge.verification_uri }}</a>
+          >{{ challenge.verification_uri }}</a
+        >
         <div class="auth-code">
           {{ challenge.user_code }}
         </div>
@@ -136,7 +137,8 @@ onUnmounted(stopPolling);
           target="_blank"
           rel="noopener"
           class="auth-link"
-        >{{ challenge.authorize_url }}</a>
+          >{{ challenge.authorize_url }}</a
+        >
         <textarea
           v-model="pastedCode"
           class="auth-textarea"
@@ -210,8 +212,10 @@ onUnmounted(stopPolling);
   resize: none;
   font-family: var(--font-mono);
   font-size: 13px;
-  transition: border-color var(--transition-fast),
-    background-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    background-color var(--transition-fast),
+    box-shadow var(--transition-fast);
 
   &:focus {
     background: var(--color-surface);

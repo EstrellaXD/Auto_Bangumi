@@ -88,7 +88,7 @@ const phaseLabel = computed(() => {
     unpacking: t('update.phase_unpacking'),
     promoting: t('update.phase_promoting'),
   };
-  return phase ? map[phase] ?? '' : '';
+  return phase ? (map[phase] ?? '') : '';
 });
 
 // 与插件 README 同一个安全渲染器：先转义全部 HTML，链接只接受 http(s)
@@ -271,7 +271,7 @@ onBeforeUnmount(() => {
         <div class="update-key">
           {{ $t('update.release_notes') }}
         </div>
-        <!-- eslint-disable-next-line vue/no-v-html -->
+        <!-- renderMarkdown 先转义全部 HTML，只输出白名单标签与 http(s) 链接 -->
         <div class="update-notes" v-html="notesHtml" />
       </div>
 

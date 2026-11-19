@@ -1,7 +1,12 @@
 <script lang="ts" setup>
 // Soft Ink 状态标记：方形色块 + 墨色文字。页面上唯一的语义色载体，
 // 回答“是否在正常工作”。四种状态取代旧的 running 布尔值。
-const { label = '', detail = '', size = 'md', state } = defineProps<{
+const {
+  label = '',
+  detail = '',
+  size = 'md',
+  state,
+} = defineProps<{
   state: 'running' | 'stopped' | 'paused' | 'degraded';
   /** 状态文字（省略则只渲染色块，需自带 aria 上下文） */
   label?: string;

@@ -46,7 +46,10 @@ describe('Setup API contract (path + HTTP method)', () => {
       ssl: false,
     };
     await apiSetup.testDownloader(config);
-    expect(axios.post).toHaveBeenCalledWith('api/v1/setup/test-downloader', config);
+    expect(axios.post).toHaveBeenCalledWith(
+      'api/v1/setup/test-downloader',
+      config
+    );
   });
 
   it('should POST api/v1/setup/test-rss with the url when testing an RSS feed', async () => {

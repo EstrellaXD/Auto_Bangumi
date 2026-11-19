@@ -17,7 +17,7 @@ const rule = defineModel<BangumiRule>('rule', { required: true });
   <div class="bangumi-info">
     <div class="bangumi-poster">
       <template v-if="rule.poster_link">
-        <img :src="posterSrc" :alt="rule.official_title">
+        <img :src="posterSrc" :alt="rule.official_title" />
       </template>
       <template v-else>
         <div class="poster-placeholder">
@@ -32,7 +32,7 @@ const rule = defineModel<BangumiRule>('rule', { required: true });
         :aria-label="$t('homepage.rule.official_title')"
         class="title-input"
         :placeholder="$t('homepage.rule.official_title')"
-      >
+      />
       <p v-if="rule.title_raw" class="bangumi-subtitle">
         {{ rule.title_raw }}
       </p>
@@ -44,8 +44,10 @@ const rule = defineModel<BangumiRule>('rule', { required: true });
           class="year-input"
           :class="{ 'year-input--empty': !rule.year }"
           :placeholder="$t('homepage.rule.year')"
-          @input="(e) => (rule.year = (e.target as HTMLInputElement).value || null)"
-        >
+          @input="
+            (e) => (rule.year = (e.target as HTMLInputElement).value || null)
+          "
+        />
         <span class="meta-separator">·</span>
         <label class="season-label">S</label>
         <input
@@ -54,7 +56,7 @@ const rule = defineModel<BangumiRule>('rule', { required: true });
           :aria-label="$t('homepage.rule.season')"
           class="season-input"
           min="1"
-        >
+        />
       </div>
     </div>
   </div>
@@ -152,7 +154,8 @@ const rule = defineModel<BangumiRule>('rule', { required: true });
   border-bottom: 1px solid transparent;
   padding: 2px 0;
   outline: none;
-  transition: border-color var(--transition-fast),
+  transition:
+    border-color var(--transition-fast),
     background-color var(--transition-fast);
 
   &:hover,

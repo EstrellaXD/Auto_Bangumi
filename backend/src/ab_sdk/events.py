@@ -231,11 +231,11 @@ class UpdateAppliedEvent(SystemEvent):
 
     # kind / severity 随结果变化，因此用属性覆盖基类的类变量
     @property
-    def kind(self) -> str:  # type: ignore[override]
+    def kind(self) -> str:  # ty: ignore[incompatible-property-override]
         return "update_applied" if self.success else "update_failed"
 
     @property
-    def severity(self) -> str:  # type: ignore[override]
+    def severity(self) -> str:  # ty: ignore[incompatible-property-override]
         return "info" if self.success else "error"
 
     def dedup_key(self) -> str | None:

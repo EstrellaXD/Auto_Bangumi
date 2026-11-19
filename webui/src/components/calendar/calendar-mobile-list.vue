@@ -67,14 +67,16 @@ function posterSrc(link: string | null | undefined): string {
                 :alt="group.primary.official_title"
                 class="calendar-row-img"
                 loading="lazy"
-              >
+              />
               <div v-else class="calendar-row-placeholder">
                 <ImageOff :size="16" />
               </div>
             </div>
             <div class="calendar-row-info">
               <div class="calendar-row-title">
-                <span class="calendar-row-title-text">{{ group.primary.official_title }}</span>
+                <span class="calendar-row-title-text">{{
+                  group.primary.official_title
+                }}</span>
                 <ab-badge
                   v-if="group.rules.length > 1"
                   class="calendar-row-badge"

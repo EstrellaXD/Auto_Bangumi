@@ -1,6 +1,6 @@
 """Tests for database-backed Auth API endpoints."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -147,7 +147,7 @@ def test_token_creation_uses_the_principal_user_id(client, service):
             scope="api",
             token_hash="a" * 64,
             prefix="ab_api_abcde",
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
         ),
         "ab_api_one_time_secret",
     )

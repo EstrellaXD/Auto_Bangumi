@@ -7,8 +7,6 @@
   AB 单进程部署，进程内计数即可。
 """
 
-from typing import Optional
-
 from .base import TokenSet
 
 _generations: dict[str, int] = {}
@@ -28,7 +26,7 @@ class CredentialStore:
     def __init__(self, provider_id: str) -> None:
         self.provider_id = provider_id
 
-    async def load(self) -> Optional[TokenSet]:
+    async def load(self) -> TokenSet | None:
         # 延迟导入打破 database ↔ providers 循环（database 的 repo 依赖
         # providers.base 的 TokenSet）。
         from module.database import Database

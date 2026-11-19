@@ -27,8 +27,10 @@ test('changing parser language re-queries the same TMDB title in that locale', a
   await page.goto('/#/config');
   await configLoaded;
 
-  const parserPanel = page
-    .getByRole('region', { name: 'Parser Setting', exact: true });
+  const parserPanel = page.getByRole('region', {
+    name: 'Parser Setting',
+    exact: true,
+  });
   await parserPanel.getByLabel('Language').click();
   await page.getByRole('option', { name: 'jp', exact: true }).click();
 

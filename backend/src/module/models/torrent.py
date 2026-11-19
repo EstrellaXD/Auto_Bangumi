@@ -1,22 +1,20 @@
-from typing import Optional
-
 from pydantic import BaseModel
 from sqlmodel import Field, SQLModel
 
 
 class Torrent(SQLModel, table=True):
     id: int = Field(default=None, primary_key=True, alias="id")
-    bangumi_id: Optional[int] = Field(
+    bangumi_id: int | None = Field(
         default=None, alias="refer_id", foreign_key="bangumi.id", index=True
     )
-    rss_id: Optional[int] = Field(
+    rss_id: int | None = Field(
         default=None, alias="rss_id", foreign_key="rssitem.id", index=True
     )
     name: str = Field(default="", alias="name")
     url: str = Field(default="https://example.com/torrent", alias="url", index=True)
-    homepage: Optional[str] = Field(default=None, alias="homepage")
+    homepage: str | None = Field(default=None, alias="homepage")
     downloaded: bool = Field(default=False, alias="downloaded")
-    qb_hash: Optional[str] = Field(default=None, alias="qb_hash", index=True)
+    qb_hash: str | None = Field(default=None, alias="qb_hash", index=True)
     # 种子实际添加到的下载器实例
     downloader_id: str = Field(default="default", alias="downloader_id")
 

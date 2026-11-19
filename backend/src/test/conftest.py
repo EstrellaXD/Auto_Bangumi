@@ -148,9 +148,11 @@ def test_settings():
 @pytest.fixture
 def mock_settings(test_settings):
     """Patch module.conf.settings globally with test defaults."""
-    with patch("module.conf.settings", test_settings):
-        with patch("module.conf.config.settings", test_settings):
-            yield test_settings
+    with (
+        patch("module.conf.settings", test_settings),
+        patch("module.conf.config.settings", test_settings),
+    ):
+        yield test_settings
 
 
 # ---------------------------------------------------------------------------

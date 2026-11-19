@@ -251,7 +251,9 @@ function validateUrl(url: string): boolean {
             <ab-icon-button
               size="sm"
               class="provider-delete"
-              :class="{ 'provider-delete--hidden': isDefaultProvider(provider.name) }"
+              :class="{
+                'provider-delete--hidden': isDefaultProvider(provider.name),
+              }"
               :label="$t('config.search_provider_set.remove')"
               :disabled="isDefaultProvider(provider.name)"
               @click="onDeleteClick(index)"
@@ -399,8 +401,8 @@ function validateUrl(url: string): boolean {
             :placeholder="$t('config.search_provider_set.name_placeholder')"
             :maxlength="32"
             :disabled="
-              editingProvider !== null
-                && isDefaultProvider(editingProvider.name)
+              editingProvider !== null &&
+              isDefaultProvider(editingProvider.name)
             "
           />
         </ab-field>
@@ -474,8 +476,8 @@ function validateUrl(url: string): boolean {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas,
-    monospace;
+  font-family:
+    ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
 }
 
 .provider-actions {
@@ -494,8 +496,8 @@ function validateUrl(url: string): boolean {
 .url-preview {
   font-size: 12px;
   color: var(--color-text-secondary);
-  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas,
-    monospace;
+  font-family:
+    ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
   padding: 8px 12px;
   background: var(--color-surface-2);
   border-radius: var(--radius-md);

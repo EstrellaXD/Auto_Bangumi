@@ -1,8 +1,8 @@
 type AnyAsyncFunction<TData = any> = (...args: any[]) => Promise<TData>;
 
 export type ApiExecuteResult<TData> =
-  | { ok: true; data: TData } |
-  { ok: false; error: unknown };
+  | { ok: true; data: TData }
+  | { ok: false; error: unknown };
 
 interface Options<T = any> {
   showMessage?: boolean;
@@ -14,7 +14,7 @@ interface Options<T = any> {
 
 export function useApi<
   TApi extends AnyAsyncFunction = AnyAsyncFunction,
-  TData = Awaited<ReturnType<TApi>>
+  TData = Awaited<ReturnType<TApi>>,
 >(
   api: TApi,
   {

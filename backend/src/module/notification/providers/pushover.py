@@ -17,7 +17,7 @@ class PushoverProvider(NotificationProvider):
 
     API_URL = "https://api.pushover.net/1/messages.json"
 
-    def __init__(self, config: "ProviderConfig"):
+    def __init__(self, config: ProviderConfig):
         super().__init__(config)
         self.user_key = config.user_key
         self.api_token = config.api_token
