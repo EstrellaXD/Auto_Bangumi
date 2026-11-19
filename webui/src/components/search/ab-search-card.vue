@@ -28,7 +28,7 @@ const variantCount = computed(() => props.group.variants.length);
     <!-- Poster -->
     <div class="card-poster">
       <template v-if="group.poster_link">
-        <img :src="posterSrc" :alt="group.official_title" loading="lazy">
+        <img :src="posterSrc" :alt="group.official_title" loading="lazy" />
       </template>
       <template v-else>
         <div class="card-placeholder">

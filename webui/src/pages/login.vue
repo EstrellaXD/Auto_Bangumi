@@ -60,16 +60,14 @@ async function handleLogin() {
       <div class="login-header">
         <div class="login-logo">
           <!-- Light mode: colored logo, Dark mode: light logo -->
-          <img src="/images/logo.svg" alt="AutoBangumi" class="logo-dark">
+          <img src="/images/logo.svg" alt="AutoBangumi" class="logo-dark" />
           <img
             src="/images/logo-light.svg"
             alt="AutoBangumi"
             class="logo-light"
-          >
+          />
         </div>
-        <h1 class="login-title">
-          AutoBangumi
-        </h1>
+        <h1 class="login-title">AutoBangumi</h1>
         <p class="login-subtitle">
           {{ $t('login.title') }}
         </p>
@@ -90,7 +88,7 @@ async function handleLogin() {
               autocomplete="username"
               :placeholder="$t('login.username')"
               class="login-input"
-            >
+            />
           </div>
         </div>
 
@@ -107,7 +105,7 @@ async function handleLogin() {
               autocomplete="current-password"
               :placeholder="$t('login.password')"
               class="login-input"
-            >
+            />
           </div>
         </div>
 
@@ -240,7 +238,8 @@ async function handleLogin() {
   -webkit-backdrop-filter: blur(20px);
   border-radius: var(--radius-xl);
   border: 1px solid var(--color-border);
-  box-shadow: var(--shadow-lg),
+  box-shadow:
+    var(--shadow-lg),
     0 0 0 1px color-mix(in srgb, var(--color-white) 5%, transparent) inset;
 
   @media (max-width: 480px) {
@@ -351,8 +350,10 @@ async function handleLogin() {
   @include forTouch {
     height: var(--touch-target);
   }
-  transition: border-color var(--transition-fast),
-    box-shadow var(--transition-fast), background-color var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background-color var(--transition-fast);
 
   &::placeholder {
     color: var(--color-text-muted);

@@ -99,11 +99,7 @@ function formatDate(dateString: string | null): string {
 
       <!-- Passkey 列表 -->
       <div v-else class="space-y-8">
-        <div
-          v-for="passkey in passkeys"
-          :key="passkey.id"
-          class="passkey-row"
-        >
+        <div v-for="passkey in passkeys" :key="passkey.id" class="passkey-row">
           <div>
             <div class="font-medium">
               {{ passkey.name }}

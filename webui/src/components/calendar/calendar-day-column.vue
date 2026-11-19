@@ -70,7 +70,8 @@ const emit = defineEmits<{
   display: flex;
   flex-direction: column;
   gap: 8px;
-  transition: background-color var(--transition-normal),
+  transition:
+    background-color var(--transition-normal),
     border-color var(--transition-normal);
 
   &--today {

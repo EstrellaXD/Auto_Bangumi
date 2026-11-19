@@ -1,0 +1,168 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": [
+    "eslint",
+    "typescript",
+    "unicorn",
+    "oxc",
+    "vue",
+    "import",
+    "node",
+    "promise",
+    "vitest"
+  ],
+  "env": {
+    "browser": true,
+    "es2024": true
+  },
+  "categories": {
+    "correctness": "error"
+  },
+  "ignorePatterns": [
+    "build/**",
+    "dist/**",
+    "storybook-static/**",
+    "e2e/.auth/**",
+    "playwright-report/**",
+    "test-results/**",
+    "types/dts/auto-imports.d.ts",
+    "types/dts/components.d.ts",
+    "types/dts/router-type.d.ts"
+  ],
+  "rules": {
+    // 沿用旧 ESLint 配置：允许 console；未使用变量只警告，`_` 前缀豁免
+    "no-console": "off",
+    // 要求 vi.fn<T>() 写类型参数，测试里大量 vi.fn() 无需此噪音
+    "vitest/require-mock-type-parameters": "off",
+    "no-unused-vars": [
+      "warn",
+      {
+        "args": "after-used",
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_",
+        "caughtErrors": "all",
+        "ignoreRestSiblings": true
+      }
+    ],
+
+    // 以下大致对应 @antfu/eslint-config 默认开启、且 oxlint 已实现的规则
+    "array-callback-return": "error",
+    "block-scoped-var": "error",
+    "default-case-last": "error",
+    "eqeqeq": ["error", "smart"],
+    "no-alert": "error",
+    "no-array-constructor": "error",
+    "no-case-declarations": "error",
+    "no-empty": ["error", { "allowEmptyCatch": true }],
+    "no-extend-native": "error",
+    "no-extra-bind": "error",
+    "no-fallthrough": "error",
+    "no-labels": "error",
+    "no-lone-blocks": "error",
+    "no-multi-str": "error",
+    "no-new": "error",
+    "no-new-func": "error",
+    "no-new-wrappers": "error",
+    "no-proto": "error",
+    "no-prototype-builtins": "error",
+    "no-redeclare": "error",
+    "no-regex-spaces": "error",
+    "no-restricted-globals": [
+      "error",
+      { "name": "global", "message": "Use `globalThis` instead." },
+      { "name": "self", "message": "Use `globalThis` instead." }
+    ],
+    "no-self-compare": "error",
+    "no-sequences": "error",
+    "no-template-curly-in-string": "error",
+    "no-throw-literal": "error",
+    "no-unmodified-loop-condition": "error",
+    "no-unneeded-ternary": ["error", { "defaultAssignment": false }],
+    "no-useless-call": "error",
+    "no-useless-computed-key": "error",
+    "no-useless-constructor": "error",
+    "no-useless-return": "error",
+    "no-var": "error",
+    "object-shorthand": [
+      "error",
+      "always",
+      { "avoidQuotes": true, "ignoreConstructors": false }
+    ],
+    "prefer-arrow-callback": "error",
+    "prefer-const": [
+      "error",
+      { "destructuring": "all", "ignoreReadBeforeAssign": true }
+    ],
+    "prefer-exponentiation-operator": "error",
+    "prefer-promise-reject-errors": "error",
+    "prefer-regex-literals": ["error", { "disallowRedundantWrapping": true }],
+    "prefer-rest-params": "error",
+    "prefer-spread": "error",
+    "prefer-template": "error",
+    "symbol-description": "error",
+    "unicode-bom": ["error", "never"],
+    "vars-on-top": "error",
+    "yoda": ["error", "never"],
+
+    "typescript/ban-ts-comment": [
+      "error",
+      { "ts-expect-error": "allow-with-description" }
+    ],
+    "typescript/consistent-type-definitions": ["error", "interface"],
+    "typescript/consistent-type-imports": [
+      "error",
+      {
+        "disallowTypeAnnotations": false,
+        "fixStyle": "separate-type-imports",
+        "prefer": "type-imports"
+      }
+    ],
+    "typescript/method-signature-style": ["error", "property"],
+    "typescript/no-import-type-side-effects": "error",
+    "typescript/no-require-imports": "error",
+    "typescript/no-unsafe-function-type": "error",
+    "typescript/no-unnecessary-type-constraint": "error",
+    "typescript/prefer-literal-enum-member": "error",
+
+    "unicorn/error-message": "error",
+    "unicorn/escape-case": "error",
+    "unicorn/no-instanceof-builtins": "error",
+    "unicorn/no-new-buffer": "error",
+    "unicorn/number-literal-case": "error",
+    "unicorn/prefer-includes": "error",
+    "unicorn/prefer-node-protocol": "error",
+    "unicorn/prefer-number-properties": "error",
+    "unicorn/prefer-string-starts-ends-with": "error",
+    "unicorn/prefer-type-error": "error",
+    "unicorn/throw-new-error": "error",
+
+    "import/first": "error",
+    "import/no-duplicates": "error",
+    "import/no-mutable-exports": "error",
+    "import/no-named-default": "error",
+    "import/no-self-import": "error",
+    "import/no-webpack-loader-syntax": "error",
+
+    "node/handle-callback-err": ["error", "^(err|error)$"],
+    "node/no-exports-assign": "error",
+    "node/no-new-require": "error",
+    "node/no-path-concat": "error",
+
+    "vitest/consistent-test-it": [
+      "error",
+      { "fn": "it", "withinDescribe": "it" }
+    ],
+    "vitest/no-identical-title": "error",
+    "vitest/no-import-node-test": "error",
+    "vitest/prefer-hooks-in-order": "error"
+  },
+  "overrides": [
+    {
+      // Service Worker 里 self 就是 ServiceWorkerGlobalScope
+      "files": ["public/sw.js"],
+      "rules": {
+        "no-restricted-globals": "off"
+      }
+    }
+  ]
+}

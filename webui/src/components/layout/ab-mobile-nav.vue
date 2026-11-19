@@ -133,7 +133,8 @@ const visibleItems = computed(() => {
     background: transparent;
     border: none;
     border-radius: var(--radius-md);
-    transition: color var(--transition-fast),
+    transition:
+      color var(--transition-fast),
       background-color var(--transition-fast);
     text-decoration: none;
     font: inherit;

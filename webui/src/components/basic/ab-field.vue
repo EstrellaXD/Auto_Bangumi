@@ -22,7 +22,12 @@ export const abFieldInjectionKey: InjectionKey<AbFieldContext> =
 <script lang="ts" setup>
 // 表单字段容器（取代 ab-label）：label + description + error + aria 接线。
 // 控件放默认插槽；ab-input 等会自动消费注入的 id/aria 上下文。
-const { description = '', error = '', required = false, label } = defineProps<{
+const {
+  description = '',
+  error = '',
+  required = false,
+  label,
+} = defineProps<{
   label: string | (() => string);
   description?: string;
   error?: string;
@@ -72,7 +77,9 @@ provide(abFieldInjectionKey, {
           :for="adopted ? controlId : undefined"
         >
           {{ labelText }}
-          <span v-if="required" class="ab-field-required" aria-hidden="true">*</span>
+          <span v-if="required" class="ab-field-required" aria-hidden="true"
+            >*</span
+          >
         </Component>
         <p v-if="description" :id="descriptionId" class="ab-field-description">
           {{ description }}

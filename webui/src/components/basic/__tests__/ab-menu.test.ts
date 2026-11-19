@@ -73,11 +73,15 @@ describe('ab-menu', () => {
     const menu = document.querySelector<HTMLElement>('[role="menu"]')!;
     expect(document.activeElement).toBe(menu);
 
-    menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    menu.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true })
+    );
     await flushPromises();
     expect(menu.getAttribute('aria-activedescendant')).toBe(menuItems()[0].id);
 
-    menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    menu.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
+    );
     await flushPromises();
     expect(document.activeElement).toBe(trigger.element);
   });

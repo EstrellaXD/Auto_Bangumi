@@ -128,10 +128,10 @@ export function onResponseError(err: AxiosError<ApiErrorResponse>) {
       handleAuthExpired();
       showErrorThrottled(
         errorMsg ||
-        returnUserLangText({
-          en: 'Authentication failed. Please check your credentials or sign in again.',
-          'zh-CN': '身份验证失败，请检查凭据或重新登录。',
-        })
+          returnUserLangText({
+            en: 'Authentication failed. Please check your credentials or sign in again.',
+            'zh-CN': '身份验证失败，请检查凭据或重新登录。',
+          })
       );
       break;
     /** 执行失败 */
@@ -142,10 +142,10 @@ export function onResponseError(err: AxiosError<ApiErrorResponse>) {
     case 500:
       showErrorThrottled(
         errorMsg ||
-        returnUserLangText({
-          en: 'Server error. Please try again later.',
-          'zh-CN': '服务器错误，请稍后重试。',
-        })
+          returnUserLangText({
+            en: 'Server error. Please try again later.',
+            'zh-CN': '服务器错误，请稍后重试。',
+          })
       );
       break;
     /**
@@ -155,10 +155,10 @@ export function onResponseError(err: AxiosError<ApiErrorResponse>) {
     default:
       showErrorThrottled(
         errorMsg ||
-        returnUserLangText({
-          en: 'Request failed. Please try again.',
-          'zh-CN': '请求失败，请重试。',
-        })
+          returnUserLangText({
+            en: 'Request failed. Please try again.',
+            'zh-CN': '请求失败，请重试。',
+          })
       );
       break;
   }

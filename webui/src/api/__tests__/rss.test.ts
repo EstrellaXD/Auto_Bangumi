@@ -4,11 +4,7 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
-import {
-  mockApiSuccess,
-  mockRSSItem,
-  mockRSSList,
-} from '@/test/mocks/api';
+import { mockApiSuccess, mockRSSItem, mockRSSList } from '@/test/mocks/api';
 import { createAxiosMock } from '@/test/mocks/axios';
 
 import { apiRSS } from '@/api/rss';
@@ -99,7 +95,10 @@ describe('RSS API Logic', () => {
     it('should POST api/v1/rss/delete/many with the id array when batch deleting', async () => {
       (axios.post as any).mockResolvedValue({ data: mockApiSuccess });
       await apiRSS.deleteMany([1, 2, 3]);
-      expect(axios.post).toHaveBeenCalledWith('api/v1/rss/delete/many', [1, 2, 3]);
+      expect(axios.post).toHaveBeenCalledWith(
+        'api/v1/rss/delete/many',
+        [1, 2, 3]
+      );
     });
 
     it('should PATCH api/v1/rss/disable/:id when disabling a single feed', async () => {
@@ -111,19 +110,28 @@ describe('RSS API Logic', () => {
     it('should POST api/v1/rss/disable/many with the id array when batch disabling', async () => {
       (axios.post as any).mockResolvedValue({ data: mockApiSuccess });
       await apiRSS.disableMany([1, 2]);
-      expect(axios.post).toHaveBeenCalledWith('api/v1/rss/disable/many', [1, 2]);
+      expect(axios.post).toHaveBeenCalledWith(
+        'api/v1/rss/disable/many',
+        [1, 2]
+      );
     });
 
     it('should PATCH api/v1/rss/update/:id with the RSS payload when updating', async () => {
       (axios.patch as any).mockResolvedValue({ data: mockApiSuccess });
       await apiRSS.update(1, mockRSSItem);
-      expect(axios.patch).toHaveBeenCalledWith('api/v1/rss/update/1', mockRSSItem);
+      expect(axios.patch).toHaveBeenCalledWith(
+        'api/v1/rss/update/1',
+        mockRSSItem
+      );
     });
 
     it('should POST api/v1/rss/enable/many with the id array when batch enabling', async () => {
       (axios.post as any).mockResolvedValue({ data: mockApiSuccess });
       await apiRSS.enableMany([1, 2, 3]);
-      expect(axios.post).toHaveBeenCalledWith('api/v1/rss/enable/many', [1, 2, 3]);
+      expect(axios.post).toHaveBeenCalledWith(
+        'api/v1/rss/enable/many',
+        [1, 2, 3]
+      );
     });
 
     it('should POST api/v1/rss/refresh/all when refreshing every feed', async () => {

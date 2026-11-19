@@ -27,9 +27,7 @@ const emit = defineEmits<{ click: [value: string] }>();
 const value = defineModel<string>('value', { required: true });
 
 const selected = computed(
-  () =>
-    options.find((option) => option.value === value.value) ??
-    options[0]
+  () => options.find((option) => option.value === value.value) ?? options[0]
 );
 
 const menuItems = computed<AbMenuItem[]>(() =>

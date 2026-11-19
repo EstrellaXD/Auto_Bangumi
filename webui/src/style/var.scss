@@ -5,38 +5,40 @@
 
 :root {
   // --- Colors ---
-  --color-primary: #6C4AB6;
-  --color-primary-hover: #563A92;
-  --color-primary-light: #E8DEF8;
+  --color-primary: #6c4ab6;
+  --color-primary-hover: #563a92;
+  --color-primary-light: #e8def8;
   // 聚焦描边（focus ring）的半透明主色
   --color-primary-alpha: rgba(108, 74, 182, 0.2);
-  --color-accent: #F97316;
-  --color-success: #22C55E;
-  --color-danger: #EF4444;
-  --color-warning: #F59E0B;
-  --color-warning-bg: #FEF9ED;
-  --color-warning-border: #FDE68A;
-  --color-warning-text: #92400E;
-  --color-warning-text-secondary: #A16207;
+  --color-accent: #f97316;
+  --color-success: #22c55e;
+  --color-danger: #ef4444;
+  --color-warning: #f59e0b;
+  --color-warning-bg: #fef9ed;
+  --color-warning-border: #fde68a;
+  --color-warning-text: #92400e;
+  --color-warning-text-secondary: #a16207;
 
-  --color-bg: #FAFAFA;
-  --color-surface: #FFFFFF;
-  --color-surface-hover: #F5F5F5;
+  --color-bg: #fafafa;
+  --color-surface: #ffffff;
+  --color-surface-hover: #f5f5f5;
   // Soft Ink: 控件的填充底色（无边框，聚焦时才出现边框/描边）
-  --color-surface-2: #F1F4F8;
+  --color-surface-2: #f1f4f8;
 
-  --color-text: #1E293B;
-  --color-text-secondary: #64748B;
-  --color-text-muted: #94A3B8;
+  --color-text: #1e293b;
+  --color-text-secondary: #64748b;
+  --color-text-muted: #94a3b8;
 
-  --color-border: #E2E8F0;
-  --color-border-hover: #CBD5E1;
+  --color-border: #e2e8f0;
+  --color-border-hover: #cbd5e1;
 
   // --- Shadows ---
   --shadow-color: rgba(0, 0, 0, 0.08);
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  --shadow-md:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  --shadow-lg:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
 
   // --- Radius (Soft Ink: 4px 控件 / 8px 卡片、菜单、弹窗) ---
   --radius-sm: 4px;
@@ -64,9 +66,12 @@
   --touch-target: 44px;
 
   // --- Typography ---
-  --font-family: 'Inter', -apple-system, 'Noto Sans SC', 'Microsoft YaHei', system-ui, sans-serif;
+  --font-family:
+    'Inter', -apple-system, 'Noto Sans SC', 'Microsoft YaHei', system-ui,
+    sans-serif;
   // Soft Ink: 数据文本（订阅源、时间戳、集数）用等宽字体 + tabular-nums
-  --font-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+  --font-mono:
+    ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
 
   // --- Z-Index Scale ---
   --z-dropdown: 10;
@@ -98,28 +103,28 @@
 
 // Dark theme
 .dark {
-  --color-primary: #8B6CC7;
-  --color-primary-hover: #A78BDB;
-  --color-primary-light: #2D2250;
+  --color-primary: #8b6cc7;
+  --color-primary-hover: #a78bdb;
+  --color-primary-light: #2d2250;
   --color-primary-alpha: rgba(139, 108, 199, 0.28);
-  --color-accent: #FB923C;
-  --color-success: #4ADE80;
-  --color-danger: #F87171;
-  --color-warning: #FBBF24;
+  --color-accent: #fb923c;
+  --color-success: #4ade80;
+  --color-danger: #f87171;
+  --color-warning: #fbbf24;
   --color-warning-bg: #322414;
-  --color-warning-border: #6B5416;
-  --color-warning-text: #FDE68A;
-  --color-warning-text-secondary: #EAB308;
+  --color-warning-border: #6b5416;
+  --color-warning-text: #fde68a;
+  --color-warning-text-secondary: #eab308;
 
-  --color-bg: #0F172A;
-  --color-surface: #1E293B;
+  --color-bg: #0f172a;
+  --color-surface: #1e293b;
   // 介于 surface-2 与 border 之间：悬停行上的发丝边框仍可见
-  --color-surface-hover: #2B3850;
-  --color-surface-2: #26334A;
+  --color-surface-hover: #2b3850;
+  --color-surface-2: #26334a;
 
-  --color-text: #F1F5F9;
-  --color-text-secondary: #94A3B8;
-  --color-text-muted: #64748B;
+  --color-text: #f1f5f9;
+  --color-text-secondary: #94a3b8;
+  --color-text-muted: #64748b;
 
   --color-border: #334155;
   --color-border-hover: #475569;
@@ -127,8 +132,10 @@
   // --- Shadows (darker for dark mode) ---
   --shadow-color: rgba(0, 0, 0, 0.3);
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
+  --shadow-md:
+    0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
+  --shadow-lg:
+    0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
 
   // --- Scrollbar ---
   --scrollbar-thumb-color: rgba(139, 108, 199, 0.3);

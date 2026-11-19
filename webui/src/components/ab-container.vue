@@ -48,7 +48,8 @@ const { title = 'title', flush = false } = defineProps<{
   color: var(--color-text-secondary);
   border-bottom: 1px solid var(--color-border);
   user-select: none;
-  transition: color var(--transition-normal),
+  transition:
+    color var(--transition-normal),
     border-color var(--transition-normal);
 
   // 触屏按钮 44px 高，上下留白，不贴住头部边框
@@ -69,7 +70,8 @@ const { title = 'title', flush = false } = defineProps<{
   background: var(--color-surface);
   color: var(--color-text);
   font-size: 14px;
-  transition: background-color var(--transition-normal),
+  transition:
+    background-color var(--transition-normal),
     color var(--transition-normal);
 
   &--flush {

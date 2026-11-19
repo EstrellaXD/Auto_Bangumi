@@ -14,7 +14,7 @@ test('player settings stay browser-local and load the hermetic iframe', async ({
     if (
       (request.url().endsWith('/api/v1/config/update') &&
         request.method() === 'PATCH') ||
-        (request.url().endsWith('/api/v1/restart') && request.method() === 'POST')
+      (request.url().endsWith('/api/v1/restart') && request.method() === 'POST')
     )
       backendMutations.push(request.url());
   });
@@ -25,8 +25,10 @@ test('player settings stay browser-local and load the hermetic iframe', async ({
   await page.goto('/#/config');
   await configLoaded;
 
-  const playerPanel = page
-    .getByRole('region', { name: 'Media Player Setting', exact: true });
+  const playerPanel = page.getByRole('region', {
+    name: 'Media Player Setting',
+    exact: true,
+  });
   await playerPanel.getByLabel('Type').click();
   await page.getByRole('option', { name: 'iframe', exact: true }).click();
   const playerURL = `${environment.mockURL}/player/`;
@@ -46,8 +48,10 @@ test('player settings stay browser-local and load the hermetic iframe', async ({
   expect(backendMutations).toEqual([]);
 
   await page.reload();
-  const reloadedPanel = page
-    .getByRole('region', { name: 'Media Player Setting', exact: true });
+  const reloadedPanel = page.getByRole('region', {
+    name: 'Media Player Setting',
+    exact: true,
+  });
   await expect(reloadedPanel.getByLabel('Player URL')).toHaveValue(playerURL);
 
   await page.goto('/#/player');
@@ -67,8 +71,10 @@ test('player settings stay browser-local and load the hermetic iframe', async ({
   );
   try {
     await isolated.page.goto('/#/config');
-    const isolatedPanel = isolated.page
-      .getByRole('region', { name: 'Media Player Setting', exact: true });
+    const isolatedPanel = isolated.page.getByRole('region', {
+      name: 'Media Player Setting',
+      exact: true,
+    });
     await expect(isolatedPanel.getByLabel('Type')).toContainText('jump');
     await expect(isolatedPanel.getByLabel('Player URL')).toHaveValue('');
   } finally {

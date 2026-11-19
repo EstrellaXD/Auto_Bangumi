@@ -76,7 +76,8 @@ const open = defineModel<boolean>('open', { default: false });
   display: grid;
   grid-template-rows: 0fr;
   opacity: 0;
-  transition: grid-template-rows var(--transition-normal),
+  transition:
+    grid-template-rows var(--transition-normal),
     opacity var(--transition-normal);
 
   &.is-open {

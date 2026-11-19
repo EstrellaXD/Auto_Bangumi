@@ -46,7 +46,9 @@ const show = defineModel<boolean>('show', { default: false });
             v-if="rule.filter && rule.filter.length > 0"
             class="rule-list-item-filter"
           >
-            <span class="rule-list-item-filter-label">{{ $t('homepage.rule.filter') }}: </span>
+            <span class="rule-list-item-filter-label"
+              >{{ $t('homepage.rule.filter') }}:
+            </span>
             <span class="rule-list-item-filter-value">{{
               rule.filter.join(', ')
             }}</span>

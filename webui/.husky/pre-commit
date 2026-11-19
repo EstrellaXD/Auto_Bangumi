@@ -1,1 +1,1 @@
-cd ./webui && pnpm run lint:fix
+cd ./webui && pnpm run format && pnpm run lint:fix

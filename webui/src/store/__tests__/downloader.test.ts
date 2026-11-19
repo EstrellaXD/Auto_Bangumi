@@ -158,7 +158,9 @@ describe('downloader store', () => {
     'should label the group with the last folders when save_path is %s',
     (savePath, expected) => {
       const store = useDownloaderStore();
-      store.torrents = [{ ...torrent('a', 'home'), save_path: savePath, size: 0 }];
+      store.torrents = [
+        { ...torrent('a', 'home'), save_path: savePath, size: 0 },
+      ];
 
       expect(store.groups[0].name).toBe(expected);
     }

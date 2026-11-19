@@ -146,7 +146,7 @@ const routeId = computed<string | undefined>((prev) =>
 const selected = computed(() => {
   const list = catalog.value ?? [];
   if (routeId.value) return list.find((e) => e.id === routeId.value) ?? null;
-  return isMobile.value ? null : visible.value[0] ?? null;
+  return isMobile.value ? null : (visible.value[0] ?? null);
 });
 const showDetail = computed(() => isMobile.value && Boolean(routeId.value));
 
@@ -263,7 +263,9 @@ function permissionLabel(id: string) {
             :title="$t('market.catalog_verified')"
           >
             <span class="mark mark--installed" aria-hidden="true" />
-            <span class="market__verified-text">{{ $t('market.catalog_verified') }} ·</span>
+            <span class="market__verified-text"
+              >{{ $t('market.catalog_verified') }} ·</span
+            >
             <span class="market__time">{{
               $t('market.updated', { time: updatedText })
             }}</span>
@@ -356,7 +358,10 @@ function permissionLabel(id: string) {
           </ab-button>
         </template>
       </ab-empty>
-      <ab-empty v-else-if="catalog.length" :title="$t('market.no_filter_match')">
+      <ab-empty
+        v-else-if="catalog.length"
+        :title="$t('market.no_filter_match')"
+      >
         <template #action>
           <ab-button size="sm" variant="ghost" @click="resetFilters">
             {{ $t('market.show_all') }}
@@ -387,7 +392,9 @@ function permissionLabel(id: string) {
             "
           >
             <span class="row__name">{{ entry.name || entry.id }}</span>
-            <span class="row__version" :title="entry.version">{{ entry.version }}</span>
+            <span class="row__version" :title="entry.version">{{
+              entry.version
+            }}</span>
             <span class="row__state">
               <span
                 class="mark"
@@ -450,9 +457,9 @@ function permissionLabel(id: string) {
               {{
                 selected.sdk
                   ? $t('market.version_sdk', {
-                    version: selected.version,
-                    sdk: selected.sdk,
-                  })
+                      version: selected.version,
+                      sdk: selected.sdk,
+                    })
                   : selected.version
               }}
             </dd>
@@ -470,8 +477,9 @@ function permissionLabel(id: string) {
                   :href="sourceUrl(selected)"
                   target="_blank"
                   rel="noopener noreferrer"
-                >{{ selected.repo }}@{{ selected.commit.slice(0, 7) }}
-                  <span aria-hidden="true">↗</span></a>
+                  >{{ selected.repo }}@{{ selected.commit.slice(0, 7) }}
+                  <span aria-hidden="true">↗</span></a
+                >
               </dd>
             </template>
 
@@ -508,7 +516,6 @@ function permissionLabel(id: string) {
           </dl>
 
           <!-- renderMarkdown 先转义全部 HTML，只输出白名单标签与 http(s) 链接 -->
-          <!-- eslint-disable-next-line vue/no-v-html -->
           <article v-if="readme" class="readme" v-html="readme" />
 
           <div v-if="isMobile" class="detail__sticky">
@@ -565,8 +572,8 @@ function permissionLabel(id: string) {
     padding-block: 4px;
     margin-block: 0 -3px;
     border-bottom: none;
-    background: linear-gradient(var(--color-border), var(--color-border))
-      left bottom 3px / 100% 1px no-repeat;
+    background: linear-gradient(var(--color-border), var(--color-border)) left
+      bottom 3px / 100% 1px no-repeat;
 
     &::-webkit-scrollbar {
       display: none;
