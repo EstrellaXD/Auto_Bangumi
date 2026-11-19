@@ -15,6 +15,7 @@ async function mountModal(props = {}, slots = {}) {
     props: { show: true, title: 'Delete rule?', ...props },
     slots: { default: '<p>body text</p>', ...slots },
     attachTo: document.body,
+    global: { stubs: { transition: false } },
   });
   // NModal mounts dialog content on the next tick (transition setup)
   await new Promise((resolve) => setTimeout(resolve));
@@ -100,4 +101,47 @@ describe('ab-modal', () => {
     expect((wrapper.vm as any).outer).toBe(true);
     wrapper.unmount();
   });
+});
+
+function pluginInputs(parent: HTMLElement) {
+  const host = document.createElement('ab-plugin-focus-test');
+  const root = host.attachShadow({ mode: 'open' });
+  const nested = document.createElement('div');
+  const inner = nested.attachShadow({ mode: 'open' });
+  inner.innerHTML = '<input id="first"><input id="last">';
+  root.append(nested);
+  parent.append(host);
+  return { host, inner, first: inner.querySelector<HTMLInputElement>('#first')!, last: inner.querySelector<HTMLInputElement>('#last')! };
+}
+
+it('keeps typing focus inside nested plugin shadow roots while retaining the modal trap', async () => {
+  const outside = document.createElement('input');
+  document.body.append(outside);
+  const wrapper = await mountModal({}, { default: '<input id="native"><div id="plugin"></div>' });
+  const { host, inner, first } = pluginInputs(document.querySelector('#plugin')!);
+  first.focus();
+  expect(document.activeElement).toBe(host);
+  expect(inner.activeElement).toBe(first);
+  first.value = 'editable text';
+  first.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true }));
+  expect(inner.activeElement).toBe(first);
+  expect(first.value).toBe('editable text');
+  outside.focus();
+  expect(document.activeElement).toBe(document.querySelector('#native'));
+  wrapper.unmount();
+});
+
+it('wraps both tab boundaries through focusable plugin shadow descendants', async () => {
+  const wrapper = await mountModal({ title: '', closable: false }, { default: '<div id="plugin"></div>' });
+  const { host, inner, first, last } = pluginInputs(document.querySelector('#plugin')!);
+  const guards = document.querySelectorAll<HTMLElement>('div[aria-hidden="true"][tabindex="0"]');
+  expect(guards.length).toBe(2);
+  // These sentinels receive focus on Shift+Tab / Tab at the dialog boundaries.
+  last.focus();
+  guards[1].focus();
+  expect(document.activeElement).toBe(host);
+  expect(inner.activeElement).toBe(first);
+  guards[0].focus();
+  expect(inner.activeElement).toBe(last);
+  wrapper.unmount();
 });

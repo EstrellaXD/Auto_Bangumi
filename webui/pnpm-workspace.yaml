@@ -10,3 +10,5 @@ allowBuilds:
   '@parcel/watcher': false
   esbuild: true
   vue-demi: true
+patchedDependencies:
+  vueuc@0.4.66: patches/vueuc@0.4.66.patch

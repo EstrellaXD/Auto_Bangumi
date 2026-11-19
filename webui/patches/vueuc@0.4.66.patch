@@ -1,0 +1,130 @@
+diff --git a/es/focus-trap/src/index.js b/es/focus-trap/src/index.js
+index c2b1608f5065b1c1e41148dd137edf2cf1e3c354..439b7fe56d6f038dd9eaf6ff0b14802f6ce398c2 100644
+--- a/es/focus-trap/src/index.js
++++ b/es/focus-trap/src/index.js
+@@ -68,7 +68,7 @@ export const FocusTrap = defineComponent({
+                 const mainEl = getMainEl();
+                 if (mainEl === null)
+                     return;
+-                if (mainEl.contains(getPreciseEventTarget(e)))
++                if (e.composedPath().includes(mainEl) || mainEl.contains(getPreciseEventTarget(e)))
+                     return;
+                 // I don't handle shift + tab status since it's too tricky to handle
+                 // Not impossible but I need to sleep
+@@ -160,7 +160,7 @@ export const FocusTrap = defineComponent({
+             const mainEl = getMainEl();
+             if (mainEl === null)
+                 return;
+-            if (e.relatedTarget !== null && mainEl.contains(e.relatedTarget)) {
++            if (e.relatedTarget !== null && containsComposed(mainEl, e.relatedTarget)) {
+                 // if it comes from inner, focus last
+                 resetFocusTo('last');
+             }
+@@ -216,3 +216,11 @@ export const FocusTrap = defineComponent({
+         ]);
+     }
+ });
++
++function containsComposed(target, node) {
++    while (node instanceof Node) {
++        if (target.contains(node)) return true;
++        node = node.getRootNode().host || null;
++    }
++    return false;
++}
+diff --git a/es/focus-trap/src/utils.js b/es/focus-trap/src/utils.js
+index 451dbefc69c7cb09adb634cdb6b834d85f8f0e04..b5e748df03bff8a98c0e805a69fa8ae5c1098845 100644
+--- a/es/focus-trap/src/utils.js
++++ b/es/focus-trap/src/utils.js
+@@ -6,7 +6,7 @@ export function focusFirstDescendant(node) {
+     for (let i = 0; i < node.childNodes.length; i++) {
+         const child = node.childNodes[i];
+         if (isHTMLElement(child)) {
+-            if (attemptFocus(child) || focusFirstDescendant(child)) {
++            if (attemptFocus(child) || focusFirstDescendant(child.shadowRoot || child)) {
+                 return true;
+             }
+         }
+@@ -17,7 +17,7 @@ export function focusLastDescendant(element) {
+     for (let i = element.childNodes.length - 1; i >= 0; i--) {
+         const child = element.childNodes[i];
+         if (isHTMLElement(child)) {
+-            if (attemptFocus(child) || focusLastDescendant(child)) {
++            if (attemptFocus(child) || focusLastDescendant(child.shadowRoot || child)) {
+                 return true;
+             }
+         }
+@@ -32,7 +32,7 @@ function attemptFocus(element) {
+         element.focus({ preventScroll: true });
+     }
+     catch (_a) { }
+-    return document.activeElement === element;
++    return element.getRootNode().activeElement === element;
+ }
+ function isFocusable(element) {
+     if (element.tabIndex > 0 ||
+diff --git a/lib/focus-trap/src/index.js b/lib/focus-trap/src/index.js
+index 77bcee3825692518c71c425be2f4e3d38a2ff1d9..2ad01c10899261dfc7fa2bc97a24c1238f3149f0 100644
+--- a/lib/focus-trap/src/index.js
++++ b/lib/focus-trap/src/index.js
+@@ -71,7 +71,7 @@ exports.FocusTrap = (0, vue_1.defineComponent)({
+                 const mainEl = getMainEl();
+                 if (mainEl === null)
+                     return;
+-                if (mainEl.contains((0, seemly_1.getPreciseEventTarget)(e)))
++                if (e.composedPath().includes(mainEl) || mainEl.contains((0, seemly_1.getPreciseEventTarget)(e)))
+                     return;
+                 // I don't handle shift + tab status since it's too tricky to handle
+                 // Not impossible but I need to sleep
+@@ -163,7 +163,7 @@ exports.FocusTrap = (0, vue_1.defineComponent)({
+             const mainEl = getMainEl();
+             if (mainEl === null)
+                 return;
+-            if (e.relatedTarget !== null && mainEl.contains(e.relatedTarget)) {
++            if (e.relatedTarget !== null && containsComposed(mainEl, e.relatedTarget)) {
+                 // if it comes from inner, focus last
+                 resetFocusTo('last');
+             }
+@@ -219,3 +219,11 @@ exports.FocusTrap = (0, vue_1.defineComponent)({
+         ]);
+     }
+ });
++
++function containsComposed(target, node) {
++    while (node instanceof Node) {
++        if (target.contains(node)) return true;
++        node = node.getRootNode().host || null;
++    }
++    return false;
++}
+diff --git a/lib/focus-trap/src/utils.js b/lib/focus-trap/src/utils.js
+index b078ce83deedd140948ba5f9c1c22de54cd768c0..6abd886cbfa9bea91b19ba22daea14af3c030054 100644
+--- a/lib/focus-trap/src/utils.js
++++ b/lib/focus-trap/src/utils.js
+@@ -10,7 +10,7 @@ function focusFirstDescendant(node) {
+     for (let i = 0; i < node.childNodes.length; i++) {
+         const child = node.childNodes[i];
+         if (isHTMLElement(child)) {
+-            if (attemptFocus(child) || focusFirstDescendant(child)) {
++            if (attemptFocus(child) || focusFirstDescendant(child.shadowRoot || child)) {
+                 return true;
+             }
+         }
+@@ -21,7 +21,7 @@ function focusLastDescendant(element) {
+     for (let i = element.childNodes.length - 1; i >= 0; i--) {
+         const child = element.childNodes[i];
+         if (isHTMLElement(child)) {
+-            if (attemptFocus(child) || focusLastDescendant(child)) {
++            if (attemptFocus(child) || focusLastDescendant(child.shadowRoot || child)) {
+                 return true;
+             }
+         }
+@@ -36,7 +36,7 @@ function attemptFocus(element) {
+         element.focus({ preventScroll: true });
+     }
+     catch (_a) { }
+-    return document.activeElement === element;
++    return element.getRootNode().activeElement === element;
+ }
+ function isFocusable(element) {
+     if (element.tabIndex > 0 ||
