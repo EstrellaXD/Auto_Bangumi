@@ -366,6 +366,26 @@ async def test_list_torrents_one_instance_down_lists_the_other(two_instances):
     assert [(t["hash"], t["downloader_id"]) for t in listed or []] == [("ha", "a")]
 
 
+async def test_list_torrents_drops_unlisted_fields(two_instances):
+    """magnet_uri 等前端用不到的大字段不随列表（SSE / API）下发。"""
+    torrent = _completed("A", "ha", "/a/Bangumi/A/Season 1")
+    torrent["magnet_uri"] = "magnet:?xt=urn:btih:ha" + "&tr=udp://t" * 1000
+    _mock("a")._torrents["ha"] = torrent
+    listed = await list_torrents()
+    assert listed == [
+        {
+            "hash": "ha",
+            "name": "A",
+            "progress": 1.0,
+            "state": "completed",
+            "category": "Bangumi",
+            "tags": "",
+            "save_path": "/a/Bangumi/A/Season 1",
+            "downloader_id": "a",
+        }
+    ]
+
+
 class TestRuleOnAnotherInstance:
     """规则换到另一个实例后，旧种子留在原实例；删除规则时两边的种子都删。"""
 
