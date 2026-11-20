@@ -575,11 +575,32 @@ class DownloaderPool:
         return self._clients[instance_id]
 
 
+# WebUI 下载器页与 MCP list_downloads 用到的字段；其余字段（如带全部 tracker
+# 的 magnet_uri）不下发，否则种子多时一帧 SSE 可达几十 MB。
+LISTED_TORRENT_FIELDS = (
+    "hash",
+    "name",
+    "size",
+    "progress",
+    "dlspeed",
+    "upspeed",
+    "num_seeds",
+    "num_leechs",
+    "state",
+    "eta",
+    "category",
+    "tags",
+    "save_path",
+    "added_on",
+)
+
+
 async def list_torrents(
     status_filter: str | None = None, timeout: float | None = None
 ) -> list[dict] | None:
     """所有下载器实例中 Bangumi 分类的种子，每条带 ``downloader_id``。
 
+    每条只保留 ``LISTED_TORRENT_FIELDS`` 中下载器返回了的字段。
     不可用（或超过 ``timeout`` 秒）的实例跳过；全部实例都不可用时返回 None。
     """
 
@@ -588,7 +609,13 @@ async def list_torrents(
             torrents = await client.get_torrent_info(
                 category="Bangumi", status_filter=status_filter
             )
-        return [{**t, "downloader_id": instance_id} for t in torrents]
+        return [
+            {
+                **{k: t[k] for k in LISTED_TORRENT_FIELDS if k in t},
+                "downloader_id": instance_id,
+            }
+            for t in torrents
+        ]
 
     ids = downloader_ids()
     results = await asyncio.gather(
