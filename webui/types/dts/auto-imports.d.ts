@@ -200,6 +200,9 @@ declare global {
   export type { TestProviderRequest, TestProviderConfigRequest, TestResponse, InboxSeverity, InboxMessage, InboxListResponse, InboxListParams } from '../../src/api/notification'
   import('../../src/api/notification')
   // @ts-ignore
+  export type { MaintenanceOperation } from '../../src/api/plugins'
+  import('../../src/api/plugins')
+  // @ts-ignore
   export type { SearchFilters, FilterOptions, GroupedBangumi } from '../../src/store/search'
   import('../../src/store/search')
   // @ts-ignore

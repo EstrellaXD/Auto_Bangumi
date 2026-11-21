@@ -159,6 +159,8 @@ export interface PluginInstance {
 
 /** Provider 选择：扩展点 → Provider id；下载器选的是实例 id */
 export interface PluginSlots {
+  organizer: string;
+  download_preflight: string;
   downloader: string;
   /** 内置方式，或插件提供的重命名方式 id（如 template） */
   rename_strategy: TupleToUnion<RenameMethod> | (string & {});
@@ -170,6 +172,7 @@ export interface PluginSlots {
 export interface Plugins {
   /** 允许加载未签名（本地目录 / pip）插件 */
   allow_unsigned: boolean;
+  local_update_sources: Record<string, string>;
   enabled: Record<string, boolean>;
   options: Record<string, Record<string, unknown>>;
   /** 各扩展点的显式钩子顺序（插件 id 列表） */
@@ -259,10 +262,13 @@ export const initConfig: Config = {
   },
   plugins: {
     allow_unsigned: false,
+    local_update_sources: {},
     enabled: {},
     options: {},
     hook_order: {},
     slots: {
+      organizer: 'native',
+      download_preflight: '',
       downloader: 'default',
       rename_strategy: 'pn',
       conflict_policy: 'hold',

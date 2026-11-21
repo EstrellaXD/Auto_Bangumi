@@ -198,6 +198,24 @@
       "category_id_invalid": "Category IDs must be numeric (comma-separated for multiple)"
     },
     "plugins_set": {
+      "recovery": "Maintenance recovery required",
+      "restore_code": "Restore previous plugin",
+      "acknowledge": "Acknowledge recovery",
+      "recovery_hint": "AB tasks stay paused. Restore interrupted plugin updates, or finish your maintenance repair before acknowledging. Start AB explicitly afterward.",
+      "refresh_status": "Refresh status",
+
+      "organizer": "Library organizer",
+      "preflight": "Download admission",
+      "native": "AutoBangumi",
+      "none": "Disabled",
+      "pipeline_hint": "A selected provider is exclusive. If unavailable, its pipeline stays paused. Changing providers stops tasks and creates a backup.",
+      "update_source": "Update source (GitHub owner/repo)",
+      "update_hint": "Trust releases from this repository for this local plugin. Checks run daily while AB is running; installation is manual. Backups are kept under config/plugin-backups.",
+      "check_update": "Check for update",
+      "apply_update": "Update to {version}",
+      "up_to_date": "Up to date",
+      "save_source": "Save source",
+
       "title": "Plugins",
       "empty": "No plugins found. Install one from the plugin market, or put a plugin directory (named after the plugin id) into config/plugins/local/ or install it with pip, then restart.",
       "allow_unsigned": "Allow unsigned plugins",
@@ -829,6 +847,10 @@
       },
       "downloader_unavailable": {
         "title": "Downloader unavailable"
+      },
+      "plugin_update_available": {
+        "title": "Plugin update available",
+        "body": "{plugin_id} {version}\n{release_url}"
       },
       "update_available": {
         "title": "New version available",

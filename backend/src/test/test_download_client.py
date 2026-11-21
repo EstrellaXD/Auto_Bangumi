@@ -20,6 +20,7 @@ def download_client(mock_qb_client):
     """Create a DownloadClient with mocked internal client."""
     with patch("module.downloader.download_client.settings") as mock_settings:
         mock_settings.downloader.type = "qbittorrent"
+        mock_settings.downloader.id = "default"
         mock_settings.downloader.host = "localhost:8080"
         mock_settings.downloader.username = "admin"
         mock_settings.downloader.password = "admin"

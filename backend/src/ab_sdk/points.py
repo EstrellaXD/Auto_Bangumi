@@ -26,6 +26,8 @@ NOTIFIER = "notifier"
 LLM_PROVIDER = "llm_provider"
 SEARCH_SITE = "search_site"
 SCHEDULED_TASK = "scheduled_task"
+DOWNLOAD_PREFLIGHT = "download.preflight"
+ORGANIZER = "organizer"
 
 # --- ingest ---
 METADATA_PROVIDER = "metadata_provider"

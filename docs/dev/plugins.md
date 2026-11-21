@@ -40,6 +40,7 @@
 
 - [核心概念](/dev/plugins/concepts)：`Plugin`、`ctx`、三种扩展声明、清单、隔离与熔断
 - [配置表单](/dev/plugins/config-forms)：`config_model` 如何变成 WebUI 表单
+- [下载与媒体库服务](/dev/plugins/services)：持久任务、强制准入、独占整理器、维护与本地更新
 - [事件](/dev/plugins/events)：系统事件、整理事件、自定义事件
 - [前端挂载点](/dev/plugins/frontend-slots)：Web Components 与 `AbHost`
 - [命令行 ab-plugin](/dev/plugins/cli)：`new`、`validate`、`pack`、`dev`

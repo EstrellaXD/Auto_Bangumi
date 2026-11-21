@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from os.path import expandvars
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from ab_sdk.rename import CORE_ID
 
@@ -412,6 +412,13 @@ class Slots(BaseModel):
         description="How to handle a higher revision targeting an existing episode",
     )
     media_files: str = Field(default=CORE_ID, description="Media file classifier")
+    organizer: str = Field(
+        default="native", description="Exclusive organizer (native or plugin/id)"
+    )
+    download_preflight: str = Field(
+        default="",
+        description="Required admission provider (plugin/id); empty keeps native admission",
+    )
 
 
 class Plugins(BaseModel):
@@ -428,6 +435,25 @@ class Plugins(BaseModel):
         default=False,
         description="Reload local plugins automatically when their files change",
     )
+    local_update_sources: dict[str, str] = Field(
+        default_factory=dict,
+        description="User-selected GitHub owner/repo for each unsigned local plugin",
+    )
+
+    @field_validator("local_update_sources")
+    @classmethod
+    def _local_sources(cls, values):
+        import re
+
+        for plugin_id, repository in values.items():
+            if not re.fullmatch(r"[a-z0-9][a-z0-9-]*", plugin_id) or not re.fullmatch(
+                r"[A-Za-z0-9][A-Za-z0-9_.-]*/[A-Za-z0-9][A-Za-z0-9_.-]*", repository
+            ):
+                raise ValueError(
+                    "Local update sources must be plugin-id: GitHub owner/repo"
+                )
+        return values
+
     enabled: dict[str, bool] = Field(
         default_factory=dict, description="Per-plugin enable switch, keyed by id"
     )

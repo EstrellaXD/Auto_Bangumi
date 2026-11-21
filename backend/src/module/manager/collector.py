@@ -77,7 +77,15 @@ class SeasonCollector:
                 # 载荷带着已禁用行的 id 也能 update 成功：显式收集
                 # 即用户想重新启用，否则种子会挂到不可见的行上
                 await db.bangumi.restore_one(bangumi.id)
-            if await self.client.add_torrent(torrents, bangumi) is AddResult.ADDED:
+            result = await self.client.add_torrent(torrents, bangumi)
+            if result is AddResult.HELD:
+                return ResponseModel(
+                    status=False,
+                    status_code=409,
+                    msg_en="Downloads are awaiting review.",
+                    msg_zh="下载正在等待审核。",
+                )
+            if result is AddResult.ADDED:
                 logger.info(
                     f"Collections of {bangumi.official_title} Season {bangumi.season} completed."
                 )

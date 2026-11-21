@@ -1,0 +1,8 @@
+[plugin]
+id = "download-review"
+name = "Download review example"
+version = "0.1.0"
+sdk = ">=0.7,<1"
+entry = "review:Review"
+description = "Hold downloads until approved; prefer v2 within the complete RSS batch"
+extension_points = ["download.preflight"]

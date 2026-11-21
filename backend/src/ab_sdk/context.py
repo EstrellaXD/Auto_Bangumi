@@ -7,7 +7,13 @@ from typing import Any, Protocol
 
 from pydantic import BaseModel
 
+from .bangumi import BangumiService
+from .downloads import DownloadService
 from .events import Event
+from .library import LibraryService
+from .maintenance import MaintenanceService
+from .metadata import MetadataService
+from .updates import PluginUpdates
 
 
 class KeyValueStore(Protocol):
@@ -33,6 +39,24 @@ class PluginContext(Protocol):
 
     @property
     def plugin_id(self) -> str: ...
+
+    @property
+    def downloads(self) -> DownloadService: ...
+
+    @property
+    def bangumi(self) -> BangumiService: ...
+
+    @property
+    def library(self) -> LibraryService: ...
+
+    @property
+    def maintenance(self) -> MaintenanceService: ...
+
+    @property
+    def updates(self) -> PluginUpdates: ...
+
+    @property
+    def metadata(self) -> MetadataService: ...
 
     @property
     def config(self) -> BaseModel | None:

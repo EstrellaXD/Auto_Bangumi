@@ -40,6 +40,8 @@ class MyPlugin(Plugin[Options]):
     async def on_organized(self, event): ...
 ```
 
+SDK 0.7 adds `ctx.downloads`, `ctx.bangumi`, `ctx.library`, `ctx.metadata`, `ctx.maintenance`, and `ctx.updates`. Pin `sdk = ">=0.7,<1"` when using them; see `docs/dev/plugins/services.md` in the AB repository. `DOWNLOAD_PREFLIGHT` and `ORGANIZER` are exclusive scoped providers selected in host settings. Return `None` from an organizer when unchanged; never use shared media identity to claim another entry's source files.
+
 `self.ctx`: `plugin_id`, `config`, `log`, `kv` (async get/set/delete, JSON values), `data_dir`, `bus` (`publish`, `subscribe`).
 
 ## Extension points

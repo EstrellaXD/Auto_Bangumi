@@ -8,6 +8,9 @@ import { apiPlugins } from '@/api/plugins';
 vi.mock('@/api/plugins', () => ({
   apiPlugins: {
     list: vi.fn(),
+    providers: vi.fn().mockResolvedValue({}),
+    localUpdate: vi.fn().mockResolvedValue(null),
+    maintenance: vi.fn().mockResolvedValue([]),
     update: vi.fn(),
     updateSettings: vi.fn(),
     uninstall: vi.fn(),
@@ -227,7 +230,11 @@ describe('config-plugins states', () => {
         options: { url: 'a' },
       }),
     ]);
-    const save = () => button(wrapper, 'config.plugins_set.save')[0];
+    const save = () =>
+      wrapper
+        .find('.plugin')
+        .findAll('button')
+        .filter((b) => b.text() === 'config.plugins_set.save')[0];
     expect(save().attributes('disabled')).toBeDefined();
     expect(wrapper.text()).not.toContain('config.plugins_set.unsaved');
 

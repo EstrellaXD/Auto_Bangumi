@@ -20,6 +20,11 @@ from sqlalchemy import Connection, Engine, inspect, text
 from sqlmodel import SQLModel
 
 from module.models import ApiToken, AuthSession, Bangumi, Movie, RenameOperation, User
+from module.models.download_admission import (
+    DownloadCandidateRecord,
+    DownloadSubmissionRecord,
+)
+from module.models.download_task import DownloadTaskRecord
 from module.models.inbox import InboxMessage
 from module.models.llm_credential import LLMCredential
 from module.models.passkey import Passkey
@@ -936,6 +941,103 @@ MIGRATIONS: tuple[Migration, ...] = (
             )(inspector)
         ),
         data_step=_strip_search_keyword_episodes,
+    ),
+    Migration(
+        29,
+        "add durable downloader task snapshots",
+        (
+            """CREATE TABLE IF NOT EXISTS download_task (
+                id VARCHAR NOT NULL PRIMARY KEY,
+                downloader_id VARCHAR NOT NULL,
+                provider_task_id VARCHAR NOT NULL,
+                bangumi_ids VARCHAR NOT NULL DEFAULT '[]',
+                release_ids VARCHAR NOT NULL DEFAULT '[]',
+                name VARCHAR NOT NULL DEFAULT '',
+                save_path VARCHAR NOT NULL DEFAULT '',
+                state VARCHAR NOT NULL DEFAULT '',
+                progress FLOAT NOT NULL DEFAULT 0,
+                revision INTEGER NOT NULL DEFAULT 1,
+                observed_at VARCHAR NOT NULL DEFAULT '',
+                files VARCHAR NOT NULL DEFAULT '[]',
+                UNIQUE(downloader_id, provider_task_id)
+            )""",
+            "CREATE INDEX IF NOT EXISTS ix_download_task_downloader_id ON download_task(downloader_id)",
+        ),
+        table_exists("download_task"),
+    ),
+    Migration(
+        30,
+        "add download candidates and submission intents",
+        (
+            """CREATE TABLE IF NOT EXISTS download_candidate (
+                id VARCHAR NOT NULL PRIMARY KEY,
+                batch_id VARCHAR NOT NULL,
+                source VARCHAR NOT NULL,
+                payload VARCHAR NOT NULL,
+                bangumi_id INTEGER,
+                stage VARCHAR NOT NULL DEFAULT 'unmatched',
+                reason VARCHAR NOT NULL DEFAULT '',
+                revision VARCHAR NOT NULL DEFAULT '',
+                match_ids VARCHAR NOT NULL DEFAULT '[]',
+                release VARCHAR NOT NULL DEFAULT 'null'
+            )""",
+            "CREATE INDEX IF NOT EXISTS ix_download_candidate_batch_id ON download_candidate(batch_id)",
+            "CREATE INDEX IF NOT EXISTS ix_download_candidate_bangumi_id ON download_candidate(bangumi_id)",
+            """CREATE TABLE IF NOT EXISTS download_submission (
+                id VARCHAR NOT NULL PRIMARY KEY,
+                owner VARCHAR NOT NULL,
+                idempotency_key VARCHAR NOT NULL,
+                fingerprint VARCHAR NOT NULL,
+                request_urls VARCHAR NOT NULL DEFAULT '[]',
+                request_payload VARCHAR NOT NULL DEFAULT '[]',
+                policy_revision VARCHAR NOT NULL,
+                mapping_revision VARCHAR NOT NULL,
+                state VARCHAR NOT NULL DEFAULT 'pending',
+                download_ids VARCHAR NOT NULL DEFAULT '[]',
+                provider_task_ids VARCHAR NOT NULL DEFAULT '[]',
+                downloader_id VARCHAR NOT NULL,
+                bangumi_id INTEGER NOT NULL,
+                reason VARCHAR NOT NULL DEFAULT ''
+            )""",
+            "CREATE INDEX IF NOT EXISTS ix_download_submission_owner ON download_submission(owner)",
+        ),
+        all_checks(
+            table_exists("download_candidate"), table_exists("download_submission")
+        ),
+    ),
+    Migration(
+        31,
+        "add library commit outbox",
+        (
+            """CREATE TABLE IF NOT EXISTS library_commit (
+                id VARCHAR NOT NULL PRIMARY KEY,
+                plugin_id VARCHAR NOT NULL,
+                download_id VARCHAR NOT NULL,
+                bangumi_id INTEGER NOT NULL,
+                payload VARCHAR NOT NULL
+            )""",
+            "CREATE INDEX IF NOT EXISTS ix_library_commit_download_id ON library_commit(download_id)",
+            "CREATE INDEX IF NOT EXISTS ix_library_commit_bangumi_id ON library_commit(bangumi_id)",
+        ),
+        table_exists("library_commit"),
+    ),
+    Migration(
+        32,
+        "add plugin maintenance journal",
+        (
+            """CREATE TABLE IF NOT EXISTS plugin_maintenance (
+                id VARCHAR NOT NULL PRIMARY KEY,
+                owner VARCHAR NOT NULL,
+                name VARCHAR NOT NULL,
+                state VARCHAR NOT NULL DEFAULT 'running',
+                step VARCHAR NOT NULL DEFAULT '',
+                payload VARCHAR NOT NULL DEFAULT '{}',
+                backup_path VARCHAR NOT NULL DEFAULT '',
+                error VARCHAR NOT NULL DEFAULT ''
+            )""",
+            "CREATE INDEX IF NOT EXISTS ix_plugin_maintenance_owner ON plugin_maintenance(owner)",
+        ),
+        table_exists("plugin_maintenance"),
     ),
 )
 

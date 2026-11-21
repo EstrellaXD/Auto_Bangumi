@@ -91,7 +91,23 @@ class HostPluginContext:
         self.log = logging.getLogger(f"plugin.{plugin_id}")
         self.bus = PluginBus(bus, plugin_id)
         self.kv = DatabaseKV(plugin_id)
+        from .downloads import HostBangumiService, HostDownloadService
+
+        self.downloads = HostDownloadService(plugin_id)
+        self.bangumi = HostBangumiService()
+        from .library import HostLibraryService
+
+        self.library = HostLibraryService()
         self._data_dir = data_root / plugin_id
+        from .maintenance import HostMaintenanceService
+
+        self.maintenance = HostMaintenanceService(plugin_id, self._data_dir)
+        from .local_updates import HostPluginUpdates
+
+        self.updates = HostPluginUpdates(plugin_id, self._data_dir)
+        from .metadata import HostMetadataService
+
+        self.metadata = HostMetadataService()
 
     @property
     def data_dir(self) -> Path:

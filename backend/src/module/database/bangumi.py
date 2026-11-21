@@ -1,6 +1,7 @@
 import json
 import logging
 import re
+from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -234,6 +235,27 @@ def release_fits_bangumi(torrent_name: str, bangumi: Bangumi) -> bool:
 class BangumiDatabase:
     def __init__(self, session: AsyncSession):
         self.session = session
+
+    async def _mapping_snapshots(self, ids):
+        from module.plugin.downloads import bangumi_snapshot
+
+        with self.session.no_autoflush:
+            table = Bangumi.__table__  # ty: ignore[missing-attribute]
+            rows = (
+                await self.session.execute(select(table).where(table.c.id.in_(ids)))
+            ).mappings()
+            return {r["id"]: bangumi_snapshot(SimpleNamespace(**r)) for r in rows}
+
+    def _publish_mapping_changes(self, old, datas):
+        from ab_sdk.events import BangumiMappingChanged
+        from module.plugin.downloads import bangumi_snapshot
+        from module.plugin.host import publish
+
+        for row in datas:
+            new = bangumi_snapshot(row)
+            before = old.get(row.id)
+            if before is not None and before.revision != new.revision:
+                publish(BangumiMappingChanged(before, new))
 
     async def _same_title_candidates(self, official_title: str) -> list[Bangumi]:
         """加载与给定 official_title 同名的所有未删除条目。"""
@@ -503,17 +525,21 @@ class BangumiDatabase:
             return False
         if not db_data:
             return False
+        old = await self._mapping_snapshots([db_data.id])
         bangumi_data = data.model_dump(exclude_unset=True)
         for key, value in bangumi_data.items():
             setattr(db_data, key, value)
         self.session.add(db_data)
         await self.session.commit()
         logger.debug("Update %s", data.official_title)
+        self._publish_mapping_changes(old, [db_data])
         return True
 
     async def update_all(self, datas: list[Bangumi]):
+        old = await self._mapping_snapshots([row.id for row in datas])
         self.session.add_all(datas)
         await self.session.commit()
+        self._publish_mapping_changes(old, datas)
         logger.debug("Update %s bangumi.", len(datas))
 
     async def restore_one(self, _id: int) -> bool:
@@ -521,9 +547,11 @@ class BangumiDatabase:
         bangumi = await self.session.get(Bangumi, _id)
         if not bangumi or not bangumi.deleted:
             return False
+        old = await self._mapping_snapshots([_id])
         bangumi.deleted = False
         self.session.add(bangumi)
         await self.session.commit()
+        self._publish_mapping_changes(old, [bangumi])
         logger.info("Restored disabled bangumi id: %s.", _id)
         return True
 
@@ -658,9 +686,11 @@ class BangumiDatabase:
         result = await self.session.execute(statement)
         bangumi = result.scalar_one_or_none()
         if bangumi:
+            old = await self._mapping_snapshots([_id])
             bangumi.deleted = True
             self.session.add(bangumi)
             await self.session.commit()
+            self._publish_mapping_changes(old, [bangumi])
             logger.debug("Disable rule %s.", bangumi.title_raw)
 
     async def search_rss(self, rss_link: str) -> list[Bangumi]:
@@ -674,9 +704,11 @@ class BangumiDatabase:
         if not bangumi:
             logger.warning(f"Cannot archive bangumi id: {_id}, not found.")
             return False
+        old = await self._mapping_snapshots([_id])
         bangumi.archived = True
         self.session.add(bangumi)
         await self.session.commit()
+        self._publish_mapping_changes(old, [bangumi])
         logger.debug("Archived bangumi id: %s.", _id)
         return True
 
@@ -686,9 +718,11 @@ class BangumiDatabase:
         if not bangumi:
             logger.warning(f"Cannot unarchive bangumi id: {_id}, not found.")
             return False
+        old = await self._mapping_snapshots([_id])
         bangumi.archived = False
         self.session.add(bangumi)
         await self.session.commit()
+        self._publish_mapping_changes(old, [bangumi])
         logger.debug("Unarchived bangumi id: %s.", _id)
         return True
 
@@ -759,6 +793,7 @@ class BangumiDatabase:
         bangumi = await self.session.get(Bangumi, _id)
         if not bangumi:
             return False
+        old = await self._mapping_snapshots([_id])
         if bangumi.suggested_season_offset is not None:
             bangumi.season_offset = bangumi.suggested_season_offset
         if bangumi.suggested_episode_offset is not None:
@@ -769,6 +804,7 @@ class BangumiDatabase:
         bangumi.suggested_episode_offset = None
         self.session.add(bangumi)
         await self.session.commit()
+        self._publish_mapping_changes(old, [bangumi])
         logger.debug(
             "Applied offset for bangumi id %s: season=%s, episode=%s",
             _id,

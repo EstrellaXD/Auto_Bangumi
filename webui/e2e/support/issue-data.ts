@@ -186,10 +186,10 @@ export async function seedRule(
     needs_review_reason: null,
   });
 
-  // The browser profile's qB fake intentionally rejects torrent adds. The
-  // production subscribe path inserts the rule first and reports that add as
-  // 502, which is sufficient for UI rule fixtures without an offline DB hook.
-  await requireStatus(
+  // The qB fake rejects adds after the rule is persisted (502). Reusing the
+  // fixture torrent after a rule reset can instead be held by durable admission
+  // (409), because resetting rules does not resolve an uncertain submission.
+  const subscribed = await requireStatus(
     await request.post('/api/v1/rss/subscribe', {
       data: {
         data,
@@ -202,8 +202,13 @@ export async function seedRule(
         },
       },
     }),
-    502
+    [409, 502]
   );
+  if (subscribed.status() === 409) {
+    const result = (await subscribed.json()) as { msg_en?: string };
+    if (result.msg_en !== 'Downloads are awaiting review.')
+      throw new Error(`Unexpected subscribe conflict: ${result.msg_en}`);
+  }
 
   const created = (await listRules(request)).find(
     (rule) => rule.title_raw === data.title_raw

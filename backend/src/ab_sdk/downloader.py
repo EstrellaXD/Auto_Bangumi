@@ -19,6 +19,7 @@ class AddResult(Enum):
     ADDED = "added"
     DUPLICATE = "duplicate"
     FAILED = "failed"
+    HELD = "held"
 
 
 class RenameOutcome(str, Enum):

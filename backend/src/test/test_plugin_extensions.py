@@ -747,6 +747,8 @@ class TestPluginsApi:
         add_plugin_provider(registry, points.DOWNLOADER, "fake", FakeDownloader)
         data = authed_client.get("/api/v1/plugins/providers").json()
         assert data == {
+            "download.preflight": [],
+            "organizer": [],
             "downloader": ["fake"],
             "notifier": [],
             "search_site": [],

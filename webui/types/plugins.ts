@@ -43,6 +43,7 @@ export interface PluginInfo {
   /** catalog：经签名目录安装，只有它能在界面上卸载 */
   source: 'builtin' | 'catalog' | 'local' | 'pip';
   signed: boolean;
+  local_source?: string;
   state: PluginState;
   enabled: boolean;
   description: string;
@@ -86,9 +87,22 @@ export interface CatalogEntry {
 
 /** 插件提供的 Provider id，按扩展点分组 */
 export interface PluginProviders {
+  organizer?: string[];
+  'download.preflight'?: string[];
   downloader: string[];
   notifier: string[];
   search_site: string[];
   metadata_provider: string[];
   rename_strategy: string[];
+}
+
+export interface LocalPluginUpdate {
+  plugin_id: string;
+  repository: string;
+  installed_version: string;
+  version: string;
+  available: boolean;
+  release_url: string;
+  notes: string;
+  install_token: string;
 }

@@ -1,5 +1,7 @@
 import asyncio
 import logging
+from dataclasses import asdict
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -40,6 +42,7 @@ class PluginInfo(BaseModel):
     options: dict[str, Any]
     # 该插件当前登记的 Provider id（按扩展点，只含非空项）；未启用时为空
     providers: dict[str, list[str]]
+    local_source: str = ""
 
 
 class PluginsOverview(BaseModel):
@@ -98,6 +101,8 @@ _PROVIDER_POINTS = (
     points.SEARCH_SITE,
     points.METADATA_PROVIDER,
     points.RENAME_STRATEGY,
+    points.DOWNLOAD_PREFLIGHT,
+    points.ORGANIZER,
 )
 
 # 模块脚本要求 JavaScript MIME 类型；mimetypes 的结果依赖系统配置，这里固定
@@ -113,6 +118,7 @@ def _overview(ctx: AppContext) -> PluginsOverview:
     plugins = []
     for status in ctx.plugins.statuses():
         info: dict[str, Any] = vars(status) | {
+            "local_source": conf.local_update_sources.get(status.id, ""),
             "options": mask_options(
                 conf.options.get(status.id, {}), status.config_schema
             ),
@@ -237,6 +243,193 @@ async def update_plugin(
         conf.enabled[plugin_id] = body.enabled
     await _save_and_apply(ctx)
     return _overview(ctx)
+
+
+class PipelineUpdate(BaseModel):
+    organizer: str
+    download_preflight: str
+
+
+@router.put("/settings/pipelines", response_model=PluginsOverview)
+async def select_pipelines(
+    body: PipelineUpdate, ctx: AppContext = Depends(get_context)
+):
+    from module.plugin.host import get_registry
+    from module.plugin.maintenance import HostMaintenanceService
+
+    for point, value, native in (
+        (points.ORGANIZER, body.organizer, "native"),
+        (points.DOWNLOAD_PREFLIGHT, body.download_preflight, ""),
+    ):
+        old = (
+            settings.plugins.slots.organizer
+            if point == points.ORGANIZER
+            else settings.plugins.slots.download_preflight
+        )
+        if (
+            value != native
+            and value != old
+            and value not in get_registry().providers(point)
+        ):
+            raise HTTPException(422, "Unknown pipeline provider")
+
+    async def select(progress):
+        settings.plugins.slots.organizer = body.organizer
+        settings.plugins.slots.download_preflight = body.download_preflight
+        await asyncio.to_thread(settings.save)
+
+    await HostMaintenanceService("core", Path("config/plugin-data/core")).run(
+        "select-pipelines", select
+    )
+    return _overview(ctx)
+
+
+class LocalSourceUpdate(BaseModel):
+    repository: str
+
+
+def _local_updater(plugin_id, ctx):
+    from module.plugin.local_updates import HostPluginUpdates
+
+    status = next((s for s in ctx.plugins.statuses() if s.id == plugin_id), None)
+    if status is None or status.source != "local":
+        raise HTTPException(
+            422, "Only unsigned local plugins can use local-source updates"
+        )
+    return HostPluginUpdates(plugin_id, Path("config/plugin-data") / plugin_id)
+
+
+@router.put("/{plugin_id}/updates/source", response_model=PluginsOverview)
+async def set_local_source(
+    plugin_id: str, body: LocalSourceUpdate, ctx: AppContext = Depends(get_context)
+):
+    _local_updater(plugin_id, ctx)
+    sources = dict(settings.plugins.local_update_sources)
+    if body.repository:
+        if not settings.plugins.allow_unsigned:
+            raise HTTPException(422, "Allow unsigned plugins before selecting a source")
+        sources[plugin_id] = body.repository.strip()
+    else:
+        sources.pop(plugin_id, None)
+    try:
+        validated = type(settings.plugins).model_validate(
+            settings.plugins.model_dump() | {"local_update_sources": sources}
+        )
+    except ValidationError:
+        raise HTTPException(422, "Source must be a GitHub owner/repo") from None
+    settings.plugins.local_update_sources = validated.local_update_sources
+    await _save_and_apply(ctx)
+    return _overview(ctx)
+
+
+@router.get("/{plugin_id}/updates")
+async def local_update_status(plugin_id: str, ctx: AppContext = Depends(get_context)):
+    updater = _local_updater(plugin_id, ctx)
+    try:
+        return await updater.cached()
+    except ValueError:
+        return None
+
+
+@router.post("/{plugin_id}/updates/check")
+async def check_local_update(plugin_id: str, ctx: AppContext = Depends(get_context)):
+    try:
+        return asdict(await _local_updater(plugin_id, ctx).check())
+    except (ValueError, RuntimeError) as error:
+        raise HTTPException(409, str(error)) from None
+
+
+class LocalInstall(BaseModel):
+    version: str
+    install_token: str
+
+
+@router.post("/{plugin_id}/updates/install", response_model=PluginsOverview)
+async def install_local_update(
+    plugin_id: str, body: LocalInstall, ctx: AppContext = Depends(get_context)
+):
+    try:
+        await _local_updater(plugin_id, ctx).install(
+            body.version, install_token=body.install_token
+        )
+    except (ValueError, RuntimeError) as error:
+        raise HTTPException(409, str(error)) from None
+    return _overview(ctx)
+
+
+class MaintenanceRecovery(BaseModel):
+    operation_id: str
+
+
+@router.post("/{plugin_id}/updates/recover", response_model=PluginsOverview)
+async def recover_local_update(
+    plugin_id: str, body: MaintenanceRecovery, ctx: AppContext = Depends(get_context)
+):
+    from ab_sdk.manifest import ID_RE
+    from module.plugin.local_updates import HostPluginUpdates
+
+    if not ID_RE.fullmatch(plugin_id):
+        raise HTTPException(422, "Invalid plugin id")
+    await HostPluginUpdates(plugin_id, Path("config/plugin-data") / plugin_id).recover(
+        body.operation_id
+    )
+    return _overview(ctx)
+
+
+@router.get("/maintenance")
+async def unfinished_maintenance():
+    from sqlmodel import col, select
+
+    from module.models.plugin_maintenance import PluginMaintenanceRecord
+    from module.plugin.downloads import database
+
+    async with database() as db:
+        rows = list(
+            (
+                await db.session.execute(
+                    select(PluginMaintenanceRecord).where(
+                        col(PluginMaintenanceRecord.state).in_(["running", "failed"])
+                    )
+                )
+            ).scalars()
+        )
+    return [
+        {
+            "id": r.id,
+            "owner": r.owner,
+            "name": r.name,
+            "state": r.state,
+            "step": r.step,
+            "backup_path": r.backup_path,
+            "error": r.error,
+        }
+        for r in rows
+    ]
+
+
+@router.get("/{plugin_id}/maintenance")
+async def plugin_maintenance(plugin_id: str):
+    from module.plugin.maintenance import HostMaintenanceService
+
+    return [
+        asdict(status)
+        for status in await HostMaintenanceService(
+            plugin_id, Path("config/plugin-data") / plugin_id
+        ).operations()
+    ]
+
+
+@router.post("/{plugin_id}/maintenance/resume")
+async def resume_plugin_maintenance(plugin_id: str, body: MaintenanceRecovery):
+    from module.plugin.maintenance import HostMaintenanceService
+
+    try:
+        await HostMaintenanceService(
+            plugin_id, Path("config/plugin-data") / plugin_id
+        ).resume(body.operation_id)
+    except (ValueError, RuntimeError) as error:
+        raise HTTPException(409, str(error)) from None
+    return {"status": "acknowledged"}
 
 
 @router.post("/{plugin_id}/install", response_model=PluginsOverview)

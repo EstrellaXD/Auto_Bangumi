@@ -26,7 +26,10 @@ class Checker:
 
     @staticmethod
     def check_renamer() -> bool:
-        return bool(settings.bangumi_manage.enable)
+        return bool(
+            settings.bangumi_manage.enable
+            or settings.plugins.slots.organizer != "native"
+        )
 
     @staticmethod
     def check_analyser() -> bool:

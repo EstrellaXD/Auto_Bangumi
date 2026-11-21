@@ -934,6 +934,19 @@ class Renamer(RevisionSaga):
 
 
 async def rename_all() -> tuple[list[Notification], list[SystemEvent]]:
+    from module.plugin.library import organization_lock, organize_selected
+    from module.plugin.maintenance import blocked
+
+    async with organization_lock:
+        if await blocked():
+            return [], []
+        if settings.plugins.slots.organizer != "native":
+            await organize_selected()
+            return [], []
+        return await _rename_all_native()
+
+
+async def _rename_all_native() -> tuple[list[Notification], list[SystemEvent]]:
     """逐个下载器实例运行一轮重命名。
 
     进不去的实例（连不上、凭据被拒、Provider 未登记）跳过，不影响其它实例；

@@ -85,10 +85,25 @@ class RSSEngine:
     @staticmethod
     async def _get_torrents(rss: RSSItem) -> list[Torrent]:
         async with RequestContent() as req:
-            torrents = await req.get_torrents(rss.url)
+            guarded = bool(settings.plugins.slots.download_preflight)
+            torrents = (
+                await req.get_torrents(rss.url, "")
+                if guarded
+                else await req.get_torrents(rss.url)
+            )
             # Add RSS ID
             for torrent in torrents:
                 torrent.rss_id = rss.id
+            if guarded:
+                from module.plugin.admission import HostAdmissionService
+
+                await HostAdmissionService().capture(torrents, source="rss")
+                pattern = "|".join(settings.rss_parser.filter)
+                torrents = [
+                    t
+                    for t in torrents
+                    if not pattern or re.search(pattern, t.name) is None
+                ]
         return torrents
 
     async def get_rss_torrents(self, rss_id: int) -> list[Torrent]:
@@ -340,7 +355,9 @@ class RSSEngine:
         匹配到的种子投递到规则的下载器实例，规则未指定时用订阅的，再退回默认实例。
         给出 ``analyser`` 时，先用同一次拉取的结果为聚合订阅生成新规则。
         """
-        with parser_engine_snapshot():
+        from module.plugin.admission import candidate_batch
+
+        with parser_engine_snapshot(), candidate_batch():
             return await self._refresh_rss(downloaders, rss_id, analyser)
 
     async def _analyse_aggregate(
@@ -420,6 +437,14 @@ class RSSEngine:
         if analyser is not None:
             bangumi_list = await self._analyse_aggregate(
                 analyser, item_results, bangumi_list
+            )
+        if settings.plugins.slots.download_preflight:
+            from module.plugin.admission import HostAdmissionService, current_batch
+
+            # 所有 RSS 已拉取并落候选库；准入看到整批，而非逐条到达的次序。
+            await self.db.commit()
+            await HostAdmissionService().recheck_candidates(
+                batch_id=current_batch.get()
             )
         events: list[SystemEvent] = []
 
@@ -524,7 +549,7 @@ class RSSEngine:
                                 torrent_name=torrent.name,
                             )
                         )
-                    else:
+                    elif result is not AddResult.HELD:
                         # ADDED 与 DUPLICATE（下载器里已有同一种子）都视为
                         # 成功，不再对健康的重复种子发失败通知。
                         logger.debug(
@@ -564,6 +589,13 @@ class RSSEngine:
                             status_code=502,
                             msg_en=(f"Download {bangumi.official_title} failed."),
                             msg_zh=f"下载 {bangumi.official_title} 失败。",
+                        )
+                    if result is AddResult.HELD:
+                        return ResponseModel(
+                            status=False,
+                            status_code=409,
+                            msg_en="Downloads are awaiting review.",
+                            msg_zh="下载正在等待审核。",
                         )
                     for torrent in torrents:
                         torrent.downloaded = True

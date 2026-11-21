@@ -227,6 +227,8 @@ class HardlinkPlugin(Plugin[Options]):
 
     @subscribe(TorrentOrganized.kind, timeout=LINK_TIMEOUT)
     async def on_organized(self, event: TorrentOrganized) -> None:
+        if await self.ctx.library.selected() != "native":
+            return
         problems: list[str] = []
         linked = False
         for f in event.files:
