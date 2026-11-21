@@ -26,6 +26,7 @@ from module.parser.analyser.tokenizer.compat import to_legacy_episode
 from module.parser.release_policy import (
     PersistenceTarget,
     bangumi_episode_type,
+    is_numbered_episode_range,
     is_weak_title_only,
     normalized_season,
     persistence_target,
@@ -423,7 +424,9 @@ class TitleParser:
             dpi=release.resolution,
             source=release.source,
             subtitle=release.subtitle,
-            eps_collect=episode is None or episode <= 1,
+            eps_collect=is_numbered_episode_range(release)
+            or episode is None
+            or episode <= 1,
             episode_offset=0,
             filter=",".join(settings.rss_parser.filter),
             episode_type=bangumi_episode_type(release),
@@ -445,7 +448,9 @@ class TitleParser:
         )
 
     @staticmethod
-    async def raw_parser(raw: str) -> Bangumi | Movie | None:
+    async def raw_parser(
+        raw: str, *, allow_episode_range: bool = False
+    ) -> Bangumi | Movie | None:
         try:
             llm_conf = _llm_config()
             parse_outcome = parse_configured_release_title_with_trace(raw)
@@ -453,7 +458,11 @@ class TitleParser:
                 "Parsing resource with %s engine: %s", parse_outcome.engine, raw
             )
             deterministic = parse_outcome.result
-            if parse_outcome.engine == "classic":
+            if parse_outcome.engine == "classic" and not (
+                allow_episode_range
+                and deterministic is not None
+                and is_numbered_episode_range(deterministic)
+            ):
                 projected = _project_classic_release(raw, deterministic)
                 if (
                     projected is None
@@ -502,6 +511,14 @@ class TitleParser:
                 return None
             release = await _apply_title_hooks(release)
             target = persistence_target(release)
+            if (
+                allow_episode_range
+                and release.primary_title
+                and is_numbered_episode_range(release)
+            ):
+                # An explicitly requested RSS can use a pack to identify the show.
+                # Keep its range intact for filters, deduplication and offset detection.
+                target = PersistenceTarget.BANGUMI
             if target is None:
                 logger.debug("Parsed but did not admit resource: %s", raw)
                 return None
