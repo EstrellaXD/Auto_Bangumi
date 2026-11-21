@@ -28,7 +28,7 @@ DEFAULT_TEMPLATE = json.dumps(
 class WebhookProvider(NotificationProvider):
     """Generic webhook notification provider with customizable templates."""
 
-    def __init__(self, config: "ProviderConfig"):
+    def __init__(self, config: ProviderConfig):
         super().__init__(config)
         self.url = config.url
         # Narrower than the base class's `str | None` -- webhook always has a

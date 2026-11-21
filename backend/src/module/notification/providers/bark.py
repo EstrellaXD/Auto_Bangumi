@@ -17,7 +17,7 @@ class BarkProvider(NotificationProvider):
 
     DEFAULT_SERVER = "https://api.day.app"
 
-    def __init__(self, config: "ProviderConfig"):
+    def __init__(self, config: ProviderConfig):
         super().__init__(config)
         self.device_key = config.device_key
         server_url = config.server_url or self.DEFAULT_SERVER

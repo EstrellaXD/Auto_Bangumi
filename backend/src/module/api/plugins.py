@@ -117,7 +117,7 @@ def _overview(ctx: AppContext) -> PluginsOverview:
     conf = settings.plugins
     plugins = []
     for status in ctx.plugins.statuses():
-        info = vars(status) | {
+        info: dict[str, Any] = vars(status) | {
             "local_source": conf.local_update_sources.get(status.id, ""),
             "options": mask_options(
                 conf.options.get(status.id, {}), status.config_schema
@@ -149,7 +149,7 @@ async def get_catalog():
     """签名目录（GitHub release ``plugins``）里可安装的插件。"""
     try:
         entries = await PluginInstaller(app_version=VERSION).fetch_catalog()
-    except Exception as e:  # noqa: BLE001 - 网络或验签失败统一报 502
+    except Exception as e:
         logger.warning("Plugin catalog unavailable: %s", e)
         raise HTTPException(
             status_code=502, detail=f"Plugin catalog unavailable: {e}"
@@ -394,15 +394,15 @@ async def unfinished_maintenance():
             ).scalars()
         )
     return [
-        dict(
-            id=r.id,
-            owner=r.owner,
-            name=r.name,
-            state=r.state,
-            step=r.step,
-            backup_path=r.backup_path,
-            error=r.error,
-        )
+        {
+            "id": r.id,
+            "owner": r.owner,
+            "name": r.name,
+            "state": r.state,
+            "step": r.step,
+            "backup_path": r.backup_path,
+            "error": r.error,
+        }
         for r in rows
     ]
 

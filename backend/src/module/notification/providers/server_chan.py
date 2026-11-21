@@ -19,7 +19,7 @@ _SC3_KEY_RE = re.compile(r"^sctp(\d+)t")
 class ServerChanProvider(NotificationProvider):
     """Server Chan (Server酱) notification provider for WeChat."""
 
-    def __init__(self, config: "ProviderConfig"):
+    def __init__(self, config: ProviderConfig):
         super().__init__(config)
         token = config.token
         sc3 = _SC3_KEY_RE.match(token)

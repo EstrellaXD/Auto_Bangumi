@@ -11,17 +11,16 @@ import json
 import logging
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.exc import IntegrityError
 
 from ab_sdk.rename import FileKind
-from module.conf import settings
 from module.database import Database
 from module.database.bangumi import normalize_save_path
 from module.downloader import DownloadClient, RenameOutcome, RenameResult
 from module.downloader.path import path_to_bangumi
-from module.models import EpisodeFile, Notification, RenameOperation, SubtitleFile
+from module.models import EpisodeFile, Notification, RenameOperation
 from module.notification import RenameConflictEvent, SystemEvent
 
 from .revision_policy import (
@@ -166,15 +165,15 @@ class RevisionSaga:
 
     @staticmethod
     def _retry_at() -> datetime:
-        return datetime.now(timezone.utc) + timedelta(seconds=_PENDING_RENAME_COOLDOWN)
+        return datetime.now(UTC) + timedelta(seconds=_PENDING_RENAME_COOLDOWN)
 
     @staticmethod
     def _retry_is_due(value: datetime | None) -> bool:
         if value is None:
             return True
         if value.tzinfo is None:
-            value = value.replace(tzinfo=timezone.utc)
-        return value <= datetime.now(timezone.utc)
+            value = value.replace(tzinfo=UTC)
+        return value <= datetime.now(UTC)
 
     def _downloader_type(self) -> str:
         instance = self.client.instance
@@ -383,7 +382,7 @@ class RevisionSaga:
                 updated = await db.rename_operation.set_state_claimed(
                     operation.id,
                     owner=operation.lease_owner,
-                    state=state,  # type: ignore[arg-type]
+                    state=state,
                     retry_at=self._retry_at() if retry else None,
                     last_error=error,
                 )
@@ -392,7 +391,7 @@ class RevisionSaga:
             else:
                 updated = await db.rename_operation.set_state(
                     operation.id,
-                    state,  # type: ignore[arg-type]
+                    state,
                     retry_at=self._retry_at() if retry else None,
                     last_error=error,
                 )
@@ -912,7 +911,7 @@ class RevisionSaga:
                     if active.state == "running":
                         recovered = await db.rename_operation.recover_stale_running(
                             active.id,
-                            before=datetime.now(timezone.utc)
+                            before=datetime.now(UTC)
                             - timedelta(seconds=_PENDING_RENAME_COOLDOWN),
                         )
                         if not recovered:

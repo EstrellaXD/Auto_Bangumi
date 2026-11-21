@@ -59,7 +59,8 @@ export async function registerPasskey(deviceName: string): Promise<void> {
       id: base64UrlToBuffer(cred.id),
       transports: cred.transports as AuthenticatorTransport[],
     })),
-    authenticatorSelection: options.authenticatorSelection as AuthenticatorSelectionCriteria,
+    authenticatorSelection:
+      options.authenticatorSelection as AuthenticatorSelectionCriteria,
   };
 
   // 3. 调用浏览器 WebAuthn API
@@ -78,7 +79,9 @@ export async function registerPasskey(deviceName: string): Promise<void> {
         throw new Error('Authentication was cancelled or timed out');
       }
       if (e.name === 'SecurityError') {
-        throw new Error('WebAuthn requires a secure context (HTTPS or localhost)');
+        throw new Error(
+          'WebAuthn requires a secure context (HTTPS or localhost)'
+        );
       }
       throw new Error(`Browser rejected the request: ${e.message}`);
     }

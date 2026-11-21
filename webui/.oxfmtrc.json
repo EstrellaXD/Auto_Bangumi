@@ -1,0 +1,26 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "printWidth": 80,
+  "tabWidth": 2,
+  "useTabs": false,
+  "semi": true,
+  "singleQuote": true,
+  "quoteProps": "as-needed",
+  "trailingComma": "es5",
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "sortPackageJson": false,
+  "ignorePatterns": [
+    "build/",
+    "dist/",
+    "storybook-static/",
+    "e2e/.auth/",
+    "playwright-report/",
+    "test-results/",
+    "pnpm-lock.yaml",
+    "types/dts/auto-imports.d.ts",
+    "types/dts/components.d.ts",
+    "types/dts/router-type.d.ts"
+  ]
+}

@@ -16,6 +16,7 @@ from .manager import NotificationManager
 from .providers import PROVIDER_REGISTRY
 
 __all__ = [
+    "PROVIDER_REGISTRY",
     "DownloadFailureEvent",
     "DownloaderUnavailableEvent",
     "LLMAuthFailureEvent",
@@ -25,7 +26,6 @@ __all__ = [
     "OffsetReviewEvent",
     "RenameConflictEvent",
     "RenameSkippedEvent",
-    "PROVIDER_REGISTRY",
     "RssFailureEvent",
     "SystemEvent",
     "UpdateAppliedEvent",

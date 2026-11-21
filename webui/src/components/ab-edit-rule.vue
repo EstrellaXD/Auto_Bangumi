@@ -457,7 +457,8 @@ function emitUnarchive() {
 
 .collapse-enter-active,
 .collapse-leave-active {
-  transition: grid-template-rows var(--transition-normal),
+  transition:
+    grid-template-rows var(--transition-normal),
     opacity var(--transition-normal);
 }
 

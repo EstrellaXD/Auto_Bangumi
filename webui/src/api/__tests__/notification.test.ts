@@ -29,7 +29,10 @@ describe('Notification API contract (path + HTTP method)', () => {
     (axios.post as any).mockResolvedValue({ data: mockTestResponse });
     const request = { provider_index: 0 };
     await apiNotification.testProvider(request);
-    expect(axios.post).toHaveBeenCalledWith('api/v1/notification/test', request);
+    expect(axios.post).toHaveBeenCalledWith(
+      'api/v1/notification/test',
+      request
+    );
   });
 
   it('should POST api/v1/notification/test-config with the provider config when testing an unsaved provider', async () => {

@@ -9,8 +9,9 @@
 """
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable, get_args, get_origin
+from typing import Any, get_args, get_origin
 from urllib.parse import parse_qsl, urlsplit
 
 from pydantic.fields import FieldInfo
@@ -1187,7 +1188,7 @@ def fill_null_with_defaults_conn(conn: Connection) -> None:
     tables = inspector.get_table_names()
 
     for model in TABLE_MODELS:
-        table_name = model.__tablename__
+        table_name = str(model.__tablename__)
         if table_name not in tables:
             continue
 

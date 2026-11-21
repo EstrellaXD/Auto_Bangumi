@@ -151,7 +151,7 @@ async def organize_selected():
                 continue
             request = OrganizeRequest(task, files, bangumi)
 
-            async def organize():
+            async def organize(request: OrganizeRequest = request):
                 result = await entry.factory().organize(request)
                 if result is not None:
                     if not isinstance(result, OrganizeResult):

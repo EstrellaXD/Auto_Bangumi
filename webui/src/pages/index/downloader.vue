@@ -192,7 +192,9 @@ function progressCell(row: QbTorrentInfo) {
     value: row.progress * 100,
     label: `${Math.round(row.progress * 100)}%`,
     state:
-      row.state === 'error' || row.state === 'missingFiles' ? 'error' : 'active',
+      row.state === 'error' || row.state === 'missingFiles'
+        ? 'error'
+        : 'active',
   });
 }
 
@@ -247,11 +249,16 @@ const tableColumnsValue = computed<DataTableColumns<Row>>(() => {
       title: isGroupRow(row) ? row.group.savePath : row.name,
     }),
     render: (row) => {
-      if (!isGroupRow(row)) return isMobile.value ? mobileNameCell(row) : row.name;
+      if (!isGroupRow(row))
+        return isMobile.value ? mobileNameCell(row) : row.name;
       const label = `${row.group.name} (${row.group.count})`;
       // 手机关掉了列省略号，分组名自己截断
       return isMobile.value
-        ? h('span', { class: 'torrent-cell' }, h('span', { class: 'torrent-name' }, label))
+        ? h(
+            'span',
+            { class: 'torrent-cell' },
+            h('span', { class: 'torrent-name' }, label)
+          )
         : label;
     },
   };
@@ -313,7 +320,9 @@ const tableColumnsValue = computed<DataTableColumns<Row>>(() => {
             key: 'peers',
             width: 110,
             ...numCol,
-            render: torrentCell((row) => `${row.num_seeds} / ${row.num_leechs}`),
+            render: torrentCell(
+              (row) => `${row.num_seeds} / ${row.num_leechs}`
+            ),
           },
         ]),
     // 多个下载器实例时放在最后；定宽，名称列是唯一的弹性列
@@ -408,11 +417,7 @@ const tableMinWidth = computed(() => columnsWidth(tableColumnsValue.value));
                 <ab-button variant="secondary" size="sm" @click="pauseSelected">
                   {{ $t('downloader.action.pause') }}
                 </ab-button>
-                <ab-button
-                  variant="danger"
-                  size="sm"
-                  @click="onDeleteSelected"
-                >
+                <ab-button variant="danger" size="sm" @click="onDeleteSelected">
                   {{ $t('downloader.action.delete') }}
                 </ab-button>
               </div>
@@ -576,7 +581,8 @@ const tableMinWidth = computed(() => columnsWidth(tableColumnsValue.value));
 
 .action-bar-enter-active,
 .action-bar-leave-active {
-  transition: grid-template-rows var(--transition-normal),
+  transition:
+    grid-template-rows var(--transition-normal),
     opacity var(--transition-normal);
 
   // 只在过渡中裁切，静止时不裁掉操作栏阴影

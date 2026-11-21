@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from itertools import permutations
+from typing import Any
 
 import pytest
 
@@ -24,7 +25,7 @@ def _candidate(
     end: int,
     claims: Claims,
     priority: int,
-    **kwargs: object,
+    **kwargs: Any,
 ) -> Candidate:
     return Candidate(
         id=candidate_id,
@@ -32,7 +33,7 @@ def _candidate(
         spans=(Span(0, start, end),),
         claims=claims,
         priority=priority,
-        **kwargs,  # type: ignore[arg-type]
+        **kwargs,
     )
 
 

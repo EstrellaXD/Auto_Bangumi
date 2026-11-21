@@ -16,9 +16,8 @@ const { t } = useMyI18n();
 const { confirm } = useConfirm();
 
 const { isMobile } = useBreakpointQuery();
-const { rss, selectedRSS, isRefreshingAll, isLoading } = storeToRefs(
-  useRSSStore()
-);
+const { rss, selectedRSS, isRefreshingAll, isLoading } =
+  storeToRefs(useRSSStore());
 const {
   getAll,
   deleteSelected,
@@ -89,13 +88,11 @@ const rssColumns = computed<DataTableColumns<RSS>>(() => [
     render(rss: RSS) {
       return h('div', { class: 'flex justify-end gap-x-8' }, [
         rss.connection_status === 'healthy' &&
-        h(AbTag, { type: 'success', title: t('rss.connected') }),
+          h(AbTag, { type: 'success', title: t('rss.connected') }),
         rss.connection_status === 'error' &&
-        h(
-          AbTooltip,
-          { content: rss.last_error || t('rss.error') },
-          () => h(AbTag, { type: 'danger', title: t('rss.error') })
-        ),
+          h(AbTooltip, { content: rss.last_error || t('rss.error') }, () =>
+            h(AbTag, { type: 'danger', title: t('rss.error') })
+          ),
         rss.enabled
           ? h(AbTag, { type: 'success', title: t('rss.active') })
           : h(AbTag, { type: 'neutral', title: t('rss.inactive') }),
@@ -147,7 +144,10 @@ function onSelectedRSSUpdate(keys: unknown[]) {
           @click="refreshAllRSS"
         >
           <template #icon>
-            <RefreshCw :size="14" :class="{ 'animate-spin': isRefreshingAll }" />
+            <RefreshCw
+              :size="14"
+              :class="{ 'animate-spin': isRefreshingAll }"
+            />
           </template>
           {{ $t('rss.refresh_all') }}
         </AbButton>
@@ -177,7 +177,10 @@ function onSelectedRSSUpdate(keys: unknown[]) {
                 :disabled="refreshingId === item.id"
                 @click.stop="onRefreshOne(item.id)"
               >
-                <RefreshCw :size="14" :class="{ 'animate-spin': refreshingId === item.id }" />
+                <RefreshCw
+                  :size="14"
+                  :class="{ 'animate-spin': refreshingId === item.id }"
+                />
               </AbButton>
             </div>
             <div class="rss-card-url">
@@ -185,7 +188,11 @@ function onSelectedRSSUpdate(keys: unknown[]) {
             </div>
             <div class="rss-card-tags">
               <AbTag v-if="item.parser" type="info" :title="item.parser" />
-              <AbTag v-if="item.aggregate" type="info" :title="$t('rss.aggregate')" />
+              <AbTag
+                v-if="item.aggregate"
+                type="info"
+                :title="$t('rss.aggregate')"
+              />
               <AbTag
                 v-if="item.connection_status === 'healthy'"
                 type="success"
@@ -326,7 +333,9 @@ function onSelectedRSSUpdate(keys: unknown[]) {
 
 .action-bar-enter-active,
 .action-bar-leave-active {
-  transition: opacity var(--transition-normal), transform var(--transition-normal);
+  transition:
+    opacity var(--transition-normal),
+    transform var(--transition-normal);
 }
 
 .action-bar-enter-from,

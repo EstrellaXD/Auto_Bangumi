@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import PurePath
 from typing import Any
 
@@ -925,7 +925,7 @@ class Renamer(RevisionSaga):
                 logger.warning(f"{torrent_name} has no media file")
         async with Database() as db:
             await db.rename_operation.prune_done(
-                datetime.now(timezone.utc) - timedelta(days=30),
+                datetime.now(UTC) - timedelta(days=30),
                 live_task_ids=set(info_by_hash),
                 downloader_type=instance_key,
             )
@@ -966,7 +966,8 @@ async def _rename_all_native() -> tuple[list[Notification], list[SystemEvent]]:
                 events.append(
                     DownloaderUnavailableEvent(
                         host=settings.downloader_instance(instance_id).host,
-                        reason=(client and client.last_auth_error) or "unreachable",
+                        reason=(client.last_auth_error if client else None)
+                        or "unreachable",
                         instance_id=instance_id,
                     )
                 )

@@ -1,7 +1,11 @@
 <script lang="ts" setup>
 // Soft Ink 标签：细线框 + 语义色方块标记，文字始终为墨色 —
 // 颜色不承载文字（拒绝粉彩胶囊）。不截断 CJK 标题。
-const { type = 'neutral', title = '', closable = false } = defineProps<{
+const {
+  type = 'neutral',
+  title = '',
+  closable = false,
+} = defineProps<{
   type?: 'success' | 'warning' | 'danger' | 'info' | 'neutral';
   title?: string;
   closable?: boolean;
@@ -45,7 +49,9 @@ defineEmits<{ close: [] }>();
   color: var(--color-text);
   font-size: 12px;
   font-weight: 500;
-  transition: border-color var(--transition-fast), color var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    color var(--transition-fast);
 
   // 语义色方块标记
   &::before {

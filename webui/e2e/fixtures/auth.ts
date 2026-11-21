@@ -60,7 +60,9 @@ export async function completeFirstRunSetup(
 
   await page.getByLabel('Host').fill(environment.downloaderURL);
   await page.getByLabel('Username').fill(environment.downloaderUsername);
-  await page.getByLabel('Password', { exact: true }).fill(environment.downloaderPassword);
+  await page
+    .getByLabel('Password', { exact: true })
+    .fill(environment.downloaderPassword);
   await page.getByLabel('Download Path').fill('/downloads/Bangumi');
   await page.getByRole('button', { name: 'Next' }).click();
 

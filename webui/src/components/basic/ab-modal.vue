@@ -83,10 +83,7 @@ function close() {
       aria-modal="true"
       :aria-labelledby="title ? titleId : undefined"
     >
-      <header
-        v-if="title || (closable && showClose)"
-        class="ab-modal-header"
-      >
+      <header v-if="title || (closable && showClose)" class="ab-modal-header">
         <h2 :id="titleId" class="ab-modal-title">
           {{ title }}
         </h2>
@@ -101,11 +98,7 @@ function close() {
         </AbIconButton>
       </header>
 
-      <div
-        v-if="$slots.default"
-        class="ab-modal-body"
-        :style="{ maxHeight }"
-      >
+      <div v-if="$slots.default" class="ab-modal-body" :style="{ maxHeight }">
         <slot />
       </div>
 

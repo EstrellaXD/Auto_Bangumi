@@ -18,7 +18,7 @@ parse_forwards = SERVER_MODULE["parse_forwards"]
 
 
 class _UpstreamHandler(BaseHTTPRequestHandler):
-    def log_message(self, *_args) -> None:
+    def log_message(self, *_args) -> None:  # ty: ignore[incompatible-method-override]
         return
 
     def do_GET(self) -> None:

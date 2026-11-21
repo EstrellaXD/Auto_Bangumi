@@ -127,7 +127,6 @@ describe('plugin-schema-form validation', () => {
     for (const field of wrapper.findAll('.ab-field'))
       await field.trigger('focusout');
     const alert = wrapper.find('[role="alert"]');
-    if (error) expect(alert.text()).toBe(error);
-    else expect(alert.exists()).toBe(false);
+    expect(alert.exists() ? alert.text() : null).toBe(error);
   });
 });

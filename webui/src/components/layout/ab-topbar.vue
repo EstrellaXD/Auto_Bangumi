@@ -100,7 +100,7 @@ onUnmounted(() => {
         :src="isDark ? '/images/logo-light.svg' : '/images/logo.svg'"
         alt="favicon"
         class="topbar-logo"
-      >
+      />
       <img
         v-if="!isMobile"
         v-show="onSearchFocus === false"
@@ -109,7 +109,7 @@ onUnmounted(() => {
         "
         alt="AutoBangumi"
         class="topbar-wordmark"
-      >
+      />
     </div>
 
     <!-- Desktop search bar -->
@@ -164,8 +164,10 @@ onUnmounted(() => {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
-  transition: background-color var(--transition-normal),
-    border-color var(--transition-normal), box-shadow var(--transition-normal);
+  transition:
+    background-color var(--transition-normal),
+    border-color var(--transition-normal),
+    box-shadow var(--transition-normal);
 
   @include forTablet {
     gap: 12px;
@@ -232,7 +234,9 @@ onUnmounted(() => {
   background: var(--color-surface-hover);
   color: var(--color-text-muted);
   cursor: pointer;
-  transition: color var(--transition-fast), border-color var(--transition-fast),
+  transition:
+    color var(--transition-fast),
+    border-color var(--transition-fast),
     background-color var(--transition-fast);
 
   &:hover {

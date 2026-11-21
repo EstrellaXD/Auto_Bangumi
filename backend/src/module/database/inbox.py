@@ -1,12 +1,13 @@
 """通知中心消息表的仓储。合并/去重语义见 ``upsert``。"""
 
+import builtins
 import logging
-from typing import Optional
 
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import delete, func, select
+from sqlmodel import col, delete, func, select
 
+from module.database.engine import rowcount
 from module.models.inbox import InboxMessage, utcnow_iso
 
 logger = logging.getLogger(__name__)
@@ -25,11 +26,11 @@ class InboxDatabase:
         severity: str = "info",
         title: str = "",
         body: str = "",
-        payload: Optional[str] = None,
-        dedup_key: Optional[str] = None,
+        payload: str | None = None,
+        dedup_key: str | None = None,
         once: bool = False,
         keep: int = DEFAULT_KEEP,
-    ) -> Optional[InboxMessage]:
+    ) -> InboxMessage | None:
         """写入一条通知。
 
         - ``once=True``：同 ``dedup_key`` 的行（无论已读与否）存在则跳过，
@@ -41,7 +42,7 @@ class InboxDatabase:
         if dedup_key is not None:
             statement = select(InboxMessage).where(InboxMessage.dedup_key == dedup_key)
             if not once:
-                statement = statement.where(InboxMessage.read == False)  # noqa: E712
+                statement = statement.where(col(InboxMessage.read) == False)  # noqa: E712
             result = await self.session.execute(statement)
             existing = result.scalars().first()
             if existing is not None:
@@ -72,14 +73,14 @@ class InboxDatabase:
 
     async def list(
         self, unread_only: bool = False, limit: int = 50, offset: int = 0
-    ) -> list[InboxMessage]:
+    ) -> builtins.list[InboxMessage]:
         statement = select(InboxMessage)
         if unread_only:
-            statement = statement.where(InboxMessage.read == False)  # noqa: E712
+            statement = statement.where(col(InboxMessage.read) == False)  # noqa: E712
         statement = (
             statement.order_by(
-                InboxMessage.updated_at.desc(),  # type: ignore[attr-defined]
-                InboxMessage.id.desc(),  # type: ignore[attr-defined]
+                col(InboxMessage.updated_at).desc(),
+                col(InboxMessage.id).desc(),
             )
             .limit(limit)
             .offset(offset)
@@ -90,7 +91,7 @@ class InboxDatabase:
     async def count_all(self, unread_only: bool = False) -> int:
         statement = select(func.count()).select_from(InboxMessage)
         if unread_only:
-            statement = statement.where(InboxMessage.read == False)  # noqa: E712
+            statement = statement.where(col(InboxMessage.read) == False)  # noqa: E712
         result = await self.session.execute(statement)
         return int(result.scalar_one())
 
@@ -115,11 +116,11 @@ class InboxDatabase:
     async def mark_all_read(self) -> int:
         result = await self.session.execute(
             update(InboxMessage)
-            .where(InboxMessage.read == False)  # type: ignore[arg-type]  # noqa: E712
+            .where(col(InboxMessage.read) == False)  # noqa: E712
             .values(read=True)
         )
         await self.session.commit()
-        return int(result.rowcount or 0)  # type: ignore[attr-defined]
+        return int(rowcount(result) or 0)
 
     async def delete(self, message_id: int) -> bool:
         message = await self.session.get(InboxMessage, message_id)
@@ -132,15 +133,15 @@ class InboxDatabase:
     async def clear(self) -> int:
         result = await self.session.execute(delete(InboxMessage))
         await self.session.commit()
-        return int(result.rowcount or 0)  # type: ignore[attr-defined]
+        return int(rowcount(result) or 0)
 
     async def prune(self, keep: int = DEFAULT_KEEP) -> int:
         """删除最近 ``keep`` 条以外的旧消息，返回删除数量。"""
         stale_ids_stmt = (
             select(InboxMessage.id)
             .order_by(
-                InboxMessage.updated_at.desc(),  # type: ignore[attr-defined]
-                InboxMessage.id.desc(),  # type: ignore[attr-defined]
+                col(InboxMessage.updated_at).desc(),
+                col(InboxMessage.id).desc(),
             )
             .offset(keep)
         )
@@ -149,7 +150,7 @@ class InboxDatabase:
         if not stale_ids:
             return 0
         await self.session.execute(
-            delete(InboxMessage).where(InboxMessage.id.in_(stale_ids))  # type: ignore[attr-defined]
+            delete(InboxMessage).where(col(InboxMessage.id).in_(stale_ids))
         )
         await self.session.commit()
         return len(stale_ids)

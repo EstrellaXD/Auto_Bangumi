@@ -52,5 +52,10 @@ const pageProps = computed(() => {
 </script>
 
 <template>
-  <AbTorrentListPage v-if="pageProps" :key="bangumiId ?? -1" v-bind="pageProps" :title="title" />
+  <AbTorrentListPage
+    v-if="pageProps"
+    :key="bangumiId ?? -1"
+    v-bind="pageProps"
+    :title="title"
+  />
 </template>

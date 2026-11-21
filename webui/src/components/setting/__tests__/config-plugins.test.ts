@@ -155,8 +155,7 @@ describe('config-plugins', () => {
 
     wrapper
       .findAllComponents({ name: 'AbSwitch' })[0]
-      .vm
-      .$emit('update:model-value', true);
+      .vm.$emit('update:model-value', true);
     await flushPromises();
 
     expect(api.updateSettings).toHaveBeenCalledWith(true);
@@ -181,8 +180,7 @@ describe('config-plugins', () => {
     // 第 0 个开关是 allow_unsigned，之后依次是插件 a、b
     wrapper
       .findAllComponents({ name: 'AbSwitch' })[2]
-      .vm
-      .$emit('update:model-value', true);
+      .vm.$emit('update:model-value', true);
     await flushPromises();
 
     expect(api.update).toHaveBeenCalledWith('b', { enabled: true });
@@ -232,7 +230,11 @@ describe('config-plugins states', () => {
         options: { url: 'a' },
       }),
     ]);
-    const save = () => wrapper.find('.plugin').findAll('button').filter((b) => b.text() === 'config.plugins_set.save')[0];
+    const save = () =>
+      wrapper
+        .find('.plugin')
+        .findAll('button')
+        .filter((b) => b.text() === 'config.plugins_set.save')[0];
     expect(save().attributes('disabled')).toBeDefined();
     expect(wrapper.text()).not.toContain('config.plugins_set.unsaved');
 
@@ -252,8 +254,7 @@ describe('config-plugins impact warning', () => {
     // 第 0 个开关是 allow_unsigned
     wrapper
       .findAllComponents({ name: 'AbSwitch' })[1]
-      .vm
-      .$emit('update:model-value', false);
+      .vm.$emit('update:model-value', false);
     return flushPromises();
   }
 
@@ -273,14 +274,11 @@ describe('config-plugins impact warning', () => {
 
       await toggleOff(wrapper);
 
-      expect(confirmMock).toHaveBeenCalledTimes(asked ? 1 : 0);
-      if (asked)
-        expect(confirmMock).toHaveBeenCalledWith(
-          expect.objectContaining({
-            danger: true,
-            body: 'config.plugins_set.in_use',
-          })
-        );
+      const inUseConfirm = expect.objectContaining({
+        danger: true,
+        body: 'config.plugins_set.in_use',
+      });
+      expect(confirmMock.mock.calls).toEqual(asked ? [[inUseConfirm]] : []);
       expect(api.update).toHaveBeenCalledTimes(disabled ? 1 : 0);
     }
   );

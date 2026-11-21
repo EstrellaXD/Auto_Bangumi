@@ -288,14 +288,22 @@ async def test_closing_subscriber_completes_queued_confirmation():
 
 
 async def test_maintenance_drains_subscriber_that_attempts_download_without_deadlock(
-    application, tmp_path
+    application, tmp_path, monkeypatch
 ):
     from ab_sdk.downloader import AddResult
     from ab_sdk.events import HistoryCleared
     from module.plugin.admission import HostAdmissionService
 
-    allowed, entered = asyncio.Event(), asyncio.Event()
+    allowed, entered, quiescing = asyncio.Event(), asyncio.Event(), asyncio.Event()
     row, _, _, _ = await sample(tmp_path)
+
+    drain = bus().drain
+
+    async def signal_drain():
+        quiescing.set()
+        await drain()
+
+    monkeypatch.setattr(bus(), "drain", signal_drain)
 
     async def listener(event):
         entered.set()
@@ -312,8 +320,8 @@ async def test_maintenance_drains_subscriber_that_attempts_download_without_dead
     service = HostMaintenanceService("review", tmp_path / "private")
     running = asyncio.create_task(service.run("drain-test", AsyncMock()))
     async with asyncio.timeout(2):
-        while not await maintenance.blocked():
-            await asyncio.sleep(0)
+        await quiescing.wait()
+        assert await maintenance.blocked()
         allowed.set()
         await running
     assert not await maintenance.blocked()

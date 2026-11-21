@@ -110,7 +110,7 @@ def github(monkeypatch, data, *, checksum=None, repository="example/demo"):
 
 
 async def test_update_pins_source_and_rejects_duplicate_install(updater, monkeypatch):
-    service, manager, scheduler, root = updater
+    service, manager, scheduler, _root = updater
     github(monkeypatch, package())
     info = await service.check()
     assert info.available and info.repository == "example/demo"

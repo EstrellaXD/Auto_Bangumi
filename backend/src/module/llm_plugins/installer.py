@@ -6,7 +6,7 @@ LLM 插件仍使用 ``plugin.json`` 清单，发布在 ``llm-plugins`` tag；通
 
 import json
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from module.database import Database
 from module.plugin.installer import (
@@ -26,7 +26,7 @@ class PluginInstaller(SignedCatalogInstaller):
     catalog_schema = _MANIFEST_SCHEMA
     manifest_name = "plugin.json"
 
-    def _reject_reason(self, plugin_id: str) -> Optional[str]:
+    def _reject_reason(self, plugin_id: str) -> str | None:
         from module.parser.analyser.providers.builtin import BUILTIN
         from module.parser.analyser.providers.presets import PRESET_ADAPTERS
 
@@ -34,9 +34,7 @@ class PluginInstaller(SignedCatalogInstaller):
             return f"{plugin_id} is a builtin provider"
         return None
 
-    def _validate_manifest(
-        self, unpacked: Path, entry: dict[str, Any]
-    ) -> Optional[str]:
+    def _validate_manifest(self, unpacked: Path, entry: dict[str, Any]) -> str | None:
         manifest = json.loads((unpacked / "plugin.json").read_text(encoding="utf-8"))
         if not isinstance(manifest, dict):
             raise ValueError("plugin.json is not an object")

@@ -106,7 +106,7 @@ def _parse_movie_file(
             title=title,
             season=1,
             episode=1,
-            language=language,  # type: ignore[arg-type]
+            language=language,  # ty: ignore[invalid-argument-type]
             suffix=suffix,
             episode_type="movie",
         )
@@ -173,7 +173,7 @@ def _torrent_parser_impl(
                         group=group,
                         title=title,
                         season=season,
-                        episode=episode,  # type: ignore[arg-type]
+                        episode=episode,
                         suffix=suffix,
                     )
                 elif file_type == "subtitle":
@@ -186,8 +186,8 @@ def _torrent_parser_impl(
                         group=group,
                         title=title,
                         season=season,
-                        language=language,  # type: ignore[arg-type]
-                        episode=episode,  # type: ignore[arg-type]
+                        language=language,  # ty: ignore[invalid-argument-type]
+                        episode=episode,
                         suffix=suffix,
                     )
     return None

@@ -1,6 +1,10 @@
 <script lang="ts" setup>
 // 计数/圆点徽标（通知中心等）：溢出显示 max+，count 为 0 时隐藏。
-const { count = 0, dot = false, max = 99 } = defineProps<{
+const {
+  count = 0,
+  dot = false,
+  max = 99,
+} = defineProps<{
   count?: number;
   /** 只显示小圆点（不显示数字） */
   dot?: boolean;
@@ -8,9 +12,7 @@ const { count = 0, dot = false, max = 99 } = defineProps<{
 }>();
 
 const visible = computed(() => dot || count > 0);
-const text = computed(() =>
-  count > max ? `${max}+` : String(count)
-);
+const text = computed(() => (count > max ? `${max}+` : String(count)));
 </script>
 
 <template>

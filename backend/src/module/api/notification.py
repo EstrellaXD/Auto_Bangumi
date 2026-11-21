@@ -6,7 +6,6 @@
 
 import json
 import logging
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -39,19 +38,19 @@ class TestProviderConfigRequest(BaseModel):
 
     type: str = Field(default=..., description="Provider type")
     enabled: bool = Field(default=True, description="Whether provider is enabled")
-    token: Optional[str] = Field(default=None, description="Auth token")
-    chat_id: Optional[str] = Field(default=None, description="Chat/channel ID")
-    webhook_url: Optional[str] = Field(default=None, description="Webhook URL")
-    server_url: Optional[str] = Field(default=None, description="Server URL")
-    device_key: Optional[str] = Field(default=None, description="Device key")
-    user_key: Optional[str] = Field(default=None, description="User key")
-    api_token: Optional[str] = Field(default=None, description="API token")
-    template: Optional[str] = Field(default=None, description="Custom template")
-    url: Optional[str] = Field(default=None, description="URL for generic webhook")
-    sound: Optional[str] = Field(default=None, description="Bark sound")
-    group: Optional[str] = Field(default=None, description="Bark group")
-    level: Optional[str] = Field(default=None, description="Bark level")
-    icon: Optional[str] = Field(default=None, description="Bark icon URL")
+    token: str | None = Field(default=None, description="Auth token")
+    chat_id: str | None = Field(default=None, description="Chat/channel ID")
+    webhook_url: str | None = Field(default=None, description="Webhook URL")
+    server_url: str | None = Field(default=None, description="Server URL")
+    device_key: str | None = Field(default=None, description="Device key")
+    user_key: str | None = Field(default=None, description="User key")
+    api_token: str | None = Field(default=None, description="API token")
+    template: str | None = Field(default=None, description="Custom template")
+    url: str | None = Field(default=None, description="URL for generic webhook")
+    sound: str | None = Field(default=None, description="Bark sound")
+    group: str | None = Field(default=None, description="Bark group")
+    level: str | None = Field(default=None, description="Bark level")
+    icon: str | None = Field(default=None, description="Bark icon URL")
 
 
 class TestResponse(BaseModel):
@@ -148,7 +147,7 @@ class InboxMessageOut(BaseModel):
     severity: str
     title: str
     body: str
-    payload: Optional[dict] = None
+    payload: dict | None = None
     read: bool
     count: int
     created_at: str

@@ -108,9 +108,7 @@ function handleCancel() {
         </div>
       </div>
 
-      <div class="comparison-vs">
-        &ne;
-      </div>
+      <div class="comparison-vs">&ne;</div>
 
       <!-- TMDB data -->
       <div class="comparison-box">
@@ -123,15 +121,17 @@ function handleCancel() {
         </div>
         <div
           v-if="
-            tmdbInfo
-              && tmdbInfo.season_episode_counts[
-                parsedSeason + (suggestion?.season_offset ?? 0)
-              ]
+            tmdbInfo &&
+            tmdbInfo.season_episode_counts[
+              parsedSeason + (suggestion?.season_offset ?? 0)
+            ]
           "
           class="comparison-value"
         >
-          <span class="value-label">S{{ parsedSeason + (suggestion?.season_offset ?? 0) }}
-            {{ t('offset.episode') }}:</span>
+          <span class="value-label"
+            >S{{ parsedSeason + (suggestion?.season_offset ?? 0) }}
+            {{ t('offset.episode') }}:</span
+          >
           <span class="value-num">{{
             tmdbInfo.season_episode_counts[
               parsedSeason + (suggestion?.season_offset ?? 0)
@@ -164,10 +164,12 @@ function handleCancel() {
           class="offset-input"
           :aria-label="t('offset.season_offset')"
         />
-        <span class="offset-hint">&rarr; S{{ parsedSeason }}
+        <span class="offset-hint"
+          >&rarr; S{{ parsedSeason }}
           {{ t('offset.season') === '季度' ? '变为' : 'becomes' }} S{{
             Math.max(1, parsedSeason + seasonOffset)
-          }}</span>
+          }}</span
+        >
       </div>
       <div class="offset-row">
         <span class="offset-label">{{ t('offset.episode_offset') }}:</span>
@@ -177,10 +179,12 @@ function handleCancel() {
           class="offset-input"
           :aria-label="t('offset.episode_offset')"
         />
-        <span class="offset-hint">&rarr; E{{ parsedEpisode }}
+        <span class="offset-hint"
+          >&rarr; E{{ parsedEpisode }}
           {{ t('offset.season') === '季度' ? '保持' : 'stays' }} E{{
             Math.max(1, parsedEpisode + episodeOffset)
-          }}</span>
+          }}</span
+        >
       </div>
     </div>
 

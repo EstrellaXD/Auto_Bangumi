@@ -1,5 +1,10 @@
 import type { PluginUiSlot } from '@autobangumi/plugin-ui';
-import type { CatalogEntry, LocalPluginUpdate, PluginProviders, PluginsOverview } from '#/plugins';
+import type {
+  CatalogEntry,
+  LocalPluginUpdate,
+  PluginProviders,
+  PluginsOverview,
+} from '#/plugins';
 
 export interface MaintenanceOperation {
   id: string;
@@ -13,31 +18,52 @@ export interface MaintenanceOperation {
 
 export const apiPlugins = {
   async maintenance() {
-    const { data } = await axios.get<MaintenanceOperation[]>('api/v1/plugins/maintenance');
+    const { data } = await axios.get<MaintenanceOperation[]>(
+      'api/v1/plugins/maintenance'
+    );
     return data;
   },
   async recoverMaintenance(operation: MaintenanceOperation) {
-    const restore = operation.name === 'local-plugin-update' && ['replacing-code', 'loaded'].includes(operation.step);
-    await axios.post(`api/v1/plugins/${encodeURIComponent(operation.owner)}/${restore ? 'updates/recover' : 'maintenance/resume'}`, { operation_id: operation.id });
+    const restore =
+      operation.name === 'local-plugin-update' &&
+      ['replacing-code', 'loaded'].includes(operation.step);
+    await axios.post(
+      `api/v1/plugins/${encodeURIComponent(operation.owner)}/${restore ? 'updates/recover' : 'maintenance/resume'}`,
+      { operation_id: operation.id }
+    );
   },
   async pipelines(body: { organizer: string; download_preflight: string }) {
-    const { data } = await axios.put<PluginsOverview>('api/v1/plugins/settings/pipelines', body);
+    const { data } = await axios.put<PluginsOverview>(
+      'api/v1/plugins/settings/pipelines',
+      body
+    );
     return data;
   },
   async localSource(id: string, repository: string) {
-    const { data } = await axios.put<PluginsOverview>(`api/v1/plugins/${encodeURIComponent(id)}/updates/source`, { repository });
+    const { data } = await axios.put<PluginsOverview>(
+      `api/v1/plugins/${encodeURIComponent(id)}/updates/source`,
+      { repository }
+    );
     return data;
   },
   async localUpdate(id: string) {
-    const { data } = await axios.get<{ version: string; available: boolean } | null>(`api/v1/plugins/${encodeURIComponent(id)}/updates`);
+    const { data } = await axios.get<{
+      version: string;
+      available: boolean;
+    } | null>(`api/v1/plugins/${encodeURIComponent(id)}/updates`);
     return data;
   },
   async checkLocalUpdate(id: string) {
-    const { data } = await axios.post<LocalPluginUpdate>(`api/v1/plugins/${encodeURIComponent(id)}/updates/check`);
+    const { data } = await axios.post<LocalPluginUpdate>(
+      `api/v1/plugins/${encodeURIComponent(id)}/updates/check`
+    );
     return data;
   },
   async installLocalUpdate(id: string, version: string, installToken: string) {
-    const { data } = await axios.post<PluginsOverview>(`api/v1/plugins/${encodeURIComponent(id)}/updates/install`, { version, install_token: installToken });
+    const { data } = await axios.post<PluginsOverview>(
+      `api/v1/plugins/${encodeURIComponent(id)}/updates/install`,
+      { version, install_token: installToken }
+    );
     return data;
   },
 

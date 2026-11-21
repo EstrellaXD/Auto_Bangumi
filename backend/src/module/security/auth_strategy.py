@@ -31,7 +31,6 @@ class AuthStrategy(ABC):
         Returns:
             ResponseModel with status and user info
         """
-        pass
 
 
 class PasskeyAuthStrategy(AuthStrategy):
@@ -149,6 +148,6 @@ class PasskeyAuthStrategy(AuthStrategy):
                 return ResponseModel(
                     status_code=401,
                     status=False,
-                    msg_en=f"Passkey verification failed: {str(e)}",
-                    msg_zh=f"Passkey 验证失败: {str(e)}",
+                    msg_en=f"Passkey verification failed: {e!s}",
+                    msg_zh=f"Passkey 验证失败: {e!s}",
                 )

@@ -8,7 +8,8 @@ Provider 扩展点（``@provider``）：
   ``type``
 - ``LLM_PROVIDER``：返回 :class:`ab_sdk.llm.LLMProviderAdapter` 子类
 - ``SEARCH_SITE``：返回 :class:`ab_sdk.search.SearchSite`，id 即站点名
-- ``SCHEDULED_TASK``：返回 :class:`ab_sdk.tasks.ScheduledTask`
+- ``SCHEDULED_TASK``：返回 :class:`ab_sdk.tasks.ScheduledTask`，id 只需在插件内
+  唯一
 - ``METADATA_PROVIDER``：返回 :class:`ab_sdk.ingest.MetadataProvider`，id 即
   RSS 订阅的「解析器」（``RSSItem.parser``）取值
 

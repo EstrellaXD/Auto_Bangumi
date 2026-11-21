@@ -3,8 +3,7 @@ Passkey 数据库操作层
 """
 
 import logging
-from datetime import datetime, timezone
-from typing import List, Optional
+from datetime import UTC, datetime
 
 from fastapi import HTTPException
 from sqlalchemy import delete
@@ -28,15 +27,13 @@ class PasskeyDatabase:
         logger.info(f"Created passkey '{passkey.name}' for user_id={passkey.user_id}")
         return passkey
 
-    async def get_passkey_by_credential_id(
-        self, credential_id: str
-    ) -> Optional[Passkey]:
+    async def get_passkey_by_credential_id(self, credential_id: str) -> Passkey | None:
         """通过 credential_id 查找 Passkey（用于认证）"""
         statement = select(Passkey).where(Passkey.credential_id == credential_id)
         result = await self.session.execute(statement)
         return result.scalar_one_or_none()
 
-    async def get_passkeys_by_user_id(self, user_id: int) -> List[Passkey]:
+    async def get_passkeys_by_user_id(self, user_id: int) -> list[Passkey]:
         """获取用户的所有 Passkey"""
         statement = select(Passkey).where(Passkey.user_id == user_id)
         result = await self.session.execute(statement)
@@ -45,7 +42,7 @@ class PasskeyDatabase:
     async def update_passkey_usage(self, passkey: Passkey, new_sign_count: int):
         """更新 Passkey 使用记录（签名计数器 + 最后使用时间）"""
         passkey.sign_count = new_sign_count
-        passkey.last_used_at = datetime.now(timezone.utc)
+        passkey.last_used_at = datetime.now(UTC)
         self.session.add(passkey)
         await self.session.commit()
 

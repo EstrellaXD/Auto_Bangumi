@@ -36,7 +36,7 @@ const posterSrc = computed(() => resolvePosterUrl(bangumi.poster_link));
             :alt="bangumi.official_title"
             class="card-img"
             loading="lazy"
-          >
+          />
         </template>
         <template v-else>
           <div class="card-placeholder">
@@ -90,7 +90,7 @@ const posterSrc = computed(() => resolvePosterUrl(bangumi.poster_link));
               :src="posterSrc"
               :alt="bangumi.official_title"
               class="search-card-img"
-            >
+            />
           </template>
           <template v-else>
             <div class="card-placeholder card-placeholder--small">
@@ -173,7 +173,8 @@ const posterSrc = computed(() => resolvePosterUrl(bangumi.poster_link));
   border-radius: var(--radius-md);
   overflow: hidden;
   box-shadow: var(--shadow-md);
-  transition: box-shadow var(--transition-fast),
+  transition:
+    box-shadow var(--transition-fast),
     transform var(--transition-fast);
 
   .card:hover &,
@@ -293,7 +294,8 @@ const posterSrc = computed(() => resolvePosterUrl(bangumi.poster_link));
   background: var(--color-primary);
   color: var(--color-white);
   box-shadow: var(--shadow-md);
-  transition: transform var(--transition-fast),
+  transition:
+    transform var(--transition-fast),
     background-color var(--transition-fast);
 
   .card:active & {

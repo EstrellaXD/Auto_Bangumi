@@ -1,4 +1,6 @@
-from sqlalchemy import event
+from typing import Any, cast
+
+from sqlalchemy import CursorResult, Result, event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from module.conf import DATA_PATH
@@ -14,6 +16,15 @@ async_engine = create_async_engine(ASYNC_DATA_PATH)
 async_session_factory = async_sessionmaker(
     async_engine, class_=AsyncSession, expire_on_commit=False
 )
+
+
+def rowcount(result: Result[Any]) -> int:
+    """UPDATE/DELETE 语句影响的行数。
+
+    ``AsyncSession.execute`` 的类型存根只返回基类 ``Result``，但 DML 语句实际
+    得到的是带 ``rowcount`` 的 ``CursorResult``。
+    """
+    return cast(CursorResult[Any], result).rowcount
 
 
 def _set_sqlite_pragmas_async(dbapi_conn, connection_record):

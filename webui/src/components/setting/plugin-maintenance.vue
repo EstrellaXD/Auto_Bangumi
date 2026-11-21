@@ -27,14 +27,28 @@ async function recover(operation: MaintenanceOperation) {
 </script>
 
 <template>
-  <AbAlert v-if="operations.length" type="warning" :title="t('config.plugins_set.recovery')">
+  <AbAlert
+    v-if="operations.length"
+    type="warning"
+    :title="t('config.plugins_set.recovery')"
+  >
     <div v-for="operation in operations" :key="operation.id">
       <AbTooltip :content="operation.backup_path">
-        <span>{{ operation.owner }} · {{ operation.step }} · {{ operation.error }}</span>
+        <span
+          >{{ operation.owner }} · {{ operation.step }} ·
+          {{ operation.error }}</span
+        >
       </AbTooltip>
       <AbTooltip :content="t('config.plugins_set.recovery_hint')">
         <AbButton size="sm" :loading="busy" @click="recover(operation)">
-          {{ t(operation.name === 'local-plugin-update' && ['replacing-code', 'loaded'].includes(operation.step) ? 'config.plugins_set.restore_code' : 'config.plugins_set.acknowledge') }}
+          {{
+            t(
+              operation.name === 'local-plugin-update' &&
+                ['replacing-code', 'loaded'].includes(operation.step)
+                ? 'config.plugins_set.restore_code'
+                : 'config.plugins_set.acknowledge'
+            )
+          }}
         </AbButton>
       </AbTooltip>
     </div>

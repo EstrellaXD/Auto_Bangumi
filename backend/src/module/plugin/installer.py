@@ -23,7 +23,7 @@ import shutil
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar
 
 import httpx2
 import semver
@@ -87,9 +87,9 @@ class SignedCatalogInstaller:
     def __init__(
         self,
         *,
-        root: Optional[Path] = None,
-        pubkey_path: Optional[Path] = None,
-        client: Optional[httpx2.AsyncClient] = None,
+        root: Path | None = None,
+        pubkey_path: Path | None = None,
+        client: httpx2.AsyncClient | None = None,
         app_version: str = "0.0.0",
     ) -> None:
         self.root = root if root is not None else DEFAULT_PLUGINS_ROOT
@@ -100,18 +100,16 @@ class SignedCatalogInstaller:
 
     # ------------------------------------------------------------ 子类实现
 
-    def _reject_reason(self, plugin_id: str) -> Optional[str]:
+    def _reject_reason(self, plugin_id: str) -> str | None:
         """该 id 不允许经安装器安装 / 卸载的原因（如与内置同名）。"""
         raise NotImplementedError
 
-    def _validate_manifest(
-        self, unpacked: Path, entry: dict[str, Any]
-    ) -> Optional[str]:
+    def _validate_manifest(self, unpacked: Path, entry: dict[str, Any]) -> str | None:
         """解包目录里的清单是否与 catalog 条目一致且可用；返回问题描述，通过时
         为 None。"""
         raise NotImplementedError
 
-    def _check_entry(self, entry: dict[str, Any]) -> Optional[str]:
+    def _check_entry(self, entry: dict[str, Any]) -> str | None:
         """下载前对 catalog 条目的检查，默认只看宿主版本要求。"""
         min_ab = entry.get("min_ab_version", "0.0.0")
         if not meets_min_version(self.app_version, min_ab):
@@ -174,7 +172,7 @@ class SignedCatalogInstaller:
         async with self._lock:
             try:
                 return await self._install(plugin_id, expected_version)
-            except Exception as e:  # noqa: BLE001 - 统一转成失败结果
+            except Exception as e:
                 logger.warning("Plugin install failed for %s: %s", plugin_id, e)
                 return InstallResult(success=False, message=str(e))
 
@@ -247,14 +245,14 @@ class SignedCatalogInstaller:
             self._reload(plugin_id)
             return InstallResult(success=True)
 
-    def _check_id(self, plugin_id: str) -> Optional[str]:
+    def _check_id(self, plugin_id: str) -> str | None:
         """id 不合法或不允许经安装器安装 / 卸载的原因；可以时为 None。"""
         # 同时挡住 "local"（本地插件目录）与路径穿越：id 会拼进文件系统路径
         if not ID_RE.match(plugin_id) or plugin_id in RESERVED_IDS:
             return f"Invalid plugin id: {plugin_id}"
         return self._reject_reason(plugin_id)
 
-    def _uninstall_reject_reason(self, plugin_id: str) -> Optional[str]:
+    def _uninstall_reject_reason(self, plugin_id: str) -> str | None:
         # 只删经本安装器装入的目录（installed.json 指向含本类清单的版本目录），
         # 绝不碰 config/plugins/ 下的其它内容：本地插件、另一类安装器装入的插件
         version = installed_version(self.root, plugin_id)
@@ -285,14 +283,12 @@ class PluginInstaller(SignedCatalogInstaller):
         kwargs.setdefault("pubkey_path", PLUGIN_PUBKEY_PATH)
         super().__init__(**kwargs)
 
-    def _reject_reason(self, plugin_id: str) -> Optional[str]:
+    def _reject_reason(self, plugin_id: str) -> str | None:
         if (BUILTIN_ROOT / plugin_id).is_dir():
             return f"{plugin_id} is a builtin plugin"
         return None
 
-    def _validate_manifest(
-        self, unpacked: Path, entry: dict[str, Any]
-    ) -> Optional[str]:
+    def _validate_manifest(self, unpacked: Path, entry: dict[str, Any]) -> str | None:
         parsed, problems = check(unpacked)
         if parsed is None or problems:
             return "; ".join(problems)

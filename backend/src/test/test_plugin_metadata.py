@@ -29,7 +29,7 @@ async def test_metadata_failure_does_not_leak_key_or_poison_cache(monkeypatch):
     metadata._cache.clear()
     get = AsyncMock(side_effect=RuntimeError("https://private-host/?api_key=secret"))
     monkeypatch.setattr(RequestContent, "get_json", get)
-    with pytest.raises(RuntimeError, match="^TMDB request failed$"):
+    with pytest.raises(RuntimeError, match=r"^TMDB request failed$"):
         await metadata.HostMetadataService().get(12)
     assert not metadata._cache
     with pytest.raises(ValueError):

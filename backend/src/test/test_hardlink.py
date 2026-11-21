@@ -118,7 +118,7 @@ async def test_on_organized_cross_device_applies_policy(roots, monkeypatch, mode
 
 
 async def test_on_organized_redelivery_does_not_copy_again(roots, monkeypatch):
-    downloads, library = roots
+    downloads, _library = roots
     plugin, ctx = make_plugin(roots)
     src = write(downloads / SEASON / "Anime S01E01.mkv", "v1")
     monkeypatch.setattr(os, "link", exdev)
@@ -278,7 +278,7 @@ async def test_on_organized_user_file_at_former_link_kept(roots):
 
 async def test_link_concurrent_copies_of_same_target_all_succeed(roots, monkeypatch):
     downloads, library = roots
-    plugin, ctx = make_plugin(roots)
+    plugin, _ctx = make_plugin(roots)
     src = write(downloads / SEASON / "Anime S01E01.mkv", "v1")
     monkeypatch.setattr(os, "link", exdev)
     both_copying = threading.Barrier(2, timeout=5)
@@ -325,7 +325,7 @@ async def test_link_target_deleted_by_user_restored_only_by_backfill(
 
 
 async def test_on_organized_publishes_linked_only_when_file_placed(roots):
-    downloads, library = roots
+    downloads, _library = roots
     plugin, ctx = make_plugin(roots)
     src = write(downloads / SEASON / "Anime S01E01.mkv", "v1")
 

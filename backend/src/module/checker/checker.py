@@ -26,20 +26,14 @@ class Checker:
 
     @staticmethod
     def check_renamer() -> bool:
-        if (
+        return bool(
             settings.bangumi_manage.enable
             or settings.plugins.slots.organizer != "native"
-        ):
-            return True
-        else:
-            return False
+        )
 
     @staticmethod
     def check_analyser() -> bool:
-        if settings.rss_parser.enable:
-            return True
-        else:
-            return False
+        return bool(settings.rss_parser.enable)
 
     @staticmethod
     def check_first_run() -> bool:
@@ -55,10 +49,7 @@ class Checker:
     @staticmethod
     def check_database() -> bool:
         db_path = Path("data/data.db")
-        if not db_path.exists():
-            return False
-        else:
-            return True
+        return db_path.exists()
 
     @staticmethod
     async def check_downloader_detail() -> tuple[bool, str | None]:

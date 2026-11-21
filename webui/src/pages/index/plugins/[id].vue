@@ -30,7 +30,10 @@ const pluginId = computed<string>((prev) =>
   <div class="page-plugin">
     <!-- 手机上 ab-page-title 隐藏，页面自己给标题 -->
     <!-- 与 index.vue 的 pageTitle 一致：插件不存在时用 id 作标题 -->
-    <h1 v-if="isMobile && (ui || loaded || loadFailed)" class="page-plugin__title">
+    <h1
+      v-if="isMobile && (ui || loaded || loadFailed)"
+      class="page-plugin__title"
+    >
       {{ ui ? slotTitle(ui, lang) : pluginId }}
     </h1>
     <PluginSlot v-if="ui" :key="`${ui.plugin_id}:${ui.element}`" :ui="ui" />

@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class TelegramProvider(NotificationProvider):
     """Telegram Bot notification provider."""
 
-    def __init__(self, config: "ProviderConfig"):
+    def __init__(self, config: ProviderConfig):
         super().__init__(config)
         token = config.token
         self.chat_id = config.chat_id

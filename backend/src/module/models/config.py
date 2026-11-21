@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from os.path import expandvars
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -33,7 +33,7 @@ class DownloaderOptions(BaseModel):
     username_: str = Field(
         default="admin", alias="username", description="Downloader username"
     )
-    # 等同 ab_sdk.secret_field()；直接写 Field 以便 mypy 识别别名
+    # 等同 ab_sdk.secret_field()；直接写 Field 以便类型检查器识别别名
     password_: str = Field(
         default="adminadmin",
         alias="password",
@@ -150,28 +150,28 @@ class NotificationProvider(BaseModel):
     enabled: bool = Field(default=True, description="Whether this provider is enabled")
 
     # Common fields (with env var expansion)
-    token_: Optional[str] = Field(default=None, alias="token", description="Auth token")
-    chat_id_: Optional[str] = Field(
+    token_: str | None = Field(default=None, alias="token", description="Auth token")
+    chat_id_: str | None = Field(
         default=None, alias="chat_id", description="Chat/channel ID"
     )
 
     # Provider-specific fields
-    webhook_url_: Optional[str] = Field(
+    webhook_url_: str | None = Field(
         default=None, alias="webhook_url", description="Webhook URL for discord/wecom"
     )
-    server_url_: Optional[str] = Field(
+    server_url_: str | None = Field(
         default=None, alias="server_url", description="Server URL for gotify/bark"
     )
-    device_key_: Optional[str] = Field(
+    device_key_: str | None = Field(
         default=None, alias="device_key", description="Device key for bark"
     )
-    user_key_: Optional[str] = Field(
+    user_key_: str | None = Field(
         default=None, alias="user_key", description="User key for pushover"
     )
-    api_token_: Optional[str] = Field(
+    api_token_: str | None = Field(
         default=None, alias="api_token", description="API token for pushover"
     )
-    template: Optional[str] = Field(
+    template: str | None = Field(
         default=None,
         description=(
             "Custom message template ({{title}}/{{season}}/{{episode}}/"
@@ -180,19 +180,19 @@ class NotificationProvider(BaseModel):
             "text."
         ),
     )
-    url_: Optional[str] = Field(
+    url_: str | None = Field(
         default=None,
         alias="url",
         description="URL for generic webhook provider; tap-to-open URL for bark",
     )
     # Bark 的可选推送参数，留空则不发送
-    sound: Optional[str] = Field(default=None, description="Bark sound name")
-    group: Optional[str] = Field(default=None, description="Bark message group")
-    level: Optional[str] = Field(
+    sound: str | None = Field(default=None, description="Bark sound name")
+    group: str | None = Field(default=None, description="Bark message group")
+    level: str | None = Field(
         default=None,
         description="Bark interruption level: active/timeSensitive/passive/critical",
     )
-    icon: Optional[str] = Field(
+    icon: str | None = Field(
         default=None, description="Bark icon URL; defaults to the poster URL"
     )
 
@@ -468,7 +468,7 @@ class Plugins(BaseModel):
     instances: list[PluginInstance] = Field(default_factory=_default_instances)
 
     @model_validator(mode="after")
-    def _check_instances(self) -> "Plugins":
+    def _check_instances(self) -> Plugins:
         ids = [i.id for i in self.instances]
         if len(ids) != len(set(ids)):
             raise ValueError(f"duplicate plugin instance id in {ids}")

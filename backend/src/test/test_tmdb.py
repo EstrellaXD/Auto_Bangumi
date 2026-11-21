@@ -292,7 +292,7 @@ def test_network_config_tmdb_api_key_defaults_empty():
 def test_reset_cache_clears_tmdb_cache():
     """reset_cache() must drop all cached lookups (called on config reload so
     a changed tmdb_base_url stops serving results from the old endpoint)."""
-    tmdb_parser_module._tmdb_cache["stale-key"] = None
+    tmdb_parser_module._tmdb_cache["stale-key"] = None  # ty: ignore[invalid-assignment]
     assert len(tmdb_parser_module._tmdb_cache) > 0
 
     tmdb_parser_module.reset_cache()

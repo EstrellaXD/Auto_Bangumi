@@ -210,10 +210,9 @@ def get_program_status() -> dict:
     structured_output=False,
 )
 async def refresh_feeds() -> dict:
-    async with DownloaderPool() as downloaders:
-        async with Database() as db:
-            engine = RSSEngine(db)
-            await engine.refresh_rss(downloaders)
+    async with DownloaderPool() as downloaders, Database() as db:
+        engine = RSSEngine(db)
+        await engine.refresh_rss(downloaders)
     return {"status": True, "message": "RSS feeds refreshed successfully"}
 
 

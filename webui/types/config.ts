@@ -21,7 +21,7 @@ export type NotificationType = [
   'wecom',
   'gotify',
   'pushover',
-  'webhook'
+  'webhook',
 ];
 /** LLM 提供商 id（内置三家 + 预设/插件，开放集合） */
 export type LLMProviderId = string;

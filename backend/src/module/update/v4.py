@@ -94,7 +94,7 @@ def _migrate_plugin_fields(config: dict[str, Any]) -> list[str]:
         config.pop("downloader")
         options = dict(downloader)
         instances = plugins.setdefault("instances", [])
-        instance = next(
+        instance: dict[str, Any] | None = next(
             (i for i in instances if i.get("id") == DEFAULT_DOWNLOADER_ID), None
         )
         if instance is None:

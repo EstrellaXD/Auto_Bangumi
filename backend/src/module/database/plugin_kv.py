@@ -5,7 +5,7 @@ from typing import Any
 
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import delete, select
+from sqlmodel import col, delete, select
 
 from module.models.plugin_kv import PluginKV, _utcnow
 
@@ -18,7 +18,7 @@ class PluginKVDatabase:
         """返回 (是否存在, 值)，以区分「不存在」与「存的就是 null」。"""
         result = await self.session.execute(
             select(PluginKV.value).where(
-                PluginKV.plugin_id == plugin_id, PluginKV.key == key
+                col(PluginKV.plugin_id) == plugin_id, col(PluginKV.key) == key
             )
         )
         raw = result.scalars().first()
@@ -42,8 +42,8 @@ class PluginKVDatabase:
     async def delete(self, plugin_id: str, key: str) -> None:
         await self.session.execute(
             delete(PluginKV).where(
-                PluginKV.plugin_id == plugin_id,  # type: ignore[arg-type]
-                PluginKV.key == key,  # type: ignore[arg-type]
+                col(PluginKV.plugin_id) == plugin_id,
+                col(PluginKV.key) == key,
             )
         )
         await self.session.commit()

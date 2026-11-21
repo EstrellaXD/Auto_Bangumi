@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 import pytest
 
 from module.parser.analyser import raw_parser
@@ -295,7 +297,7 @@ class TestIssue794PreEpisodeFormat:
     Fixed: tokenizer handles Pre-episode format correctly.
     """
 
-    TITLES = [
+    TITLES: ClassVar[list[str]] = [
         "[KitaujiSub] Shikanoko Nokonoko Koshitantan [01Pre][WebRip][HEVC_AAC][CHS_JP].mp4",
         "[KitaujiSub] Shikanoko Nokonoko Koshitantan [01Pre][WebRip][HEVC_AAC][CHT_JP].mp4",
     ]
@@ -362,7 +364,7 @@ class TestIssue986AtlasFormat:
     episode numbers.
     """
 
-    TITLES = [
+    TITLES: ClassVar[list[str]] = [
         "[阿特拉斯字幕组·雪原市出差所][命运-奇异赝品_Fate／strange Fake][04_半神们的卡农曲][简繁日内封PGS][日语配音版_Japanese Dub][Web-DL Remux][1080p AVC AAC]",
         "[阿特拉斯字幕组·雪原市出差所][命运-奇异赝品_Fate／strange Fake][07_神自黄昏归来][简繁日内封PGS][日语配音版_Japanese Dub][Web-DL Remux][1080p AVC AAC]",
     ]

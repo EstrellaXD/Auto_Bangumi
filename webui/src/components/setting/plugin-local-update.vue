@@ -15,11 +15,15 @@ const { t } = useMyI18n();
 const repository = ref(props.plugin.local_source ?? '');
 const busy = ref(false);
 const update = ref<{ version: string; available: boolean } | null>(null);
-watch(() => props.plugin.local_source, (value) => {
-  repository.value = value ?? '';
-});
+watch(
+  () => props.plugin.local_source,
+  (value) => {
+    repository.value = value ?? '';
+  }
+);
 onMounted(async () => {
-  if (props.allowUnsigned && props.plugin.local_source) update.value = await apiPlugins.localUpdate(props.plugin.id);
+  if (props.allowUnsigned && props.plugin.local_source)
+    update.value = await apiPlugins.localUpdate(props.plugin.id);
 });
 async function act(action: () => Promise<unknown>) {
   busy.value = true;
@@ -44,7 +48,11 @@ async function install() {
   const fresh = await apiPlugins.checkLocalUpdate(props.plugin.id);
   update.value = fresh;
   if (!fresh.available) return;
-  await apiPlugins.installLocalUpdate(props.plugin.id, fresh.version, fresh.install_token);
+  await apiPlugins.installLocalUpdate(
+    props.plugin.id,
+    fresh.version,
+    fresh.install_token
+  );
   update.value = null;
   await refreshPluginState();
   emit('updated');
@@ -54,7 +62,11 @@ async function install() {
 <template>
   <div class="local-update">
     <AbField :label="t('config.plugins_set.update_source')">
-      <AbInput v-model="repository" :disabled="busy || !allowUnsigned" placeholder="owner/repo" />
+      <AbInput
+        v-model="repository"
+        :disabled="busy || !allowUnsigned"
+        placeholder="owner/repo"
+      />
     </AbField>
     <div class="actions">
       <AbTooltip :content="t('config.plugins_set.update_hint')">
@@ -62,13 +74,32 @@ async function install() {
           <Info :size="16" />
         </button>
       </AbTooltip>
-      <AbButton size="sm" :loading="busy" :disabled="!allowUnsigned || repository.trim() === (plugin.local_source ?? '')" @click="act(save)">
+      <AbButton
+        size="sm"
+        :loading="busy"
+        :disabled="
+          !allowUnsigned || repository.trim() === (plugin.local_source ?? '')
+        "
+        @click="act(save)"
+      >
         {{ t('config.plugins_set.save_source') }}
       </AbButton>
-      <AbButton v-if="plugin.local_source" size="sm" :disabled="busy || !allowUnsigned" @click="act(check)">
+      <AbButton
+        v-if="plugin.local_source"
+        size="sm"
+        :disabled="busy || !allowUnsigned"
+        @click="act(check)"
+      >
         {{ t('config.plugins_set.check_update') }}
       </AbButton>
-      <AbButton v-if="update?.available" size="sm" variant="primary" :loading="busy" :disabled="!allowUnsigned" @click="act(install)">
+      <AbButton
+        v-if="update?.available"
+        size="sm"
+        variant="primary"
+        :loading="busy"
+        :disabled="!allowUnsigned"
+        @click="act(install)"
+      >
         {{ t('config.plugins_set.apply_update', { version: update.version }) }}
       </AbButton>
       <AbTag v-else-if="update">
@@ -79,7 +110,17 @@ async function install() {
 </template>
 
 <style scoped>
-.local-update { display: grid; gap: 8px; }
-.actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-button { color: var(--color-text-secondary); }
+.local-update {
+  display: grid;
+  gap: 8px;
+}
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+button {
+  color: var(--color-text-secondary);
+}
 </style>

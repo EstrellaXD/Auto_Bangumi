@@ -337,12 +337,16 @@ function pinLeaving(el: Element) {
             <div class="rule-list-item-info">
               <div
                 class="rule-list-item-title"
-                :title="rule.needs_review ? $t('homepage.rule.needs_review') : undefined"
+                :title="
+                  rule.needs_review
+                    ? $t('homepage.rule.needs_review')
+                    : undefined
+                "
               >
                 {{
-                  rule.group_name
-                    || rule.rule_name
-                    || $t('homepage.rule.unnamed')
+                  rule.group_name ||
+                  rule.rule_name ||
+                  $t('homepage.rule.unnamed')
                 }}
               </div>
               <div class="rule-list-item-tags">
@@ -358,7 +362,9 @@ function pinLeaving(el: Element) {
                 v-if="rule.filter && rule.filter.length > 0"
                 class="rule-list-item-filter"
               >
-                <span class="rule-list-item-filter-label">{{ $t('homepage.rule.filter') }}:</span>
+                <span class="rule-list-item-filter-label"
+                  >{{ $t('homepage.rule.filter') }}:</span
+                >
                 <span class="rule-list-item-filter-value">{{
                   rule.filter.join(', ')
                 }}</span>
@@ -367,9 +373,7 @@ function pinLeaving(el: Element) {
                 {{ rule.title_raw }}
               </div>
             </div>
-            <div class="rule-list-item-arrow">
-              ›
-            </div>
+            <div class="rule-list-item-arrow">›</div>
           </div>
         </div>
       </ab-modal>
@@ -476,7 +480,8 @@ function pinLeaving(el: Element) {
   justify-content: center;
   background: var(--color-surface-hover);
   border: 2px dashed var(--color-border);
-  transition: box-shadow var(--transition-fast),
+  transition:
+    box-shadow var(--transition-fast),
     transform var(--transition-fast);
 
   .others-card:hover &,
@@ -758,7 +763,8 @@ function pinLeaving(el: Element) {
 <style>
 .bangumi-enter-active,
 .bangumi-leave-active {
-  transition: opacity var(--transition-normal),
+  transition:
+    opacity var(--transition-normal),
     transform var(--transition-normal);
 }
 .bangumi-enter-from,

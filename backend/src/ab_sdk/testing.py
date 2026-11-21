@@ -32,7 +32,7 @@ import logging
 from collections.abc import Awaitable, Callable, Coroutine
 from dataclasses import replace
 from pathlib import Path, PurePosixPath
-from typing import Any, ClassVar, TypeVar
+from typing import Any, ClassVar
 from urllib.parse import urlparse
 
 from pydantic import BaseModel
@@ -53,8 +53,6 @@ from .plugin import Plugin
 from .rename import RenameInput, RenameSkipped, RenameStrategy
 from .search import SearchSite
 from .updates import PluginUpdates
-
-P = TypeVar("P", bound=Plugin[Any])
 
 
 class MemoryKV:
@@ -153,7 +151,7 @@ class FakeContext:
         return self._bangumi
 
 
-def create_plugin(
+def create_plugin[P: Plugin[Any]](
     plugin_cls: type[P],
     options: dict[str, Any] | None = None,
     *,
@@ -197,10 +195,7 @@ class NativeLibraryService:
         return (), None
 
 
-T = TypeVar("T")
-
-
-def _run(coro: Coroutine[Any, Any, T]) -> T:
+def _run[T](coro: Coroutine[Any, Any, T]) -> T:
     return asyncio.run(coro)
 
 

@@ -46,6 +46,6 @@ def verify_bundle_signature(
     except InvalidSignature:
         logger.error("bundle signature verification FAILED")
         return False
-    except Exception as exc:  # noqa: BLE001 - 验签失败必须拒绝，不得放行
+    except Exception as exc:
         logger.error("cannot verify bundle signature: %s", exc)
         return False

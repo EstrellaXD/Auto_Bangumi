@@ -31,7 +31,7 @@ jobs:
       - name: Dead code
         run: cd backend && uv run vulture
       - name: Type check
-        run: cd backend && uv run mypy src
+        run: cd backend && uv run ty check src
       - name: Test
         run: |
           mkdir -p backend/config
@@ -76,6 +76,9 @@ jobs:
 
       - name: Lint
         run: cd webui && pnpm lint
+
+      - name: Format check
+        run: cd webui && pnpm format:check
 
       - name: Unit test
         run: cd webui && pnpm test

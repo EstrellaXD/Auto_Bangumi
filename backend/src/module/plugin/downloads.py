@@ -4,7 +4,7 @@ import asyncio
 import hashlib
 import json
 import math
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import PurePosixPath, PureWindowsPath
 from typing import Literal
 from uuid import NAMESPACE_URL, uuid5
@@ -220,7 +220,7 @@ class HostDownloadService:
                 row.revision += 1
             for key, value in changes.items():
                 setattr(row, key, value)
-            row.observed_at = datetime.now(timezone.utc).isoformat()
+            row.observed_at = datetime.now(UTC).isoformat()
             db.add(row)
             await db.commit()
             return task_snapshot(row)

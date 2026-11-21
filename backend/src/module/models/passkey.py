@@ -2,8 +2,7 @@
 WebAuthn Passkey 数据模型
 """
 
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from pydantic import BaseModel
 from sqlmodel import Field, SQLModel
@@ -26,12 +25,12 @@ class Passkey(SQLModel, table=True):
     sign_count: int = Field(default=0)  # 防止克隆攻击
 
     # 可选的设备信息
-    aaguid: Optional[str] = None  # Authenticator AAGUID
-    transports: Optional[str] = None  # JSON array: ["usb", "nfc", "ble", "internal"]
+    aaguid: str | None = None  # Authenticator AAGUID
+    transports: str | None = None  # JSON array: ["usb", "nfc", "ble", "internal"]
 
     # 审计字段
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    last_used_at: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    last_used_at: datetime | None = None
 
     # 备份状态 (是否为多设备凭证，如 iCloud Keychain)
     backup_eligible: bool = Field(default=False)
@@ -52,9 +51,9 @@ class PasskeyList(BaseModel):
     id: int
     name: str
     created_at: datetime
-    last_used_at: Optional[datetime]
+    last_used_at: datetime | None
     backup_eligible: bool
-    aaguid: Optional[str]
+    aaguid: str | None
 
 
 class PasskeyDelete(BaseModel):
@@ -66,11 +65,11 @@ class PasskeyDelete(BaseModel):
 class PasskeyAuthStart(BaseModel):
     """Passkey 认证开始请求"""
 
-    username: Optional[str] = None  # Optional for discoverable credentials
+    username: str | None = None  # Optional for discoverable credentials
 
 
 class PasskeyAuthFinish(BaseModel):
     """Passkey 认证完成请求"""
 
-    username: Optional[str] = None  # Optional for discoverable credentials
+    username: str | None = None  # Optional for discoverable credentials
     credential: dict

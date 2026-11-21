@@ -92,12 +92,8 @@ function handleNext() {
       </div>
 
       <div v-if="feedTitle" class="feed-info">
-        <p>
-          <strong>{{ t('setup.rss.feed_title') }}:</strong> {{ feedTitle }}
-        </p>
-        <p>
-          <strong>{{ t('setup.rss.item_count') }}:</strong> {{ itemCount }}
-        </p>
+        <p><strong>{{ t('setup.rss.feed_title') }}:</strong> {{ feedTitle }}</p>
+        <p><strong>{{ t('setup.rss.item_count') }}:</strong> {{ itemCount }}</p>
       </div>
 
       <div class="wizard-actions">

@@ -123,7 +123,7 @@ class AppContext:
     # ------------------------------------------------------------------ build
 
     @classmethod
-    def build(cls, settings_obj) -> "AppContext":
+    def build(cls, settings_obj) -> AppContext:
         """Pure wiring: construct the object graph, perform no I/O.
 
         The scheduler closures capture ``notifier`` / ``analyser`` directly.

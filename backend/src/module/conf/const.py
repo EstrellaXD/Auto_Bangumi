@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 from typing import Any
 
 # ENV_TO_ATTR: maps AB_* environment variables to Config model attribute paths.

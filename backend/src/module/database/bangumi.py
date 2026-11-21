@@ -2,11 +2,11 @@ import json
 import logging
 import re
 from types import SimpleNamespace
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import func
-from sqlmodel import and_, delete, false, or_, select, update
+from sqlmodel import and_, col, delete, false, or_, select, update
 
 from module.models import Bangumi, BangumiUpdate
 
@@ -103,7 +103,7 @@ def build_save_path_index(bangumi_list: list[Bangumi]) -> dict[str, Bangumi]:
     return index
 
 
-def _find_semantic_match(data: Bangumi, candidates: list[Bangumi]) -> Optional[Bangumi]:
+def _find_semantic_match(data: Bangumi, candidates: list[Bangumi]) -> Bangumi | None:
     """在已加载的候选列表中查找语义重复项（同一部番剧、命名规则不同）。
 
     被 ``find_semantic_duplicate``（单条、逐条查库）和 ``add_all``（批量、
@@ -150,7 +150,7 @@ def _inherit_year(data: Bangumi, candidates: list[Bangumi]) -> None:
 
 def match_bangumi_in_list(
     torrent_name: str, bangumi_list: list[Bangumi]
-) -> Optional[Bangumi]:
+) -> Bangumi | None:
     """Match a torrent name against an already-loaded list of bangumi.
 
     Pure/in-memory: the RSS refresh cycle loads the active bangumi once and
@@ -180,7 +180,7 @@ def match_bangumi_in_list(
     release_title = release and (
         release.title_en or release.title_zh or release.title_jp
     )
-    best_match: Optional[Bangumi] = None
+    best_match: Bangumi | None = None
     best_rank = (-1, -1, -1)
     for bangumi in bangumi_list:
         if bangumi.deleted or not _release_matches_bangumi(release, bangumi):
@@ -199,7 +199,7 @@ def match_bangumi_in_list(
     return best_match
 
 
-def _release_matches_bangumi(release: "ParsedRelease | None", bangumi: Bangumi) -> bool:
+def _release_matches_bangumi(release: ParsedRelease | None, bangumi: Bangumi) -> bool:
     if release is None:
         return True
     if release.is_mixed_collection:
@@ -240,7 +240,7 @@ class BangumiDatabase:
         from module.plugin.downloads import bangumi_snapshot
 
         with self.session.no_autoflush:
-            table = Bangumi.__table__  # type: ignore[attr-defined]
+            table = Bangumi.__table__  # ty: ignore[missing-attribute]
             rows = (
                 await self.session.execute(select(table).where(table.c.id.in_(ids)))
             ).mappings()
@@ -268,7 +268,7 @@ class BangumiDatabase:
         result = await self.session.execute(statement)
         return list(result.scalars().all())
 
-    async def find_semantic_duplicate(self, data: Bangumi) -> Optional[Bangumi]:
+    async def find_semantic_duplicate(self, data: Bangumi) -> Bangumi | None:
         """
         Find existing bangumi that semantically matches the new one.
 
@@ -331,7 +331,7 @@ class BangumiDatabase:
         )
         return True
 
-    async def find_duplicate(self, data: Bangumi) -> Optional[Bangumi]:
+    async def find_duplicate(self, data: Bangumi) -> Bangumi | None:
         """Find an existing rule with the same typed subscription identity.
 
         Legacy data may contain multiple rows for the same key; return the
@@ -347,7 +347,7 @@ class BangumiDatabase:
                     Bangumi.episode_type == data.episode_type,
                 )
             )
-            .order_by(Bangumi.id)  # type: ignore[arg-type]
+            .order_by(col(Bangumi.id))
         )
         result = await self.session.execute(statement)
         rows = list(result.scalars().all())
@@ -441,11 +441,9 @@ class BangumiDatabase:
         official_titles = {d.official_title for d in to_add}
         candidates_by_title: dict[str, list[Bangumi]] = {}
         if official_titles:
-            # SQLModel 类属性在 mypy 看来是普通字段类型而非 InstrumentedAttribute，
-            # 无法识别 .in_() 等查询方法（无官方 mypy 插件支持）。
             dup_statement = select(Bangumi).where(
                 and_(
-                    Bangumi.official_title.in_(official_titles),  # type: ignore[attr-defined]
+                    col(Bangumi.official_title).in_(official_titles),
                     Bangumi.deleted == false(),
                 )
             )
@@ -583,11 +581,11 @@ class BangumiDatabase:
         from module.models.torrent import Torrent
 
         await self.session.execute(
-            delete(Torrent).where(Torrent.bangumi_id.is_not(None))  # type: ignore[union-attr]
+            delete(Torrent).where(col(Torrent.bangumi_id).is_not(None))
         )
         await self.session.execute(
             update(Aria2Gid)
-            .where(Aria2Gid.bangumi_id.is_not(None))  # type: ignore[union-attr]
+            .where(col(Aria2Gid.bangumi_id).is_not(None))
             .values(bangumi_id=None)
         )
         await self.session.execute(delete(Bangumi))
@@ -598,7 +596,7 @@ class BangumiDatabase:
         result = await self.session.execute(statement)
         return list(result.scalars().all())
 
-    async def search_id(self, _id: int) -> Optional[Bangumi]:
+    async def search_id(self, _id: int) -> Bangumi | None:
         statement = select(Bangumi).where(Bangumi.id == _id)
         result = await self.session.execute(statement)
         bangumi = result.scalar_one_or_none()
@@ -608,14 +606,14 @@ class BangumiDatabase:
         logger.debug("Find bangumi id: %s.", _id)
         return bangumi
 
-    async def search_official_title(self, official_title: str) -> Optional[Bangumi]:
+    async def search_official_title(self, official_title: str) -> Bangumi | None:
         statement = (
             select(Bangumi)
             .where(Bangumi.official_title == official_title)
             .order_by(
-                Bangumi.episode_type,  # type: ignore[arg-type]
-                Bangumi.season,  # type: ignore[arg-type]
-                Bangumi.id,  # type: ignore[arg-type]
+                col(Bangumi.episode_type),
+                col(Bangumi.season),
+                col(Bangumi.id),
             )
         )
         result = await self.session.execute(statement)
@@ -625,7 +623,7 @@ class BangumiDatabase:
         """Batch lookup multiple bangumi by their IDs."""
         if not ids:
             return []
-        statement = select(Bangumi).where(Bangumi.id.in_(ids))  # type: ignore[attr-defined]
+        statement = select(Bangumi).where(col(Bangumi.id).in_(ids))
         result = await self.session.execute(statement)
         return list(result.scalars().all())
 
@@ -667,7 +665,7 @@ class BangumiDatabase:
             )
         return unmatched
 
-    async def match_torrent(self, torrent_name: str) -> Optional[Bangumi]:
+    async def match_torrent(self, torrent_name: str) -> Bangumi | None:
         """
         Match torrent name to a bangumi, checking both title_raw and title_aliases.
 

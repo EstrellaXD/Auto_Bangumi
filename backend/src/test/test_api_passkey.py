@@ -144,27 +144,28 @@ class TestRegisterOptions:
         self, authed_client, mock_webauthn, mock_user_model
     ):
         """POST /passkey/register/options returns registration options."""
-        with patch(
-            "module.api.passkey._get_webauthn_from_request", return_value=mock_webauthn
+        with (
+            patch(
+                "module.api.passkey._get_webauthn_from_request",
+                return_value=mock_webauthn,
+            ),
+            patch("module.api.passkey.async_session_factory") as MockSession,
         ):
-            with patch("module.api.passkey.async_session_factory") as MockSession:
-                mock_session = AsyncMock()
-                mock_result = MagicMock()
-                mock_result.scalar_one_or_none.return_value = mock_user_model
-                mock_session.execute = AsyncMock(return_value=mock_result)
+            mock_session = AsyncMock()
+            mock_result = MagicMock()
+            mock_result.scalar_one_or_none.return_value = mock_user_model
+            mock_session.execute = AsyncMock(return_value=mock_result)
 
-                mock_passkey_db = MagicMock()
-                mock_passkey_db.get_passkeys_by_user_id = AsyncMock(return_value=[])
+            mock_passkey_db = MagicMock()
+            mock_passkey_db.get_passkeys_by_user_id = AsyncMock(return_value=[])
 
-                MockSession.return_value.__aenter__ = AsyncMock(
-                    return_value=mock_session
-                )
-                MockSession.return_value.__aexit__ = AsyncMock(return_value=False)
+            MockSession.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+            MockSession.return_value.__aexit__ = AsyncMock(return_value=False)
 
-                with patch(
-                    "module.api.passkey.PasskeyDatabase", return_value=mock_passkey_db
-                ):
-                    response = authed_client.post("/api/v1/passkey/register/options")
+            with patch(
+                "module.api.passkey.PasskeyDatabase", return_value=mock_passkey_db
+            ):
+                response = authed_client.post("/api/v1/passkey/register/options")
 
         assert response.status_code == 200
         data = response.json()
@@ -179,23 +180,24 @@ class TestRegisterOptions:
         self, authed_client, mock_webauthn
     ):
         """Registration identity comes from the typed session principal."""
-        with patch(
-            "module.api.passkey._get_webauthn_from_request", return_value=mock_webauthn
+        with (
+            patch(
+                "module.api.passkey._get_webauthn_from_request",
+                return_value=mock_webauthn,
+            ),
+            patch("module.api.passkey.async_session_factory") as MockSession,
         ):
-            with patch("module.api.passkey.async_session_factory") as MockSession:
-                mock_session = AsyncMock()
-                mock_passkey_db = MagicMock()
-                mock_passkey_db.get_passkeys_by_user_id = AsyncMock(return_value=[])
+            mock_session = AsyncMock()
+            mock_passkey_db = MagicMock()
+            mock_passkey_db.get_passkeys_by_user_id = AsyncMock(return_value=[])
 
-                MockSession.return_value.__aenter__ = AsyncMock(
-                    return_value=mock_session
-                )
-                MockSession.return_value.__aexit__ = AsyncMock(return_value=False)
+            MockSession.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+            MockSession.return_value.__aexit__ = AsyncMock(return_value=False)
 
-                with patch(
-                    "module.api.passkey.PasskeyDatabase", return_value=mock_passkey_db
-                ):
-                    response = authed_client.post("/api/v1/passkey/register/options")
+            with patch(
+                "module.api.passkey.PasskeyDatabase", return_value=mock_passkey_db
+            ):
+                response = authed_client.post("/api/v1/passkey/register/options")
 
         assert response.status_code == 200
         mock_passkey_db.get_passkeys_by_user_id.assert_awaited_once_with(1)
@@ -211,41 +213,42 @@ class TestRegisterVerify:
         self, authed_client, mock_webauthn, mock_user_model
     ):
         """POST /passkey/register/verify successfully registers passkey."""
-        with patch(
-            "module.api.passkey._get_webauthn_from_request", return_value=mock_webauthn
+        with (
+            patch(
+                "module.api.passkey._get_webauthn_from_request",
+                return_value=mock_webauthn,
+            ),
+            patch("module.api.passkey.async_session_factory") as MockSession,
         ):
-            with patch("module.api.passkey.async_session_factory") as MockSession:
-                mock_session = AsyncMock()
-                mock_result = MagicMock()
-                mock_result.scalar_one_or_none.return_value = mock_user_model
-                mock_session.execute = AsyncMock(return_value=mock_result)
+            mock_session = AsyncMock()
+            mock_result = MagicMock()
+            mock_result.scalar_one_or_none.return_value = mock_user_model
+            mock_session.execute = AsyncMock(return_value=mock_result)
 
-                mock_passkey_db = MagicMock()
-                mock_passkey_db.create_passkey = AsyncMock()
+            mock_passkey_db = MagicMock()
+            mock_passkey_db.create_passkey = AsyncMock()
 
-                MockSession.return_value.__aenter__ = AsyncMock(
-                    return_value=mock_session
-                )
-                MockSession.return_value.__aexit__ = AsyncMock(return_value=False)
+            MockSession.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+            MockSession.return_value.__aexit__ = AsyncMock(return_value=False)
 
-                with patch(
-                    "module.api.passkey.PasskeyDatabase", return_value=mock_passkey_db
-                ):
-                    response = authed_client.post(
-                        "/api/v1/passkey/register/verify",
-                        json={
-                            "name": "My iPhone",
-                            "attestation_response": {
-                                "id": "credential_id",
-                                "rawId": "raw_id",
-                                "response": {
-                                    "clientDataJSON": "data",
-                                    "attestationObject": "object",
-                                },
-                                "type": "public-key",
+            with patch(
+                "module.api.passkey.PasskeyDatabase", return_value=mock_passkey_db
+            ):
+                response = authed_client.post(
+                    "/api/v1/passkey/register/verify",
+                    json={
+                        "name": "My iPhone",
+                        "attestation_response": {
+                            "id": "credential_id",
+                            "rawId": "raw_id",
+                            "response": {
+                                "clientDataJSON": "data",
+                                "attestationObject": "object",
                             },
+                            "type": "public-key",
                         },
-                    )
+                    },
+                )
 
         assert response.status_code == 200
         data = response.json()
@@ -266,31 +269,32 @@ class TestAuthOptions:
 
         mock_passkeys = [make_passkey()]
 
-        with patch(
-            "module.api.passkey._get_webauthn_from_request", return_value=mock_webauthn
+        with (
+            patch(
+                "module.api.passkey._get_webauthn_from_request",
+                return_value=mock_webauthn,
+            ),
+            patch("module.api.passkey.async_session_factory") as MockSession,
         ):
-            with patch("module.api.passkey.async_session_factory") as MockSession:
-                mock_session = AsyncMock()
-                mock_result = MagicMock()
-                mock_result.scalar_one_or_none.return_value = mock_user
-                mock_session.execute = AsyncMock(return_value=mock_result)
+            mock_session = AsyncMock()
+            mock_result = MagicMock()
+            mock_result.scalar_one_or_none.return_value = mock_user
+            mock_session.execute = AsyncMock(return_value=mock_result)
 
-                mock_passkey_db = MagicMock()
-                mock_passkey_db.get_passkeys_by_user_id = AsyncMock(
-                    return_value=mock_passkeys
+            mock_passkey_db = MagicMock()
+            mock_passkey_db.get_passkeys_by_user_id = AsyncMock(
+                return_value=mock_passkeys
+            )
+
+            MockSession.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+            MockSession.return_value.__aexit__ = AsyncMock(return_value=False)
+
+            with patch(
+                "module.api.passkey.PasskeyDatabase", return_value=mock_passkey_db
+            ):
+                response = unauthed_client.post(
+                    "/api/v1/passkey/auth/options", json={"username": "testuser"}
                 )
-
-                MockSession.return_value.__aenter__ = AsyncMock(
-                    return_value=mock_session
-                )
-                MockSession.return_value.__aexit__ = AsyncMock(return_value=False)
-
-                with patch(
-                    "module.api.passkey.PasskeyDatabase", return_value=mock_passkey_db
-                ):
-                    response = unauthed_client.post(
-                        "/api/v1/passkey/auth/options", json={"username": "testuser"}
-                    )
 
         assert response.status_code == 200
         data = response.json()
@@ -315,23 +319,24 @@ class TestAuthOptions:
         Same status/message as "user exists but has no passkeys" so this
         endpoint can't be used to enumerate valid usernames.
         """
-        with patch(
-            "module.api.passkey._get_webauthn_from_request", return_value=mock_webauthn
+        with (
+            patch(
+                "module.api.passkey._get_webauthn_from_request",
+                return_value=mock_webauthn,
+            ),
+            patch("module.api.passkey.async_session_factory") as MockSession,
         ):
-            with patch("module.api.passkey.async_session_factory") as MockSession:
-                mock_session = AsyncMock()
-                mock_result = MagicMock()
-                mock_result.scalar_one_or_none.return_value = None
-                mock_session.execute = AsyncMock(return_value=mock_result)
+            mock_session = AsyncMock()
+            mock_result = MagicMock()
+            mock_result.scalar_one_or_none.return_value = None
+            mock_session.execute = AsyncMock(return_value=mock_result)
 
-                MockSession.return_value.__aenter__ = AsyncMock(
-                    return_value=mock_session
-                )
-                MockSession.return_value.__aexit__ = AsyncMock(return_value=False)
+            MockSession.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+            MockSession.return_value.__aexit__ = AsyncMock(return_value=False)
 
-                response = unauthed_client.post(
-                    "/api/v1/passkey/auth/options", json={"username": "nonexistent"}
-                )
+            response = unauthed_client.post(
+                "/api/v1/passkey/auth/options", json={"username": "nonexistent"}
+            )
 
         assert response.status_code == 400
 
@@ -358,33 +363,34 @@ class TestAuthVerify:
         mock_strategy = MagicMock()
         mock_strategy.authenticate = AsyncMock(return_value=mock_response)
 
-        with patch(
-            "module.api.passkey._get_webauthn_from_request", return_value=mock_webauthn
+        with (
+            patch(
+                "module.api.passkey._get_webauthn_from_request",
+                return_value=mock_webauthn,
+            ),
+            patch("module.api.passkey.PasskeyAuthStrategy", return_value=mock_strategy),
         ):
-            with patch(
-                "module.api.passkey.PasskeyAuthStrategy", return_value=mock_strategy
-            ):
-                service = MagicMock()
-                service.issue_session_for_verified_passkey = AsyncMock(
-                    return_value="persisted-session"
-                )
-                app.dependency_overrides[get_auth_service] = lambda: service
-                response = unauthed_client.post(
-                    "/api/v1/passkey/auth/verify",
-                    json={
-                        "username": "testuser",
-                        "credential": {
-                            "id": "cred_id",
-                            "rawId": "raw_id",
-                            "response": {
-                                "clientDataJSON": "data",
-                                "authenticatorData": "auth_data",
-                                "signature": "sig",
-                            },
-                            "type": "public-key",
+            service = MagicMock()
+            service.issue_session_for_verified_passkey = AsyncMock(
+                return_value="persisted-session"
+            )
+            app.dependency_overrides[get_auth_service] = lambda: service
+            response = unauthed_client.post(
+                "/api/v1/passkey/auth/verify",
+                json={
+                    "username": "testuser",
+                    "credential": {
+                        "id": "cred_id",
+                        "rawId": "raw_id",
+                        "response": {
+                            "clientDataJSON": "data",
+                            "authenticatorData": "auth_data",
+                            "signature": "sig",
                         },
+                        "type": "public-key",
                     },
-                )
+                },
+            )
 
         assert response.status_code == 200
         assert response.json() == {"authenticated": True}
@@ -402,28 +408,29 @@ class TestAuthVerify:
         mock_strategy = MagicMock()
         mock_strategy.authenticate = AsyncMock(return_value=mock_response)
 
-        with patch(
-            "module.api.passkey._get_webauthn_from_request", return_value=mock_webauthn
+        with (
+            patch(
+                "module.api.passkey._get_webauthn_from_request",
+                return_value=mock_webauthn,
+            ),
+            patch("module.api.passkey.PasskeyAuthStrategy", return_value=mock_strategy),
         ):
-            with patch(
-                "module.api.passkey.PasskeyAuthStrategy", return_value=mock_strategy
-            ):
-                response = unauthed_client.post(
-                    "/api/v1/passkey/auth/verify",
-                    json={
-                        "username": "testuser",
-                        "credential": {
-                            "id": "invalid_cred",
-                            "rawId": "raw_id",
-                            "response": {
-                                "clientDataJSON": "data",
-                                "authenticatorData": "auth_data",
-                                "signature": "invalid_sig",
-                            },
-                            "type": "public-key",
+            response = unauthed_client.post(
+                "/api/v1/passkey/auth/verify",
+                json={
+                    "username": "testuser",
+                    "credential": {
+                        "id": "invalid_cred",
+                        "rawId": "raw_id",
+                        "response": {
+                            "clientDataJSON": "data",
+                            "authenticatorData": "auth_data",
+                            "signature": "invalid_sig",
                         },
+                        "type": "public-key",
                     },
-                )
+                },
+            )
 
         assert response.status_code == 401
 

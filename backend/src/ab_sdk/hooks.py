@@ -43,11 +43,11 @@ class Verdict:
     reason: str | None = None
 
     @classmethod
-    def ok(cls) -> "Verdict":
+    def ok(cls) -> Verdict:
         return cls(True)
 
     @classmethod
-    def reject(cls, reason: str) -> "Verdict":
+    def reject(cls, reason: str) -> Verdict:
         return cls(False, reason)
 
 

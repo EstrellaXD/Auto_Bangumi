@@ -5,6 +5,7 @@ the current (buggy) behavior and the expected (fixed) behavior.
 """
 
 import re
+from typing import ClassVar
 
 import pytest
 
@@ -25,7 +26,7 @@ from module.parser.analyser.raw_parser import get_group, raw_parser
 class TestIssue986AtlasSubGroupFormat:
     """Issue #986: Parser now handles Atlas subtitle group naming convention."""
 
-    ATLAS_TITLES = [
+    ATLAS_TITLES: ClassVar[list[str]] = [
         "[阿特拉斯字幕组·雪原市出差所][命运-奇异赝品_Fate／strange Fake][04_半神们的卡农曲][简繁日内封PGS][日语配音版_Japanese Dub][Web-DL Remux][1080p AVC AAC].mkv",
         "[阿特拉斯字幕组·雪原市出差所][命运-奇异赝品_Fate／strange Fake][07_神自黄昏归来][简繁日内封PGS][日语配音版_Japanese Dub][Web-DL Remux][1080p AVC AAC].mkv",
         "[阿特拉斯字幕组·雪原市出差所][命运-奇异赝品_Fate／strange Fake][03_无英灵的战斗][简繁日内封PGS][日语配音版_Japanese Dub][Web-DL Remux][1080p AVC AAC].mkv",
@@ -182,7 +183,7 @@ class TestIssue976NoneInMatchList:
         """Demonstrate that sorted() with None keys crashes (the original bug)."""
         title_index = {"valid_title": "data", None: "bad_data"}
         with pytest.raises(TypeError, match="'NoneType'"):
-            sorted(title_index.keys(), key=len, reverse=True)  # type: ignore[arg-type]
+            sorted(title_index.keys(), key=len, reverse=True)  # ty: ignore[no-matching-overload]
 
     def test_empty_title_index_produces_empty_pattern(self):
         """When all titles are None/empty, the regex pattern should be empty."""
@@ -247,6 +248,7 @@ class TestIssue974FilterPatternError:
         engine = RSSEngine.__new__(RSSEngine)
         engine._filter_cache = {}
         pattern = engine._get_filter_pattern("720,[字幕组")
+        assert pattern is not None
         # Should not raise — falls back to escaped literal matching
         assert pattern.search("720p video")
         assert pattern.search("[字幕组 release")
@@ -259,6 +261,7 @@ class TestIssue974FilterPatternError:
         engine = RSSEngine.__new__(RSSEngine)
         engine._filter_cache = {}
         pattern = engine._get_filter_pattern("720,test(v2")
+        assert pattern is not None
         assert pattern.search("720p")
         assert pattern.search("test(v2 stuff")
 
@@ -269,6 +272,7 @@ class TestIssue974FilterPatternError:
         engine = RSSEngine.__new__(RSSEngine)
         engine._filter_cache = {}
         pattern = engine._get_filter_pattern("720,path\\")
+        assert pattern is not None
         assert pattern.search("720p")
 
     def test_engine_default_filter_still_uses_regex(self):
@@ -278,6 +282,7 @@ class TestIssue974FilterPatternError:
         engine = RSSEngine.__new__(RSSEngine)
         engine._filter_cache = {}
         pattern = engine._get_filter_pattern(r"720,\d+-\d+")
+        assert pattern is not None
         assert pattern.search("720p video")
         assert pattern.search("01-12 batch")
         assert not pattern.search("1080p single episode")
@@ -390,7 +395,7 @@ class TestIssue990NumberPrefixTitle:
             official_title="29岁单身冒险家的日常",
             season=1,
         )
-        bangumi.title_raw = None  # type: ignore[assignment]  # simulating corrupted data
+        bangumi.title_raw = None  # simulating corrupted data  # ty: ignore[invalid-assignment]
         db_session.add(bangumi)
         await db_session.commit()
 
@@ -433,7 +438,7 @@ class TestIssue990NumberPrefixTitle:
 
         # Insert corrupted bangumi (title_raw=None, aliases=[null])
         bangumi = Bangumi(official_title="29岁单身冒险家的日常", season=1)
-        bangumi.title_raw = None  # type: ignore[assignment]  # simulating corrupted data
+        bangumi.title_raw = None  # simulating corrupted data  # ty: ignore[invalid-assignment]
         bangumi.title_aliases = "[null]"
         db_session.add(bangumi)
 
@@ -467,7 +472,7 @@ class TestIssue992NonEpisodicAttributeError:
 
     # These formats triggered the original crash. The tokenizer now parses
     # both successfully, so keep an integration-level guard for that behavior.
-    FORMERLY_UNPARSEABLE_TITLES = [
+    FORMERLY_UNPARSEABLE_TITLES: ClassVar[list[tuple[str, str]]] = [
         (
             "[阿特拉斯字幕组·雪原市出差所][命运-奇异赝品_Fate／strange Fake][04_半神们的卡农曲][简繁日内封PGS][日语配音版_Japanese Dub][Web-DL Remux][1080p AVC AAC]",
             "Fate／strange Fake",

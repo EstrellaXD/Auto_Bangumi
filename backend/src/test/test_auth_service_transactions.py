@@ -20,12 +20,14 @@ async def test_password_update_rolls_back_if_session_revocation_fails(db_engine)
     assert user.id is not None
     _user, session_token = await service.login("atomic_user", "old-password")
 
-    with patch(
-        "module.database.auth.AuthDatabase.revoke_user_sessions",
-        new=AsyncMock(side_effect=RuntimeError("revoke failed")),
+    with (
+        patch(
+            "module.database.auth.AuthDatabase.revoke_user_sessions",
+            new=AsyncMock(side_effect=RuntimeError("revoke failed")),
+        ),
+        pytest.raises(RuntimeError, match="revoke failed"),
     ):
-        with pytest.raises(RuntimeError, match="revoke failed"):
-            await service.update_user(user.id, UserUpdate(password="new-password"))
+        await service.update_user(user.id, UserUpdate(password="new-password"))
 
     async with Database(db_engine) as db:
         assert await db.user.authenticate_credentials("atomic_user", "old-password")
@@ -45,12 +47,14 @@ async def test_password_update_rolls_back_on_cancellation(db_engine):
     assert user.id is not None
     _user, session_token = await service.login("cancel_user", "old-password")
 
-    with patch(
-        "module.database.auth.AuthDatabase.revoke_user_sessions",
-        new=AsyncMock(side_effect=asyncio.CancelledError()),
+    with (
+        patch(
+            "module.database.auth.AuthDatabase.revoke_user_sessions",
+            new=AsyncMock(side_effect=asyncio.CancelledError()),
+        ),
+        pytest.raises(asyncio.CancelledError),
     ):
-        with pytest.raises(asyncio.CancelledError):
-            await service.update_user(user.id, UserUpdate(password="new-password"))
+        await service.update_user(user.id, UserUpdate(password="new-password"))
 
     async with Database(db_engine) as db:
         assert await db.user.authenticate_credentials("cancel_user", "old-password")
@@ -66,12 +70,14 @@ async def test_password_update_rolls_back_if_final_commit_fails(db_engine):
     assert user.id is not None
     _user, session_token = await service.login("commit_user", "old-password")
 
-    with patch(
-        "module.database.combine.Database.commit",
-        new=AsyncMock(side_effect=RuntimeError("commit failed")),
+    with (
+        patch(
+            "module.database.combine.Database.commit",
+            new=AsyncMock(side_effect=RuntimeError("commit failed")),
+        ),
+        pytest.raises(RuntimeError, match="commit failed"),
     ):
-        with pytest.raises(RuntimeError, match="commit failed"):
-            await service.update_user(user.id, UserUpdate(password="new-password"))
+        await service.update_user(user.id, UserUpdate(password="new-password"))
 
     async with Database(db_engine) as db:
         assert await db.user.authenticate_credentials("commit_user", "old-password")
@@ -94,12 +100,14 @@ async def test_delete_rolls_back_credential_purge_if_user_delete_fails(db_engine
         target.id, name="automation", scope="api"
     )
 
-    with patch(
-        "module.database.user.UserDatabase.delete_user",
-        new=AsyncMock(side_effect=RuntimeError("delete failed")),
+    with (
+        patch(
+            "module.database.user.UserDatabase.delete_user",
+            new=AsyncMock(side_effect=RuntimeError("delete failed")),
+        ),
+        pytest.raises(RuntimeError, match="delete failed"),
     ):
-        with pytest.raises(RuntimeError, match="delete failed"):
-            await service.delete_user(target.id)
+        await service.delete_user(target.id)
 
     async with Database(db_engine) as db:
         assert await db.user.get_user_by_id(target.id)

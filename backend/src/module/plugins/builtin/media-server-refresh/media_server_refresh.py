@@ -9,6 +9,7 @@
 """
 
 import asyncio
+import contextlib
 from collections.abc import Callable
 from typing import Literal
 
@@ -76,10 +77,8 @@ class MediaServerRefresh(Plugin[Options]):
     async def teardown(self) -> None:
         if self._pending is not None and not self._pending.done():
             self._pending.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._pending
-            except asyncio.CancelledError:
-                pass
         self._pending = None
 
     @subscribe(TorrentOrganized.kind)

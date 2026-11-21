@@ -5,7 +5,12 @@
  * endpoints) fails a test instead of going unnoticed.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { mockApiSuccess, mockBangumiAPI, mockBangumiRule, mockRSSItem } from '@/test/mocks/api';
+import {
+  mockApiSuccess,
+  mockBangumiAPI,
+  mockBangumiRule,
+  mockRSSItem,
+} from '@/test/mocks/api';
 import { createAxiosMock } from '@/test/mocks/axios';
 
 import { apiDownload } from '@/api/download';
@@ -27,7 +32,10 @@ describe('Download API contract (path + HTTP method)', () => {
   it('should POST api/v1/rss/collect with the joined filter/rss_link when collecting a season', async () => {
     (axios.post as any).mockResolvedValue({ data: mockApiSuccess });
     await apiDownload.collection(mockBangumiRule);
-    expect(axios.post).toHaveBeenCalledWith('api/v1/rss/collect', mockBangumiAPI);
+    expect(axios.post).toHaveBeenCalledWith(
+      'api/v1/rss/collect',
+      mockBangumiAPI
+    );
   });
 
   it('should POST api/v1/rss/subscribe with the bangumi and rss payload when subscribing', async () => {

@@ -8,7 +8,10 @@ import importlib.util
 import logging
 import sys
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from module.parser.analyser.providers.base import LLMProviderAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +21,7 @@ def _module_name(plugin_id: str, version: str) -> str:
     return f"ab_llm_plugin_{safe}_{version.replace('.', '_')}"
 
 
-def load_adapter_class(plugin_dir: Path, manifest: dict) -> type:
+def load_adapter_class(plugin_dir: Path, manifest: dict) -> type[LLMProviderAdapter]:
     """加载并返回 manifest.entry 指定的适配器类。
 
     entry 形如 ``pkg.module:ClassName``。校验类继承 LLMProviderAdapter 且

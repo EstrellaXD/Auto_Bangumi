@@ -52,7 +52,8 @@ function onClick(event: MouseEvent) {
   background: transparent;
   color: var(--color-text-secondary);
   cursor: pointer;
-  transition: background-color var(--transition-fast),
+  transition:
+    background-color var(--transition-fast),
     color var(--transition-fast);
 
   &:hover:not(:disabled) {

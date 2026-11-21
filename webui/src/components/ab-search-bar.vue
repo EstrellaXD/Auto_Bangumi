@@ -15,11 +15,7 @@ onMounted(() => {
 
 <template>
   <!-- Search trigger button -->
-  <ab-search
-    :provider="provider"
-    :loading="loading"
-    @click="toggleModal"
-  />
+  <ab-search :provider="provider" :loading="loading" @click="toggleModal" />
 
   <!-- Search Modal -->
   <component :is="SearchModal" v-if="SearchModal" @close="toggleModal" />

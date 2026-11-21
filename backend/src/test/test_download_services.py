@@ -54,7 +54,7 @@ async def test_identity_files_and_revisions_survive_service_recreation():
     assert updated.files[0].downloader_path == "/downloads/S01E01.mkv"
     assert original.files[0].progress == 0.5
     with pytest.raises(FrozenInstanceError):
-        changed.name = "mutable"  # type: ignore[misc]
+        changed.name = "mutable"  # ty: ignore[invalid-assignment]
 
 
 async def test_exact_entry_query_ignores_tags_title_and_shared_library_identity():

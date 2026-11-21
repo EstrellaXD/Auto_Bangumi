@@ -64,7 +64,7 @@ class MockDownloader:
             tag,
         )
         result = []
-        for hash_, torrent in self._torrents.items():
+        for torrent in self._torrents.values():
             if category and torrent.get("category") != category:
                 continue
             if tag and tag not in torrent.get("tags", []):
