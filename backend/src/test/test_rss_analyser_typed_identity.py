@@ -131,3 +131,58 @@ async def test_rss_to_data_keeps_one_parser_engine_across_awaits(
 
     # The task-local scope is gone, so a later workflow sees the new setting.
     assert parse_configured_release_title(torrent.name) is preview_release
+
+
+@pytest.mark.parametrize("engine", ["tokenizer", "classic"])
+async def test_explicit_rss_previews_range_with_configured_exclusions(
+    monkeypatch, engine
+):
+    from xml.etree.ElementTree import fromstring
+
+    from module.models import Bangumi, ResponseModel
+    from module.network import RequestContent
+    from module.parser.release_policy import is_offset_signal, preference_identity
+
+    title = "[Group] Example Show [01-06 合集][WebRip 1080p]"
+    xml = fromstring(f"""<rss><channel><item><title>{title}</title>
+        <link>https://example.com/episode</link>
+        <enclosure url="https://example.com/file.torrent" type="application/x-bittorrent" />
+        </item></channel></rss>""")
+
+    async def get_xml(*args, **kwargs):
+        return xml
+
+    monkeypatch.setattr(RequestContent, "get_xml", get_xml)
+    monkeypatch.setattr(settings.rss_parser, "engine", engine)
+    rss = make_rss_item(parser="none")
+    analyser = RSSAnalyser()
+    for exclusions in ([r"\d+-\d+"], ["720", r"1080p"]):
+        monkeypatch.setattr(settings.rss_parser, "filter", exclusions)
+        rejected = await analyser.link_to_data(rss)
+        assert isinstance(rejected, ResponseModel)
+        assert rejected.msg_en == "Cannot find any torrent."
+
+    for exclusions in ([], ["720"]):
+        monkeypatch.setattr(settings.rss_parser, "filter", exclusions)
+        rule = await analyser.link_to_data(rss)
+        assert isinstance(rule, Bangumi)
+        assert rule.title_raw == "Example Show"
+        assert rule.rss_link == rss.url
+        assert rule.filter == ",".join(exclusions)
+        assert rule.eps_collect
+    release = parse_configured_release_title(title)
+    assert release is not None
+    assert preference_identity(release) is None
+    assert not is_offset_signal(release)
+
+
+async def test_explicit_rss_rejects_mixed_collection_and_unnumbered_batch():
+    analyser = RSSAnalyser()
+    rss = make_rss_item(parser="none")
+    for title in ("Anime Title [TV 01-12 + OVA 01-02]", "Anime Title Complete Batch"):
+        assert (
+            await analyser.torrent_to_data(
+                Torrent(name=f"[Group] {title} [1080p]"), rss, allow_episode_range=True
+            )
+            is None
+        )

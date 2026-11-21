@@ -50,6 +50,17 @@ def is_weak_title_only(release: ParsedRelease) -> bool:
     )
 
 
+def is_numbered_episode_range(release: ParsedRelease) -> bool:
+    """A bounded normal episode pack can identify a show for explicit RSS collection."""
+    return (
+        release.media_type is MediaType.EPISODE
+        and release.release_kind in {ReleaseKind.RANGE, ReleaseKind.COLLECTION}
+        and type(release.episode) is int
+        and type(release.episode_end) is int
+        and 0 < release.episode < release.episode_end
+    )
+
+
 def persistence_target(release: ParsedRelease) -> PersistenceTarget | None:
     """Return the database projection currently supported for a release."""
     if (

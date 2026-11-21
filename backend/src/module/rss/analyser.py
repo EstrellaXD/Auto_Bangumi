@@ -38,15 +38,6 @@ class RSSAnalyser:
         if bangumi.official_title:
             bangumi.official_title = re.sub(r"[/:.\\]", " ", bangumi.official_title)
 
-    @staticmethod
-    async def get_rss_torrents(rss_link: str, full_parse: bool = True) -> list[Torrent]:
-        async with RequestContent() as req:
-            if full_parse:
-                rss_torrents = await req.get_torrents(rss_link)
-            else:
-                rss_torrents = await req.get_torrents(rss_link, "\\d+-\\d+")
-        return rss_torrents
-
     async def torrents_to_data(
         self, torrents: list[Torrent], rss: RSSItem, full_parse: bool = True
     ) -> tuple[list[Bangumi], list[Movie]]:
@@ -88,9 +79,16 @@ class RSSAnalyser:
         return new_bangumi, new_movies
 
     async def torrent_to_data(
-        self, torrent: Torrent, rss: RSSItem, fetch_poster: bool = True
+        self,
+        torrent: Torrent,
+        rss: RSSItem,
+        fetch_poster: bool = True,
+        *,
+        allow_episode_range: bool = False,
     ) -> Bangumi | Movie | None:
-        result = await TitleParser.raw_parser(raw=torrent.name)
+        result = await TitleParser.raw_parser(
+            raw=torrent.name, allow_episode_range=allow_episode_range
+        )
         if result:
             if isinstance(result, Movie):
                 await self.official_title_parser_movie(
@@ -152,7 +150,8 @@ class RSSAnalyser:
             return []
 
     async def link_to_data(self, rss: RSSItem) -> Bangumi | Movie | ResponseModel:
-        torrents = await self.get_rss_torrents(rss.url, False)
+        async with RequestContent() as req:
+            torrents = await req.get_torrents(rss.url)
         if not torrents:
             return ResponseModel(
                 status=False,
@@ -161,7 +160,7 @@ class RSSAnalyser:
                 msg_zh="无法找到种子。",
             )
         for torrent in torrents:
-            data = await self.torrent_to_data(torrent, rss)
+            data = await self.torrent_to_data(torrent, rss, allow_episode_range=True)
             if data:
                 return data
         return ResponseModel(
